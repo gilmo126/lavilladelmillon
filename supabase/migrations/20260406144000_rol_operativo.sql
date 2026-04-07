@@ -1,0 +1,4 @@
+-- MIGRACIÓN OBSOLETA: El rol 'operativo' fue incorporado directamente en el ENUM
+-- original de la migración 20260405210000_jerarquia_estados.sql.
+-- Este archivo se conserva solo como referencia histórica de la decisión de diseño.
+-- No ejecuta ninguna sentencia SQL.

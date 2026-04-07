@@ -1,0 +1,72 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --admin-blue: #3B82F6;
+  --admin-gold: #F59E0B;
+  --admin-dark: #0F172A;
+  --admin-card: #1E293B;
+  --admin-border: #334155;
+  --admin-green: #10B981;
+}
+
+body {
+  background-color: var(--admin-dark);
+  color: #F8FAFC;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar Minimalista Táctico */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--admin-blue);
+}
+
+.table-glass {
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Densidad de Datos y Sticky Headers */
+.dense-table tr td {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background-color: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(8px);
+}
+
+/* Glass Cards */
+.glass-card {
+  background: rgba(30, 41, 59, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+}
+
+/* Safe Area Insets for Mobile keyboards */
+@media (max-width: 768px) {
+  .mobile-modal-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}

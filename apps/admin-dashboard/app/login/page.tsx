@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 import React from 'react';
 import LoginBox from './LoginBox';
 import { createClient } from '../../utils/supabase/server';

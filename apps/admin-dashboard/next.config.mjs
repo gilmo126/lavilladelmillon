@@ -10,6 +10,13 @@ const nextConfig = {
     }
     return config;
   },
+  experimental: {
+    turbopack: {
+      resolveAlias: {
+        'async_hooks': false,
+      },
+    },
+  },
 };
 
 export default nextConfig;

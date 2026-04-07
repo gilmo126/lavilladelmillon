@@ -159,6 +159,32 @@ export async function getPremios(campanaId: string) {
   return data;
 }
 
+export async function upsertPremio(payload: { id?: string, campana_id: string, nombre_premio: string, descripcion: string, cantidad_disponible: number, imagen_url: string | null }) {
+  try {
+    const { id, ...data } = payload;
+    let res;
+    if (id) {
+      res = await supabaseAdmin.from('premios').update(data).eq('id', id);
+    } else {
+      res = await supabaseAdmin.from('premios').insert(data);
+    }
+    if (res.error) throw res.error;
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function deletePremio(id: string) {
+  try {
+    const { error } = await supabaseAdmin.from('premios').delete().eq('id', id);
+    if (error) throw error;
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
 export async function getConfiguracion() {
   const { data, error } = await supabaseAdmin.from('configuracion_campana').select('*').limit(1).single();
   if (error) throw error;

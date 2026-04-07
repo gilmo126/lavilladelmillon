@@ -1,10 +1,11 @@
+﻿export const dynamic = 'force-dynamic'
 import { createClient } from '../../utils/supabase/server';
 import { redirect } from 'next/navigation';
 import CreateZonaForm from './CreateZonaForm';
 import { deleteZonaAction } from './actions';
 
 export const metadata = {
-  title: 'Catálogo de Zonas | AdminPanel',
+  title: 'CatÃ¡logo de Zonas | AdminPanel',
 };
 
 function DeleteButton({ id }: { id: string }) {
@@ -31,7 +32,7 @@ export default async function ZonasPage() {
 
   const { data: profile } = await supabase.from('perfiles').select('*').eq('id', user.id).single();
   if (profile?.rol !== 'admin') {
-    return <div className="p-8 text-red-500 font-bold">Bloqueo: Módulo exclusivo de Gerencia.</div>;
+    return <div className="p-8 text-red-500 font-bold">Bloqueo: MÃ³dulo exclusivo de Gerencia.</div>;
   }
 
   const { data: zonas } = await supabase
@@ -42,8 +43,8 @@ export default async function ZonasPage() {
   return (
     <div className="p-8 pb-20">
       <header className="mb-10">
-        <h1 className="text-3xl font-bold mb-2">Territorios y Zonas Logísticas</h1>
-        <p className="text-slate-400">Catálogo maestro para delimitar territorios. Al crear asignaciones y reclutar agentes, este catálogo proveerá las opciones.</p>
+        <h1 className="text-3xl font-bold mb-2">Territorios y Zonas LogÃ­sticas</h1>
+        <p className="text-slate-400">CatÃ¡logo maestro para delimitar territorios. Al crear asignaciones y reclutar agentes, este catÃ¡logo proveerÃ¡ las opciones.</p>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -52,7 +53,7 @@ export default async function ZonasPage() {
         <div className="lg:col-span-2">
           <div className="bg-admin-card rounded-2xl border border-admin-border overflow-hidden">
              <div className="p-6 border-b border-admin-border">
-                <h3 className="font-bold text-white">Catálogo Actual</h3>
+                <h3 className="font-bold text-white">CatÃ¡logo Actual</h3>
              </div>
              
              {zonas && zonas.length > 0 ? (
@@ -72,7 +73,7 @@ export default async function ZonasPage() {
                            <p className="text-xs text-admin-blue font-mono mt-1">{zona.id}</p>
                         </td>
                         <td className="p-4 text-sm text-slate-400 max-w-xs truncate">
-                           {zona.descripcion || <span className="italic opacity-50">Sin descripción</span>}
+                           {zona.descripcion || <span className="italic opacity-50">Sin descripciÃ³n</span>}
                         </td>
                         <td className="p-4 text-right">
                            <DeleteButton id={zona.id} />
@@ -83,7 +84,7 @@ export default async function ZonasPage() {
                 </table>
              ) : (
                 <div className="p-12 text-center text-slate-500">
-                  <p>Aún no has definido ninguna zona geográfica.</p>
+                  <p>AÃºn no has definido ninguna zona geogrÃ¡fica.</p>
                 </div>
              )}
           </div>

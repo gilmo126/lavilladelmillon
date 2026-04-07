@@ -1,3 +1,4 @@
+﻿export const dynamic = 'force-dynamic'
 import { createClient } from '../../utils/supabase/server';
 import { supabaseAdmin } from '../../lib/supabaseAdmin';
 import AsignarForm from './AsignarForm';
@@ -10,7 +11,7 @@ export const metadata = {
 export default async function AsignacionesPage() {
   const supabase = await createClient();
 
-  // 1. Verificar Autenticación
+  // 1. Verificar AutenticaciÃ³n
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     redirect('/login');
@@ -22,13 +23,13 @@ export default async function AsignacionesPage() {
      return (
         <div className="p-8">
            <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-6 rounded-lg font-bold">
-              Bloqueo de Seguridad: Esta sección es exclusiva de Gerencia y personal Operativo.
+              Bloqueo de Seguridad: Esta secciÃ³n es exclusiva de Gerencia y personal Operativo.
            </div>
         </div>
      );
   }
 
-  // 3. Misión de Estabilización: Atomic Join para distribuidores y zonas
+  // 3. MisiÃ³n de EstabilizaciÃ³n: Atomic Join para distribuidores y zonas
   const [resDist, resZonas, resBoletas, resPerfilZonas] = await Promise.all([
     supabaseAdmin.from('perfiles').select('*').eq('rol', 'distribuidor').order('nombre'),
     supabaseAdmin.from('zonas').select('id, nombre'),
@@ -53,7 +54,7 @@ export default async function AsignacionesPage() {
         }
       }));
 
-    // 2. Fallback de Emergencia: Si no hay N:N, usar la zona única del perfil
+    // 2. Fallback de Emergencia: Si no hay N:N, usar la zona Ãºnica del perfil
     if (myPZs.length === 0 && d.zona_id) {
        myPZs = [{
           zonas: {
@@ -75,7 +76,7 @@ export default async function AsignacionesPage() {
     <div className="p-8 pb-20">
       <header className="mb-10">
         <h1 className="text-3xl font-bold mb-2">Asignaciones Masivas</h1>
-        <p className="text-slate-400">Opera despachos de inventario inactivo (Bodega) hacia la red logística de Distribuidores Autorizados.</p>
+        <p className="text-slate-400">Opera despachos de inventario inactivo (Bodega) hacia la red logÃ­stica de Distribuidores Autorizados.</p>
       </header>
 
       <AsignarForm 
@@ -87,9 +88,9 @@ export default async function AsignacionesPage() {
           <h3 className="text-white font-bold mb-2">Protocolos de Estricto Cumplimiento (DB-First Security)</h3>
           <ul className="list-disc list-inside text-sm text-slate-400 space-y-2">
             <li>Al asignar un lote, este pasa irreversiblemente a la custodia del Distribuidor <strong>(Estado 1: Despachada)</strong>.</li>
-            <li>Si digita un rango que contiene boletas que ya fueron despachadas, el sistema <strong>las ignorará de forma automática y solo inyectará las vírgenes.</strong></li>
-            <li>Los distribuidores recibirán este lote íntegramente de forma inmediata en sus pantallas de trazabilidad y estarán habilitados para entregarlas en comercios y zonas.</li>
-            <li>No se pueden reversar lotes enviados de forma directa, se requiere intervención superior SQL sobre incidentes reales.</li>
+            <li>Si digita un rango que contiene boletas que ya fueron despachadas, el sistema <strong>las ignorarÃ¡ de forma automÃ¡tica y solo inyectarÃ¡ las vÃ­rgenes.</strong></li>
+            <li>Los distribuidores recibirÃ¡n este lote Ã­ntegramente de forma inmediata en sus pantallas de trazabilidad y estarÃ¡n habilitados para entregarlas en comercios y zonas.</li>
+            <li>No se pueden reversar lotes enviados de forma directa, se requiere intervenciÃ³n superior SQL sobre incidentes reales.</li>
           </ul>
       </div>
     </div>

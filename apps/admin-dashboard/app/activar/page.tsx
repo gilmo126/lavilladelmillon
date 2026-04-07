@@ -1,3 +1,4 @@
+﻿export const dynamic = 'force-dynamic'
 import { createClient } from '../../utils/supabase/server';
 import { redirect } from 'next/navigation';
 import ActivarForm from './ActivarForm';
@@ -23,7 +24,7 @@ export default async function ActivarPage() {
     return (
       <div className="p-8">
         <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-6 rounded-lg font-bold">
-          Módulo exclusivo para Distribuidores logísticos.
+          MÃ³dulo exclusivo para Distribuidores logÃ­sticos.
         </div>
       </div>
     );
@@ -35,7 +36,7 @@ export default async function ActivarPage() {
     .select('zonas(nombre)')
     .eq('perfil_id', user.id);
 
-  // 3. Obtener las boletas con su zona de destino específica
+  // 3. Obtener las boletas con su zona de destino especÃ­fica
   const { data: boletas } = await supabase
     .from('boletas')
     .select('id_boleta, estado, zonas!zona_destino_id(nombre)')
@@ -45,7 +46,7 @@ export default async function ActivarPage() {
     .limit(500);
 
   const { data: config } = await supabase.from('configuracion_campana').select('nombre_campana').eq('activa', true).single();
-  const nombreCampana = config?.nombre_campana || "Campaña Activa";
+  const nombreCampana = config?.nombre_campana || "CampaÃ±a Activa";
 
   // 4. Obtener lista de barrios para el formulario
   const { data: territorios } = await supabase
@@ -63,14 +64,14 @@ export default async function ActivarPage() {
           <div className="flex flex-wrap gap-2">
             {misZonas.map((z: string, i: number) => (
                 <span key={i} className="bg-green-500/10 border border-green-500/20 text-green-400 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest">
-                    📍 {z}
+                    ðŸ“ {z}
                 </span>
             ))}
           </div>
         </div>
         <p className="text-slate-400">
-          Operación de Campo: <span className="text-white font-semibold">{profile.nombre}</span> — 
-          Gestiona las ventas tácticas y activa boletas en tus frentes de trabajo autorizados.
+          OperaciÃ³n de Campo: <span className="text-white font-semibold">{profile.nombre}</span> â€” 
+          Gestiona las ventas tÃ¡cticas y activa boletas en tus frentes de trabajo autorizados.
         </p>
       </header>
 

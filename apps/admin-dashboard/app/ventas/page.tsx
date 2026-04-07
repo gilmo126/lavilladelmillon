@@ -1,3 +1,4 @@
+﻿export const dynamic = 'force-dynamic'
 import { getVentasPaged } from '../../lib/actions';
 import VentasClient from './VentasClient';
 import { createClient } from '../../utils/supabase/server';
@@ -25,10 +26,10 @@ export default async function VentasReportPage({ searchParams }: { searchParams:
   return (
     <div className="p-8 pb-20 h-full overflow-y-auto">
       <header className="mb-10">
-        <h1 className="text-3xl font-bold mb-2">📈 Reporte de Ventas Local</h1>
+        <h1 className="text-3xl font-bold mb-2">ðŸ“ˆ Reporte de Ventas Local</h1>
         <p className="text-slate-400">
           Base de datos de compradores finales registrados por los distribuidores en Palmira. 
-          Auditoría de cumplimiento legal y trazabilidad de premios.
+          AuditorÃ­a de cumplimiento legal y trazabilidad de premios.
         </p>
       </header>
       

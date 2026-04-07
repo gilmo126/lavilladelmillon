@@ -1,3 +1,4 @@
+﻿export const dynamic = 'force-dynamic'
 import { createClient } from '../../utils/supabase/server';
 import { redirect } from 'next/navigation';
 import { getConfiguracion } from '../../lib/actions';
@@ -30,13 +31,13 @@ export default async function BodegaPage() {
       <header className="mb-10">
         <div className="flex items-center gap-3 mb-2">
           <div className="w-10 h-10 rounded-xl bg-admin-gold/20 flex items-center justify-center border border-admin-gold/30">
-            <span className="text-xl">📥</span>
+            <span className="text-xl">ðŸ“¥</span>
           </div>
           <h1 className="text-3xl font-bold tracking-tight">Ingreso a Bodega</h1>
         </div>
         <p className="text-slate-400 max-w-2xl">
-          Genera masivamente boletas en <strong>Estado 0 (Bodega)</strong> para iniciar el ciclo logístico. 
-          Este proceso es atómico e irreversible.
+          Genera masivamente boletas en <strong>Estado 0 (Bodega)</strong> para iniciar el ciclo logÃ­stico. 
+          Este proceso es atÃ³mico e irreversible.
         </p>
       </header>
 
@@ -46,12 +47,12 @@ export default async function BodegaPage() {
 
       <div className="mt-12 p-6 rounded-2xl bg-amber-950/20 border border-amber-900/30 max-w-4xl">
         <h3 className="text-amber-500 font-bold mb-2 flex items-center gap-2">
-          <span>⚠️</span> Recordatorio de Jerarquía
+          <span>âš ï¸</span> Recordatorio de JerarquÃ­a
         </h3>
         <ul className="text-sm text-amber-500/80 space-y-2 list-disc pl-5">
-          <li>El ingreso a bodega NO asigna distribuidores; eso se hace en el módulo de Asignaciones.</li>
-          <li>Los números de boleta deben ser únicos. Si un número ya existe, será omitido.</li>
-          <li>Cada boleta generada tendrá un token de integridad automático con formato <code>TKN-ID</code>.</li>
+          <li>El ingreso a bodega NO asigna distribuidores; eso se hace en el mÃ³dulo de Asignaciones.</li>
+          <li>Los nÃºmeros de boleta deben ser Ãºnicos. Si un nÃºmero ya existe, serÃ¡ omitido.</li>
+          <li>Cada boleta generada tendrÃ¡ un token de integridad automÃ¡tico con formato <code>TKN-ID</code>.</li>
         </ul>
       </div>
     </div>

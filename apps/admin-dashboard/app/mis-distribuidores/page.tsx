@@ -1,3 +1,4 @@
+﻿export const dynamic = 'force-dynamic'
 import { createClient } from '../../utils/supabase/server';
 import { redirect } from 'next/navigation';
 import MisDistribuidoresClient from './MisDistribuidoresClient';
@@ -12,10 +13,10 @@ export default async function MisDistribuidoresPage() {
   const { data: profile } = await supabase.from('perfiles')
     .select('*, zonas(nombre)').eq('id', user.id).single();
   if (!profile || profile.rol !== 'operativo') {
-    return <div className="p-8 text-red-500 font-bold">Módulo exclusivo de Operativos.</div>;
+    return <div className="p-8 text-red-500 font-bold">MÃ³dulo exclusivo de Operativos.</div>;
   }
 
-  // El operativo puede ver TODOS los distribuidores para gestionar logística
+  // El operativo puede ver TODOS los distribuidores para gestionar logÃ­stica
   const { data: distribuidores } = await supabase
     .from('perfiles').select('*, zonas(nombre)')
     .eq('rol', 'distribuidor').order('zonas(nombre)');
@@ -30,7 +31,7 @@ export default async function MisDistribuidoresPage() {
           </span>
         </div>
         <p className="text-slate-400">
-          Red logística asignada. Puedes editar datos de contacto y zona. No puedes crear ni eliminar distribuidores.
+          Red logÃ­stica asignada. Puedes editar datos de contacto y zona. No puedes crear ni eliminar distribuidores.
         </p>
       </header>
 

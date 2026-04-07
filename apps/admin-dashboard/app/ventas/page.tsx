@@ -1,4 +1,5 @@
-﻿export const dynamic = 'force-dynamic'
+export const dynamic = 'force-dynamic'
+export const runtime = 'edge';
 import { getVentasPaged } from '../../lib/actions';
 import VentasClient from './VentasClient';
 import { createClient } from '../../utils/supabase/server';

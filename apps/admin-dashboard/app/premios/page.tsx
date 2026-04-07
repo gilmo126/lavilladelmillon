@@ -1,4 +1,5 @@
-﻿export const dynamic = 'force-dynamic'
+export const dynamic = 'force-dynamic'
+export const runtime = 'edge';
 import React from 'react';
 import PremiosManager from '../components/PremiosManager';
 

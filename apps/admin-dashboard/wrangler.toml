@@ -1,11 +1,4 @@
 name = "admin-dashboard"
 compatibility_date = "2024-04-01"
 compatibility_flags = [ "nodejs_compat" ]
-
-[site]
-bucket = ".next"
-
-[env.production]
-routes = [
-  { pattern = "admin.lavilladelmillon.co/*", zone_name = "lavilladelmillon.co" }
-]
+pages_build_output_dir = ".vercel/output/static"

@@ -1,0 +1,11 @@
+name = "landing-page"
+compatibility_date = "2024-04-01"
+compatibility_flags = [ "nodejs_compat" ]
+
+[site]
+bucket = ".next"
+
+[env.production]
+routes = [
+  { pattern = "lavilladelmillon.co/*", zone_name = "lavilladelmillon.co" }
+]

@@ -20,7 +20,7 @@ const OPERATIVO_ALLOWED_ROUTES = [
   '/mis-distribuidores',
 ]
 
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request: { headers: request.headers },
   })
@@ -77,13 +77,11 @@ export async function proxy(request: NextRequest) {
 
     // --- Operativo ---
     if (rol === 'operativo') {
-      // Redirigir raíz a /asignaciones
       if (pathname === '/') {
         const url = request.nextUrl.clone()
         url.pathname = '/asignaciones'
         return NextResponse.redirect(url)
       }
-      // Bloquear rutas no permitidas
       const isAllowed = OPERATIVO_ALLOWED_ROUTES.some(
         (route) => pathname === route || pathname.startsWith(route + '/')
       )
@@ -109,8 +107,6 @@ export async function proxy(request: NextRequest) {
 
   return supabaseResponse
 }
-
-export default proxy;
 
 export const config = {
   matcher: [

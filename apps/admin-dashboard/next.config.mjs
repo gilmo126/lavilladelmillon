@@ -1,11 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  serverExternalPackages: ['@supabase/supabase-js'], // Evita que se empaqueten cosas pesadas
   webpack: (config, { isServer }) => {
     if (isServer) {
       config.resolve.alias = {
         ...config.resolve.alias,
-        'async_hooks': false,
+        'async_hooks': 'node:async_hooks',
       };
     }
     return config;
@@ -13,7 +12,7 @@ const nextConfig = {
   experimental: {
     turbopack: {
       resolveAlias: {
-        'async_hooks': false,
+        'async_hooks': 'node:async_hooks',
       },
     },
   },

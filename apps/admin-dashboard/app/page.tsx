@@ -4,13 +4,23 @@ import React from 'react';
 import { supabaseAdmin } from '../lib/supabaseAdmin';
 import RealtimeDashboard from './components/RealtimeDashboard';
 import { createClient } from '../utils/supabase/server';
+import { redirect } from 'next/navigation';
 
 export default async function DashboardPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const { data: profile } = await supabase.from('perfiles').select('*').eq('id', user?.id).single();
 
-  const isDist = profile?.rol === 'distribuidor';
+  if (!user) {
+    redirect('/login');
+  }
+
+  const { data: profile } = await supabase.from('perfiles').select('*').eq('id', user.id).single();
+
+  if (!profile) {
+    redirect('/login');
+  }
+
+  const isDist = profile.rol === 'distribuidor';
 
   // Construir consultas base dependientes del ROL
   const baseBoletas = supabaseAdmin.from('boletas').select('*', { count: 'exact', head: true });

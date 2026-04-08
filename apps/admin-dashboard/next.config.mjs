@@ -15,11 +15,9 @@ const nextConfig = {
     }
     return config;
   },
-  experimental: {
-    turbopack: {
-      resolveAlias: {
-        'async_hooks': './lib/async_hooks_shim.js',
-      },
+  turbopack: {
+    resolveAlias: {
+      'async_hooks': './lib/async_hooks_shim.js',
     },
   },
 };

@@ -16,6 +16,7 @@ const nextConfig = {
     return config;
   },
   turbopack: {
+    root: path.resolve(__dirname),
     resolveAlias: {
       'async_hooks': './lib/async_hooks_shim.js',
     },

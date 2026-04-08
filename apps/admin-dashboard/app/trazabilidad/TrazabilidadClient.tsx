@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Search } from 'lucide-react';
 import { buscarTrazabilidadAction } from './actions';
 
 type TrackResult = {
@@ -158,21 +159,25 @@ export default function TrazabilidadClient({ userProfile }: { userProfile: any }
           <input
             name="query"
             type="text"
-            placeholder="Número de boleta (ej: 5005) o Cédula del cliente..."
-            className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white outline-none focus:border-admin-blue transition-colors text-sm"
+            placeholder="Número de boleta (ej: 5005)..."
+            className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono"
             autoComplete="off"
           />
           <button
             type="submit"
             disabled={loading}
-            className="px-6 py-3 bg-admin-blue text-white font-bold rounded-xl hover:bg-blue-600 transition-colors disabled:opacity-50 flex items-center gap-2 text-sm"
+            className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white px-6 py-3 rounded-lg font-bold flex items-center gap-2 transition-all shadow-lg shadow-blue-900/20"
           >
-            {loading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : '🔎'}
-            {loading ? 'Buscando...' : 'Buscar'}
+            {loading ? 'Buscando...' : (
+              <>
+                <Search size={18} />
+                Buscar
+              </>
+            )}
           </button>
         </form>
-        <p className="text-xs text-slate-500 mt-3">
-          Puedes buscar por el <strong className="text-slate-400">número numérico de la boleta</strong> o por la <strong className="text-slate-400">cédula del cliente registrado</strong>.
+        <p className="mt-4 text-xs text-slate-500">
+          Puedes buscar por el <strong>número numérico</strong> de la boleta o por el token de integridad.
         </p>
       </div>
 

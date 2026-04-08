@@ -57,6 +57,10 @@ export default function AsignarForm({ distribuidores, boletasLibres }: { distrib
         no_aptas: resp.no_aptas || 0,
         es_valido: resp.es_valido || false
       });
+      setMessage(null);
+    } else {
+      setValidation(null);
+      setMessage({ type: 'warning', text: resp.error || 'No se pudo validar el rango. Verifique la conexión.' });
     }
     setValidating(false);
   }, []);
@@ -227,6 +231,8 @@ export default function AsignarForm({ distribuidores, boletasLibres }: { distrib
         >
           {loading ? (
              <><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Procesando Transacción...</>
+          ) : validating ? (
+             <><div className="w-5 h-5 border-2 border-admin-gold/30 border-t-admin-gold rounded-full animate-spin"></div> Validando Inventario...</>
           ) : (
              <><span className="text-xl">✈️</span> Confirmar Despacho a Logística</>
           )}

@@ -5,7 +5,7 @@ import { supabaseAdmin } from './supabaseAdmin';
 // ==========================================
 // Módulo: BOLETAS (Estabilización Misión)
 // ==========================================
-export async function getBoletasPaged(page: number, limit: number, query: string, range?: { desde?: number, hasta?: number }) {
+export async function getBoletasPaged(page: number, limit: number, query: string, range?: { desde?: number, hasta?: number }, distribuidorId?: string) {
   const from = (page - 1) * limit;
   const to = from + limit - 1;
 
@@ -18,16 +18,34 @@ export async function getBoletasPaged(page: number, limit: number, query: string
     despachador:perfiles!asignado_por(nombre)
   `, { count: 'exact' });
 
+  if (distribuidorId) {
+    queryBuilder = queryBuilder.eq('distribuidor_id', distribuidorId);
+  }
+
   if (range?.desde) queryBuilder = queryBuilder.gte('id_boleta', range.desde);
   if (range?.hasta) queryBuilder = queryBuilder.lte('id_boleta', range.hasta);
 
   if (query) {
     const isNum = !isNaN(Number(query));
+    let extraFilters = '';
+
+    // 1. Búsqueda de IDs de distribuidores que coincidan con el nombre
+    const { data: matchedProfiles } = await supabaseAdmin
+      .from('perfiles')
+      .select('id')
+      .ilike('nombre', `%${query}%`)
+      .limit(10);
+    
+    const distIds = (matchedProfiles || []).map(p => p.id);
+    if (distIds.length > 0) {
+      extraFilters = `,distribuidor_id.in.(${distIds.join(',')})`;
+    }
+
     if (isNum) {
       const paddedId = query.padStart(6, '0');
-      queryBuilder = queryBuilder.or(`id_boleta.eq.${query},identificacion_usuario.ilike.%${query}%,token_integridad.eq.TKN-${paddedId}`);
+      queryBuilder = queryBuilder.or(`id_boleta.eq.${query},identificacion_usuario.ilike.%${query}%,token_integridad.eq.TKN-${paddedId}${extraFilters}`);
     } else {
-      queryBuilder = queryBuilder.ilike('token_integridad', `%${query}%`);
+      queryBuilder = queryBuilder.or(`token_integridad.ilike.%${query}%,identificacion_usuario.ilike.%${query}%${extraFilters}`);
     }
   }
 
@@ -157,6 +175,36 @@ export async function getPremios(campanaId: string) {
   const { data, error } = await supabaseAdmin.from('premios').select('*').eq('campana_id', campanaId).order('created_at', { ascending: false });
   if (error) throw error;
   return data;
+}
+
+export async function uploadPublicImagenAction(formData: FormData, folder: string = 'premios') {
+  try {
+    const file = formData.get('file') as File;
+    if (!file) throw new Error('No se recibió ningún archivo.');
+
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
+    const filePath = `${folder}/${fileName}`;
+
+    const buffer = await file.arrayBuffer();
+
+    const { data, error } = await supabaseAdmin.storage
+      .from('fotos-premios')
+      .upload(filePath, buffer, {
+        contentType: file.type,
+        upsert: true
+      });
+
+    if (error) throw error;
+
+    const { data: { publicUrl } } = supabaseAdmin.storage
+      .from('fotos-premios')
+      .getPublicUrl(filePath);
+
+    return { success: true, url: publicUrl };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
 }
 
 export async function upsertPremio(payload: { id?: string, campana_id: string, nombre_premio: string, descripcion: string, cantidad_disponible: number, imagen_url: string | null }) {
@@ -318,4 +366,21 @@ export async function cerrarSorteoAction(adminId: string, campanaId: string) {
   } catch (error: any) {
     return { success: false, error: error.message };
   }
+}
+
+export async function getDashboardCounts(distribuidorId?: string) {
+  const baseQuery = supabaseAdmin.from('boletas').select('*', { count: 'exact', head: true });
+  if (distribuidorId) baseQuery.eq('distribuidor_id', distribuidorId);
+
+  const [t, a, r] = await Promise.all([
+    baseQuery,
+    supabaseAdmin.from('boletas').select('*', { count: 'exact', head: true }).eq('estado', 2).match(distribuidorId ? { distribuidor_id: distribuidorId } : {}),
+    supabaseAdmin.from('boletas').select('*', { count: 'exact', head: true }).eq('estado', 3).match(distribuidorId ? { distribuidor_id: distribuidorId } : {}),
+  ]);
+
+  return {
+    total: t.count || 0,
+    activas: a.count || 0,
+    registradas: r.count || 0
+  };
 }

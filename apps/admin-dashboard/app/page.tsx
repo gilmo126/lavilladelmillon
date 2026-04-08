@@ -40,7 +40,7 @@ export default async function DashboardPage() {
     ranking
   ] = await Promise.all([
     getConfiguracion().catch(() => ({ nombre_campana: "Sin Campaña" })),
-    getBoletasPaged(1, 10, "", {}),
+    getBoletasPaged(1, 10, "", {}, isDist ? user.id : undefined),
     (async () => {
         const { count: t } = await baseBoletas;
         const { count: a } = await supabaseAdmin.from('boletas').select('*', { count: 'exact', head: true }).eq('estado', 2).match(isDist ? { distribuidor_id: user?.id } : {});

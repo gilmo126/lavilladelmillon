@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { getPremios, upsertPremio, deletePremio, getConfiguracion } from '../../lib/actions';
+import { getPremios, upsertPremio, deletePremio, getConfiguracion, uploadPublicImagenAction } from '../../lib/actions';
 import { supabase } from '../../lib/supabaseClient';
 
 export default function PremiosManager() {
@@ -105,22 +105,17 @@ export default function PremiosManager() {
 
     setUploading(true);
     
+    setUploading(true);
+    
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random()}.${fileExt}`;
-      const filePath = `premios/${fileName}`;
+      const formData = new FormData();
+      formData.append('file', file);
 
-      const { data, error } = await supabase.storage
-        .from('fotos-premios')
-        .upload(filePath, file);
+      const resp = await uploadPublicImagenAction(formData);
 
-      if (error) throw error;
+      if (!resp.success) throw new Error(resp.error);
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('fotos-premios')
-        .getPublicUrl(filePath);
-
-      setFormImagenUrl(publicUrl);
+      setFormImagenUrl(resp.url || null);
     } catch (err: any) {
       alert('Error subiendo imagen: ' + err.message);
     } finally {

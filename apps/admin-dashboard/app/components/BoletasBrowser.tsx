@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { getBoletasPaged } from '../../lib/actions';
+import { Search as SearchIcon, Eye } from 'lucide-react';
 
 function estadoToString(estado: number) {
   switch (estado) {
@@ -167,7 +168,7 @@ function BoletaDetailDrawer({ boleta, onClose, onRefresh }: { boleta: any; onClo
   );
 }
 
-export default function BoletasBrowser() {
+export default function BoletasBrowser({ userProfile }: { userProfile: any }) {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -186,7 +187,13 @@ export default function BoletasBrowser() {
           desde: range.desde ? parseInt(range.desde) : undefined,
           hasta: range.hasta ? parseInt(range.hasta) : undefined
       };
-      const res = await getBoletasPaged(page, limit, query, rangeParams);
+      const res = await getBoletasPaged(
+        page, 
+        limit, 
+        query, 
+        rangeParams, 
+        userProfile.rol === 'distribuidor' ? userProfile.id : undefined
+      );
       setData(res.data || []);
       setTotal(res.total);
       setTotalPages(res.totalPages);
@@ -298,9 +305,15 @@ export default function BoletasBrowser() {
                     </div>
                     <div className="space-y-2 mb-6">
                         <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-tighter">
-                            <span className="text-slate-600">Custodia</span>
-                            <span className="text-slate-300">{b.distribuidor?.nombre || 'Bodega'}</span>
+                            <span className="text-slate-600">Responsable</span>
+                            <span className="text-slate-300">{b.distribuidor?.nombre || 'Bodega Central'}</span>
                         </div>
+                        {b.despachador && (
+                            <div className="flex justify-between items-center text-[9px] font-medium uppercase tracking-tighter border-t border-white/5 pt-2 mt-2">
+                                <span className="text-slate-700">Origen</span>
+                                <span className="text-admin-gold/70">{b.despachador.nombre}</span>
+                            </div>
+                        )}
                         {b.identificacion_usuario && (
                             <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-tighter">
                                 <span className="text-slate-600">Titular</span>
@@ -325,7 +338,7 @@ export default function BoletasBrowser() {
                 <th className="p-4">Estado Logístico</th>
                 <th className="p-4">Identidad</th>
                 <th className="p-4">Ubicación / Comercio</th>
-                <th className="p-4">Custodia</th>
+                <th className="p-4">Responsable / Origen</th>
                 <th className="p-4 text-admin-gold">Premio</th>
                 <th className="p-4 text-right pr-8">Auditoría</th>
               </tr>
@@ -355,10 +368,33 @@ export default function BoletasBrowser() {
                     {b.nombre_usuario && <span className="text-slate-600 ml-1">({b.nombre_usuario})</span>}
                   </td>
                   <td className="p-3 text-slate-400 font-bold uppercase">{b.comercio_nombre || b.zonas?.nombre || '-'}</td>
-                  <td className="p-3 text-slate-500 font-bold uppercase tracking-tighter">{b.distribuidor?.nombre || 'Bodega Central'}</td>
+                  <td className="p-3">
+                    <div className="relative group/tooltip inline-block">
+                        <span className="text-slate-500 font-bold uppercase tracking-tighter">
+                            {b.distribuidor?.nombre || 'Bodega Central'}
+                        </span>
+                        {b.distribuidor && (
+                            <div className="invisible group-hover/tooltip:visible absolute z-[100] bottom-full left-0 mb-2 w-48 p-3 bg-slate-900 border border-admin-gold/30 rounded-xl shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+                                <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-admin-gold via-transparent to-transparent opacity-30" />
+                                <p className="text-[8px] font-black text-admin-gold uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                                    <span className="w-1 h-1 bg-admin-gold rounded-full animate-pulse" />
+                                    Trazabilidad Logística
+                                </p>
+                                <p className="text-[10px] text-white font-bold">Asignado por:</p>
+                                <p className="text-[10px] text-admin-blue font-black uppercase tracking-tight">{b.despachador?.nombre || 'Sistema'}</p>
+                                <div className="mt-2 pt-2 border-t border-white/5">
+                                    <p className="text-[9px] text-slate-500 font-bold uppercase">📅 {b.fecha_despacho ? new Date(b.fecha_despacho).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Fecha no reg.'}</p>
+                                </div>
+                                <div className="absolute top-full left-4 w-2 h-2 bg-slate-900 border-r border-b border-admin-gold/30 rotate-45 -mt-1 shadow-xl"></div>
+                            </div>
+                        )}
+                    </div>
+                  </td>
                   <td className="p-3 text-admin-gold font-black uppercase text-[9px]">{b.premios?.nombre_premio || '—'}</td>
                   <td className="p-3 text-right pr-8">
-                    <button className="w-8 h-8 flex items-center justify-center bg-slate-800 hover:bg-white text-slate-500 hover:text-slate-900 rounded-lg transition-all border border-white/5">ℹ️</button>
+                    <button className="w-8 h-8 flex items-center justify-center bg-slate-800/50 hover:bg-admin-blue text-slate-500 hover:text-white rounded-lg transition-all border border-white/5 active:scale-90 shadow-sm">
+                      <SearchIcon size={14} strokeWidth={3} />
+                    </button>
                   </td>
                 </tr>
               ))}

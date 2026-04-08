@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { activarBoletaAction } from './actions';
+import SearchableBarrio from './SearchableBarrio';
 
 function VentaModal({ boleta, territorios, onClose }: { boleta: any; territorios: any[]; onClose: () => void }) {
   const [loading, setLoading] = useState(false);
@@ -9,7 +10,6 @@ function VentaModal({ boleta, territorios, onClose }: { boleta: any; territorios
   const [accepted, setAccepted] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [barrioSearch, setBarrioSearch] = useState("");
-  const [showSuggestions, setShowSuggestions] = useState(false);
 
   async function handleAction(formData: FormData) {
     if (!accepted) return setMessage({ type: 'error', text: 'Debe aceptar el tratamiento de datos para continuar.' });
@@ -101,40 +101,27 @@ function VentaModal({ boleta, territorios, onClose }: { boleta: any; territorios
                 </div>
                 <div className="relative space-y-1.5">
                     <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Barrio Geográfico</label>
-                    <input 
-                        type="text" 
-                        autoComplete="off"
-                        required
-                        placeholder="Escribe el barrio..."
+                    <SearchableBarrio 
+                        options={territorios}
                         value={barrioSearch}
-                        onChange={(e) => {
-                          setBarrioSearch(e.target.value);
-                          setShowSuggestions(true);
-                        }}
-                        onFocus={() => setShowSuggestions(true)}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white text-xs outline-none focus:border-admin-blue transition-all" 
+                        onChange={(val) => setBarrioSearch(val)}
                     />
-                    <input type="hidden" name="cliente_barrio" value={barrioSearch} required />
                     
-                    {showSuggestions && (
-                    <div className="absolute z-[110] top-full left-0 w-full mt-2 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl overflow-hidden max-h-40 overflow-y-auto animate-in fade-in slide-in-from-top-1">
-                        {territorios
-                            .filter(t => t.nombre.toLowerCase().includes(barrioSearch.toLowerCase()))
-                            .map((t, idx) => (
-                            <button
-                                key={idx}
-                                type="button"
-                                onClick={() => {
-                                setBarrioSearch(t.nombre);
-                                setShowSuggestions(false);
-                                }}
-                                className="w-full text-left px-4 py-3 text-[10px] font-black text-white hover:bg-admin-blue hover:text-white transition-colors border-b border-white/5 last:border-0 uppercase tracking-tighter"
-                            >
-                                {t.nombre}
-                            </button>
-                            ))}
-                    </div>
+                    {barrioSearch === 'OTRO' && (
+                        <div className="mt-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                            <label className="block text-[9px] font-black text-admin-gold uppercase tracking-widest ml-1 mb-1.5">Especifique el Barrio</label>
+                            <input 
+                                type="text"
+                                name="cliente_barrio_otro"
+                                required
+                                placeholder="Escribe el nombre del barrio..."
+                                className="w-full bg-slate-950 border border-admin-gold/30 rounded-xl px-4 py-3 text-white text-xs outline-none focus:border-admin-gold transition-all"
+                            />
+                            <p className="text-[8px] text-slate-500 mt-1.5 italic">* Este barrio será auditado para su inclusión en el catálogo.</p>
+                        </div>
                     )}
+
+                    <input type="hidden" name="cliente_barrio" value={barrioSearch} required />
                 </div>
               </div>
 

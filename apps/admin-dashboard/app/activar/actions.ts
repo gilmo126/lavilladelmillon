@@ -25,7 +25,14 @@ export async function activarBoletaAction(formData: FormData) {
   const cliente_nombre = formData.get('cliente_nombre') as string;
   const cliente_movil = formData.get('cliente_movil') as string;
   const cliente_direccion = formData.get('cliente_direccion') as string;
-  const cliente_barrio = formData.get('cliente_barrio') as string;
+  let cliente_barrio = formData.get('cliente_barrio') as string;
+  const cliente_barrio_otro = formData.get('cliente_barrio_otro') as string;
+  
+  // Priorizar el barrio manual si se seleccionó 'OTRO'
+  if (cliente_barrio === 'OTRO' && cliente_barrio_otro) {
+    cliente_barrio = cliente_barrio_otro;
+  }
+
   const acepta_hd = formData.get('habeas_data') === 'on';
 
   if (!boleta_id_raw || !comercio_nombre || !cliente_id || !cliente_nombre || !cliente_movil || !cliente_direccion || !cliente_barrio) {
@@ -46,6 +53,9 @@ export async function activarBoletaAction(formData: FormData) {
     p_dist_id: user.id,
     p_boleta_id: boleta_id,
     p_nombre_comercio: comercio_nombre,
+    p_cliente_nombre: cliente_nombre,
+    p_cliente_id: cliente_id,
+    p_cliente_movil: cliente_movil,
   });
 
   if (actError || !actOk) {
@@ -74,4 +84,11 @@ export async function activarBoletaAction(formData: FormData) {
 
   revalidatePath('/activar');
   return { success: true, boleta_code: `TKN-${String(boleta_id).padStart(6, '0')}` };
+}
+
+export async function obtenerBarriosAction() {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc('obtener_barrios_sugeridos');
+  if (error) return [];
+  return (data || []).map((b: any) => b.barrio);
 }

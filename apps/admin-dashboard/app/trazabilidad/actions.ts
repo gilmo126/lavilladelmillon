@@ -13,20 +13,16 @@ export async function buscarTrazabilidadAction(formData: FormData) {
   }
 
   const query = (formData.get('query') as string || '').trim();
-  if (!query || (me.rol !== 'distribuidor' && query.length < 2)) {
+  if (!query || (me.rol !== 'distribuidor' && query.length < 1)) {
     return { success: false, error: 'Ingrese un criterio válido.', results: [] };
   }
 
-  const { data, error } = await supabase.rpc('buscar_trazabilidad', { p_query: query });
-  if (error) return { success: false, error: error.message, results: [] };
+  const { data, error } = await supabase.rpc('buscar_trazabilidad', { 
+    p_query: query,
+    p_user_id: user.id 
+  });
 
-  let results = data || [];
-  
-  // FILTRO ESTRICTO PARA DISTRIBUIDORES
-  if (me.rol === 'distribuidor') {
-    // El distribuidor solo ve boletas que él mismo tiene o tuvo asignadas
-    results = results.filter((r: any) => r.distribuidor_nombre === me.nombre);
-  }
+  if (error) return { success: false, error: error.message, results: [] };
 
   return { success: true, results: data || [] };
 }

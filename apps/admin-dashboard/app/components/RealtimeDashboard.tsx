@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../../lib/supabaseClient';
-import { getBoletasPaged } from '../../lib/actions';
+import { getBoletasPaged, getDashboardCounts } from '../../lib/actions';
 import Link from 'next/link';
 
 function estadoToString(estado: number) {
@@ -78,17 +78,24 @@ export default function RealtimeDashboard({ initialConfig, initialCounts, initia
   const fetchPagedData = useCallback(async (p: number) => {
       setLoading(true);
       try {
-          const res = await getBoletasPaged(p, limit, "");
+          const [res, counts] = await Promise.all([
+            getBoletasPaged(p, limit, "", {}, isDist ? myId : undefined),
+            getDashboardCounts(isDist ? myId : undefined)
+          ]);
+
           setRecientes(res.data);
           setTotalPages(res.totalPages);
-          // Actualizar total también si hubo cambios
-          if (res.total !== total) setTotal(res.total);
+
+          // Actualizar contadores globales
+          setTotal(counts.total);
+          setActivas(counts.activas);
+          setRegistradas(counts.registradas);
       } catch (e) {
           console.error(e);
       } finally {
           setLoading(false);
       }
-  }, [total]);
+  }, [total, isDist, myId]);
 
   // Sincronización Real-time (solo para resetear a la pag 1 o actualizar contadores)
   useEffect(() => {
@@ -276,8 +283,12 @@ export default function RealtimeDashboard({ initialConfig, initialCounts, initia
                 <div className="relative w-40 h-40 rounded-full border-[6px] border-slate-950 flex items-center justify-center shadow-2xl"
                     style={{ background: `conic-gradient(#10B981 0% ${pctRegistradas}%, #3B82F6 ${pctRegistradas}% ${pctRegistradas + pctActivas}%, #1E293B ${pctRegistradas + pctActivas}% 100%)` }}>
                     <div className="w-32 h-32 bg-slate-900 rounded-full flex flex-col items-center justify-center border border-white/5 shadow-inner">
-                        <span className="text-3xl font-black text-white tracking-tighter">{pctRegistradas}%</span>
-                        <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest mt-1">Éxito Total</span>
+                        <span className="text-3xl font-black text-white tracking-tighter">
+                            {pctRegistradas > 0 ? pctRegistradas : pctActivas}%
+                        </span>
+                        <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest mt-1">
+                            {pctRegistradas > 0 ? 'Éxito Total' : 'Progreso Ventas'}
+                        </span>
                     </div>
                 </div>
                 <div className="mt-10 w-full space-y-4">
@@ -286,11 +297,11 @@ export default function RealtimeDashboard({ initialConfig, initialCounts, initia
                         <span className="text-white">{pctRegistradas}%</span>
                     </div>
                     <div className="flex justify-between items-center text-[10px] font-black uppercase text-slate-400">
-                        <span className="flex items-center gap-3"><span className="w-2 h-2 rounded-full bg-admin-blue" /> Activas en PDV</span>
+                        <span className="flex items-center gap-3"><span className="w-2 h-2 rounded-full bg-admin-blue" /> {isDist ? 'Ventas en Comercio' : 'Activas en PDV'}</span>
                         <span className="text-white">{pctActivas}%</span>
                     </div>
                     <div className="flex justify-between items-center text-[10px] font-black uppercase text-slate-400">
-                        <span className="flex items-center gap-3"><span className="w-2 h-2 rounded-full bg-slate-700" /> Bodega Central</span>
+                        <span className="flex items-center gap-3"><span className="w-2 h-2 rounded-full bg-slate-700" /> {isDist ? 'En Maletín (Por Activar)' : 'Bodega Central'}</span>
                         <span className="text-slate-500">{pctBodega}%</span>
                     </div>
                 </div>

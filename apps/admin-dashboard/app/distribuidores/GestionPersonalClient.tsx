@@ -115,6 +115,7 @@ import { getInventarioDistribuidorAction } from '../../lib/actions';
 function InventoryDrawer({ dist, onClose }: { dist: Perfil; onClose: () => void }) {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<{ resumen: any, lotes: any[], frentes: any[] } | null>(null);
+  const [filterStatus, setFilterStatus] = useState<'todos' | 'completados' | 'pendientes'>('todos');
 
   useEffect(() => {
     async function load() {
@@ -176,34 +177,95 @@ function InventoryDrawer({ dist, onClose }: { dist: Perfil; onClose: () => void 
 
               {/* Listado de Lotes (Rangos) con Zona */}
               <section>
-                <div className="flex justify-between items-center mb-6">
-                  <h4 className="text-xs font-bold text-white uppercase tracking-wider">Historial de Despachos</h4>
-                  <span className="text-[9px] font-bold text-admin-gold bg-admin-gold/10 px-2 py-0.5 rounded-full">Stock Total: {data.resumen.total_asignado}</span>
+                <div className="flex flex-col gap-4 mb-6">
+                  <div className="flex justify-between items-center">
+                    <h4 className="text-xs font-bold text-white uppercase tracking-wider">Historial de Despachos</h4>
+                    <span className="text-[9px] font-bold text-admin-gold bg-admin-gold/10 px-2 py-0.5 rounded-full">Stock Total: {data.resumen.total_asignado}</span>
+                  </div>
+                  
+                  {/* Selector de Filtros Premium */}
+                  <div className="flex p-1 bg-slate-950 border border-white/5 rounded-xl">
+                      {[
+                        { id: 'todos', label: 'Todos' },
+                        { id: 'completados', label: 'Completados' },
+                        { id: 'pendientes', label: 'En Proceso' }
+                      ].map((tab) => (
+                        <button
+                          key={tab.id}
+                          onClick={() => setFilterStatus(tab.id as any)}
+                          className={`flex-1 py-2 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all ${
+                            filterStatus === tab.id 
+                            ? 'bg-admin-gold text-slate-950 shadow-lg' 
+                            : 'text-slate-500 hover:text-white'
+                          }`}
+                        >
+                          {tab.label}
+                        </button>
+                      ))}
+                  </div>
                 </div>
-                <div className="space-y-3">
-                  {data.lotes.map((lote, idx) => (
-                    <div key={idx} className="flex justify-between items-center bg-slate-950 border border-white/5 hover:border-admin-blue/30 p-5 rounded-2xl transition-all group">
-                      <div className="flex items-center gap-5">
-                        <div className="text-center">
-                           <p className="text-[8px] font-bold text-slate-600 uppercase mb-1">Lot</p>
-                           <p className="text-xs font-bold text-white">#{String(data.lotes.length - idx).padStart(3, '0')}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold text-white font-mono">{lote.rango_inicio} — {lote.rango_fin}</p>
-                          <div className="flex items-center gap-2 mt-1">
-                             <span className="text-[9px] font-bold text-admin-blue uppercase">{lote.zona_nombre || 'Nacional'}</span>
-                             <span className="w-1 h-1 bg-slate-700 rounded-full" />
-                             <span className="text-[9px] text-slate-500 uppercase">{lote.cantidad} boletas</span>
+
+                <div className="space-y-4">
+                  {data.lotes
+                    .filter(l => {
+                      const isComplete = (l.activadas || 0) >= l.cantidad;
+                      if (filterStatus === 'completados') return isComplete;
+                      if (filterStatus === 'pendientes') return !isComplete;
+                      return true;
+                    })
+                    .map((lote, idx) => {
+                      const porcentaje = Math.min(100, Math.round(((lote.activadas || 0) / lote.cantidad) * 100));
+                      const isComplete = porcentaje >= 100;
+                      
+                      return (
+                        <div key={idx} className={`flex flex-col bg-slate-950 border ${isComplete ? 'border-green-500/20' : 'border-white/5'} hover:border-admin-blue/30 p-5 rounded-2xl transition-all group overflow-hidden relative`}>
+                          {isComplete && (
+                            <div className="absolute top-0 right-0 px-3 py-1 bg-green-500 text-slate-950 text-[8px] font-black uppercase tracking-tighter rounded-bl-xl shadow-lg">
+                               Completado
+                            </div>
+                          )}
+                          
+                          <div className="flex justify-between items-start mb-4">
+                            <div className="flex items-center gap-5">
+                              <div className="text-center">
+                                 <p className="text-[8px] font-bold text-slate-600 uppercase mb-1">Lot</p>
+                                 <p className="text-xs font-bold text-white">#{String(data.lotes.length - idx).padStart(3, '0')}</p>
+                              </div>
+                              <div>
+                                <p className="text-sm font-bold text-white font-mono">{lote.rango_inicio} — {lote.rango_fin}</p>
+                                <div className="flex items-center gap-2 mt-1">
+                                   <span className="text-[9px] font-bold text-admin-blue uppercase">{lote.zona_nombre || 'Nacional'}</span>
+                                   <span className="w-1 h-1 bg-slate-700 rounded-full" />
+                                   <span className="text-[9px] text-slate-500 uppercase">{lote.cantidad} boletas</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                               <p className="text-[9px] text-slate-500 font-bold mb-1">{new Date(lote.fecha_asignacion).toLocaleDateString()}</p>
+                               <p className="text-[10px] font-black text-white">{lote.activadas || 0} / {lote.cantidad}</p>
+                            </div>
+                          </div>
+
+                          {/* Barra de Progreso Visual */}
+                          <div className="w-full h-1.5 bg-slate-900 rounded-full overflow-hidden mt-2 relative">
+                             <div 
+                                className={`absolute inset-y-0 left-0 transition-all duration-1000 ${isComplete ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.4)]' : 'bg-admin-blue'}`}
+                                style={{ width: `${porcentaje}%` }}
+                             />
                           </div>
                         </div>
-                      </div>
-                      <div className="text-right">
-                         <p className="text-[9px] text-slate-500 font-bold mb-1">{new Date(lote.fecha_asignacion).toLocaleDateString()}</p>
-                         <span className="text-[8px] font-bold text-white/40 border border-white/10 px-1.5 py-0.5 rounded uppercase">Verificado</span>
-                      </div>
-                    </div>
-                  ))}
+                      );
+                    })}
+                  
                   {data.lotes.length === 0 && <p className="text-center text-slate-600 text-xs py-10 italic">Sin lotes asignados aún.</p>}
+                  {data.lotes.length > 0 && data.lotes.filter(l => {
+                      const isComplete = (l.activadas || 0) >= l.cantidad;
+                      if (filterStatus === 'completados') return isComplete;
+                      if (filterStatus === 'pendientes') return !isComplete;
+                      return true;
+                  }).length === 0 && (
+                      <p className="text-center text-slate-600 text-[10px] py-10 uppercase tracking-widest font-black opacity-30">No hay lotes en este estado</p>
+                  )}
                 </div>
               </section>
             </>
@@ -217,9 +279,12 @@ function InventoryDrawer({ dist, onClose }: { dist: Perfil; onClose: () => void 
            <button onClick={onClose} className="flex-1 py-4 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-2xl transition-all">
               Cerrar Expediente
            </button>
-           <button className="flex-1 py-4 bg-admin-blue hover:bg-blue-600 text-white font-bold rounded-2xl transition-all shadow-lg shadow-blue-500/20">
+            <button 
+              onClick={() => window.print()}
+              className="flex-1 py-4 bg-admin-blue hover:bg-blue-600 text-white font-bold rounded-2xl transition-all shadow-lg shadow-blue-500/20"
+            >
               Imprimir Reporte
-           </button>
+            </button>
         </div>
       </div>
     </div>

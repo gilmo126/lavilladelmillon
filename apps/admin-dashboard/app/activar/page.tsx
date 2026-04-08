@@ -1,6 +1,7 @@
-﻿export const dynamic = 'force-dynamic'
+export const dynamic = 'force-dynamic'
 import { createClient } from '../../utils/supabase/server';
 import { redirect } from 'next/navigation';
+import { createAdminClient } from '../../utils/supabase/admin';
 import ActivarForm from './ActivarForm';
 
 export const metadata = {
@@ -9,6 +10,7 @@ export const metadata = {
 
 export default async function ActivarPage() {
   const supabase = await createClient();
+  const supabaseAdmin = createAdminClient();
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
@@ -48,11 +50,22 @@ export default async function ActivarPage() {
   const { data: config } = await supabase.from('configuracion_campana').select('nombre_campana').eq('activa', true).single();
   const nombreCampana = config?.nombre_campana || "CampaÃ±a Activa";
 
-  // 4. Obtener lista de barrios para el formulario
-  const { data: territorios } = await supabase
+  // 4. Obtener lista de barrios para el formulario (Prioridad: Barrios registrados en ventas)
+  const { data: barriosRegistrados } = await supabaseAdmin.rpc('obtener_barrios_sugeridos');
+  const { data: territorios } = await supabaseAdmin
     .from('territorios')
     .select('nombre')
     .order('nombre', { ascending: true });
+
+  // Consolidar listas
+  const listaTerritorios = [
+    ...(barriosRegistrados || []).map((b: any) => ({ nombre: typeof b === 'string' ? b : (b.barrio || '') })),
+    ...(territorios || [])
+  ];
+
+  // Eliminar duplicados y formatear
+  const barriosFinales = Array.from(new Set(listaTerritorios.map(t => t.nombre.toUpperCase())))
+    .map(name => ({ nombre: name }));
 
   const misZonas = userZonas?.map((uz: any) => uz.zonas.nombre) || ['Nacional'];
 
@@ -64,18 +77,18 @@ export default async function ActivarPage() {
           <div className="flex flex-wrap gap-2">
             {misZonas.map((z: string, i: number) => (
                 <span key={i} className="bg-green-500/10 border border-green-500/20 text-green-400 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest">
-                    ðŸ“ {z}
+                    📍 {z}
                 </span>
             ))}
           </div>
         </div>
         <p className="text-slate-400">
-          OperaciÃ³n de Campo: <span className="text-white font-semibold">{profile.nombre}</span> â€” 
-          Gestiona las ventas tÃ¡cticas y activa boletas en tus frentes de trabajo autorizados.
+          Operación de Campo: <span className="text-white font-semibold">{profile.nombre}</span> — 
+          Gestiona las ventas tácticas y activa boletas en tus frentes de trabajo autorizados.
         </p>
       </header>
 
-      <ActivarForm boletas={boletas || []} territorios={territorios || []} />
+      <ActivarForm boletas={boletas || []} territorios={barriosFinales} />
     </div>
   );
 }

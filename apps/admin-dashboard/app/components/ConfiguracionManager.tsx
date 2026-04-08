@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { getConfiguracion, updateConfiguracion } from '../../lib/actions';
+import { getConfiguracion, updateConfiguracion, uploadPublicImagenAction } from '../../lib/actions';
 import { supabase } from '../../lib/supabaseClient';
 
 export default function ConfiguracionManager() {
@@ -54,13 +54,14 @@ export default function ConfiguracionManager() {
 
     setUploading(true);
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `brand/logo-${Date.now()}.${fileExt}`;
-      const { data, error } = await supabase.storage.from('fotos-premios').upload(fileName, file);
-      if (error) throw error;
+      const formData = new FormData();
+      formData.append('file', file);
 
-      const { data: { publicUrl } } = supabase.storage.from('fotos-premios').getPublicUrl(fileName);
-      setFormLogoUrl(publicUrl);
+      const resp = await uploadPublicImagenAction(formData, 'brand');
+
+      if (!resp.success) throw new Error(resp.error);
+
+      setFormLogoUrl(resp.url || null);
     } catch (err: any) {
       alert('Error subiendo logo: ' + err.message);
     } finally {

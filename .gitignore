@@ -51,3 +51,6 @@ supabase/.env.*
 
 # Temporary
 tmp-test/
+
+# Claude Code
+.claude/

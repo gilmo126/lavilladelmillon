@@ -148,13 +148,13 @@ export default function LandingPage() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-6 md:p-12 bg-marca-darker text-white relative overflow-hidden">
+    <main className="flex min-h-screen flex-col items-center justify-center p-4 md:p-8 bg-marca-darker text-white relative overflow-hidden">
       <div className="absolute top-0 w-full h-96 bg-gradient-to-b from-marca-gold/10 to-transparent pointer-events-none" />
 
-      <div className="z-10 w-full max-w-5xl flex flex-col items-center gap-8 md:gap-16">
+      <div className="z-10 w-full max-w-5xl flex flex-col items-center gap-6 md:gap-10">
         
         {/* Encabezado Dinámico (Branding) */}
-        <header className="flex flex-col items-center gap-8 animate-in fade-in zoom-in duration-1000">
+        <header className="flex flex-col items-center gap-5 animate-in fade-in zoom-in duration-1000">
           {logoUrl ? (
             <div className="relative group">
               <div className="absolute -inset-1 bg-gradient-to-r from-marca-gold/20 to-marca-gold/0 rounded-full blur opacity-40 group-hover:opacity-100 transition duration-1000"></div>
@@ -166,12 +166,12 @@ export default function LandingPage() {
             </div>
           )}
           
-          <div className="text-center space-y-4">
+          <div className="text-center space-y-2">
             <h2 className="text-marca-gold font-black tracking-[0.4em] uppercase text-[10px] md:text-xs animate-pulse">Palmira 2026</h2>
-            <h1 className="text-4xl md:text-7xl font-black bg-clip-text text-transparent bg-gradient-to-r from-white via-white/90 to-marca-goldLight drop-shadow-2xl px-4 text-balance">
+            <h1 className="text-2xl md:text-4xl font-black bg-clip-text text-transparent bg-gradient-to-r from-white via-white/90 to-marca-goldLight drop-shadow-2xl px-4 text-balance">
               {campana}
             </h1>
-            <p className="text-gray-400/80 max-w-md mx-auto text-base md:text-xl leading-relaxed italic border-t border-white/10 pt-4 px-4">
+            <p className="text-gray-400/80 max-w-md mx-auto text-sm leading-relaxed italic border-t border-white/10 pt-4 px-4">
               {slogan || "Blindaje Legal y Transparencia: Registra tus datos para participar oficialmente."}
             </p>
           </div>
@@ -180,7 +180,7 @@ export default function LandingPage() {
         {/* Sección: Grandes Sorteos (Galería Aspiracional) */}
         <div className="w-full space-y-10">
           <div className="flex items-center justify-between border-b border-gray-800 pb-2">
-            <h3 className="text-lg md:text-2xl font-black text-white uppercase tracking-wider flex items-center gap-3">
+            <h3 className="text-base font-black text-white uppercase tracking-wider flex items-center gap-3">
               <span className="w-1.5 h-6 bg-marca-gold rounded-full" />
               Próximos Grandes Sorteos
             </h3>
@@ -209,7 +209,7 @@ export default function LandingPage() {
                     </div>
                   </div>
                   <div className="p-6 space-y-3 flex flex-col flex-1 bg-gradient-to-b from-[#111] to-black">
-                    <h4 className="text-xl font-black text-white group-hover:text-marca-gold transition-colors leading-tight">{p.nombre_premio}</h4>
+                    <h4 className="text-sm font-black text-white group-hover:text-marca-gold transition-colors leading-tight">{p.nombre_premio}</h4>
                     <p className="text-xs text-gray-500 line-clamp-4 flex-1 leading-relaxed font-medium">
                       {p.descripcion}
                     </p>
@@ -222,19 +222,19 @@ export default function LandingPage() {
         </div>
 
         {/* Sección Formulario */}
-        <div className="w-full max-w-2xl space-y-12 flex flex-col items-center mt-8">
-          <div className="w-full glass-panel rounded-[2.5rem] p-10 md:p-14 shadow-2xl relative overflow-hidden border border-white/5">
+        <div className="w-full max-w-2xl space-y-8 flex flex-col items-center mt-4">
+          <div className="w-full glass-panel rounded-[2.5rem] p-6 md:p-10 shadow-2xl relative overflow-hidden border border-white/5">
             <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-marca-gold/20 via-marca-gold to-marca-gold/20" />
 
-            <div className="mb-10 text-center">
-              <h3 className="text-2xl font-bold text-white mb-2 tracking-tight">Registro Oficial de Participante</h3>
+            <div className="mb-6 text-center">
+              <h3 className="text-lg font-bold text-white mb-2 tracking-tight">Registro Oficial de Participante</h3>
               <p className="text-gray-500 text-sm">Completa los datos de tu boleta física para habilitar tu número.</p>
             </div>
 
             {errorMSG && <div className="mb-8 p-4 rounded-xl bg-red-900/30 border border-red-500/30 text-red-200 text-sm text-center animate-in slide-in-from-top duration-300">{errorMSG}</div>}
             {successMSG && <div className="mb-8 p-4 rounded-xl bg-green-900/30 border border-green-500/30 text-green-200 text-sm text-center animate-in slide-in-from-top duration-300">{successMSG}</div>}
 
-            <form onSubmit={handleSubmit} className="flex flex-col gap-8">
+            <form onSubmit={handleSubmit} className="flex flex-col gap-5">
               <div className="space-y-3">
                 <label htmlFor="token" className="text-sm font-bold text-gray-400 uppercase tracking-widest pl-1">Número de Boleta</label>
                 <input
@@ -244,7 +244,7 @@ export default function LandingPage() {
                   required
                   value={tokenIntegridad}
                   onChange={(e) => setTokenIntegridad(e.target.value)}
-                  className="w-full bg-marca-dark/50 border border-gray-700/50 rounded-2xl px-6 py-4 text-xl text-white focus:outline-none focus:border-marca-gold uppercase font-mono transition-all"
+                  className="w-full bg-marca-dark/50 border border-gray-700/50 rounded-2xl px-5 py-3 text-sm text-white focus:outline-none focus:border-marca-gold uppercase font-mono transition-all"
                 />
               </div>
 
@@ -257,7 +257,7 @@ export default function LandingPage() {
                     required
                     value={identificacion}
                     onChange={(e) => setIdentificacion(e.target.value)}
-                    className="w-full bg-marca-dark/50 border border-gray-700/50 rounded-2xl px-6 py-4 text-white focus:outline-none focus:border-marca-gold transition-all"
+                    className="w-full bg-marca-dark/50 border border-gray-700/50 rounded-2xl px-5 py-3 text-sm text-white focus:outline-none focus:border-marca-gold transition-all"
                   />
                 </div>
                 <div className="space-y-3">
@@ -268,7 +268,7 @@ export default function LandingPage() {
                     required
                     value={celular}
                     onChange={(e) => setCelular(e.target.value)}
-                    className="w-full bg-marca-dark/50 border border-gray-700/50 rounded-2xl px-6 py-4 text-white focus:outline-none focus:border-marca-gold transition-all"
+                    className="w-full bg-marca-dark/50 border border-gray-700/50 rounded-2xl px-5 py-3 text-sm text-white focus:outline-none focus:border-marca-gold transition-all"
                   />
                 </div>
               </div>
@@ -281,7 +281,7 @@ export default function LandingPage() {
                   required
                   value={nombre}
                   onChange={(e) => setNombre(e.target.value)}
-                  className="w-full bg-marca-dark/50 border border-gray-700/50 rounded-2xl px-6 py-4 text-white focus:outline-none focus:border-marca-gold transition-all"
+                  className="w-full bg-marca-dark/50 border border-gray-700/50 rounded-2xl px-5 py-3 text-sm text-white focus:outline-none focus:border-marca-gold transition-all"
                 />
               </div>
 
@@ -302,7 +302,7 @@ export default function LandingPage() {
                       setShowUbicaciones(true);
                     }}
                     autoComplete="off"
-                    className="w-full bg-marca-dark/50 border border-gray-700/50 rounded-2xl px-6 py-4 text-white focus:outline-none focus:border-marca-gold transition-all"
+                    className="w-full bg-marca-dark/50 border border-gray-700/50 rounded-2xl px-5 py-3 text-sm text-white focus:outline-none focus:border-marca-gold transition-all"
                   />
                   {showUbicaciones && (ubicacionBusqueda || showUbicaciones) && !territorioSel && (
                     <div className="absolute z-20 w-full mt-2 bg-marca-dark border border-gray-700 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300 backdrop-blur-xl">
@@ -358,7 +358,7 @@ export default function LandingPage() {
                       placeholder="Escribe el nombre manualmente"
                       value={otroBarrio}
                       onChange={(e) => setOtroBarrio(e.target.value)}
-                      className="w-full bg-marca-dark/50 border border-marca-gold/30 rounded-2xl px-6 py-4 text-white focus:outline-none focus:border-marca-gold transition-all"
+                      className="w-full bg-marca-dark/50 border border-marca-gold/30 rounded-2xl px-5 py-3 text-sm text-white focus:outline-none focus:border-marca-gold transition-all"
                     />
                   </div>
                 )}
@@ -373,7 +373,7 @@ export default function LandingPage() {
                       required
                       value={premioSel}
                       onChange={(e) => setPremioSel(e.target.value)}
-                      className="flex-1 bg-marca-dark/50 border border-gray-700/50 rounded-2xl px-6 py-4 text-white focus:outline-none focus:border-marca-gold appearance-none cursor-pointer transition-all"
+                      className="flex-1 bg-marca-dark/50 border border-gray-700/50 rounded-2xl px-5 py-3 text-sm text-white focus:outline-none focus:border-marca-gold appearance-none cursor-pointer transition-all"
                     >
                       <option value="" disabled>-- Selecciona un sorteo --</option>
                       {premiosDisponibles.map(p => (
@@ -437,7 +437,7 @@ export default function LandingPage() {
               <button
                 type="submit"
                 disabled={isSubmitting || !aceptaTerminos}
-                className={`w-full py-6 rounded-[1.5rem] font-black text-xl uppercase tracking-[0.2em] transition-all shadow-2xl
+                className={`w-full py-4 rounded-[1.5rem] font-black text-sm uppercase tracking-[0.2em] transition-all shadow-2xl
                   ${isSubmitting || !aceptaTerminos
                     ? 'bg-gray-800 text-gray-600 cursor-not-allowed border border-gray-700/30' 
                     : 'bg-gradient-to-r from-marca-gold to-marca-goldLight text-marca-darker hover:shadow-marca-gold/40 hover:scale-[1.03] active:scale-95'
@@ -459,41 +459,41 @@ export default function LandingPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/90 backdrop-blur-xl animate-in fade-in duration-500">
           <div className="bg-marca-dark border border-marca-gold/20 rounded-[2.5rem] w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl relative">
             <div className="p-8 border-b border-gray-800 flex justify-between items-center bg-marca-dark/50 backdrop-blur-md">
-              <h3 className="text-2xl font-black text-marca-gold uppercase tracking-widest">Mecánica v1.0</h3>
+              <h3 className="text-lg font-black text-marca-gold uppercase tracking-widest">Mecánica v1.0</h3>
               <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-white text-2xl transition-transform hover:rotate-90">✕</button>
             </div>
             
-            <div className="p-6 md:p-10 overflow-y-auto space-y-8 text-gray-300 leading-relaxed text-sm md:text-base scrollbar-hide">
+            <div className="p-6 md:p-10 overflow-y-auto space-y-8 text-gray-300 leading-relaxed text-sm scrollbar-hide">
               <section className="space-y-3">
-                <h4 className="text-white font-black text-lg md:text-xl flex items-center gap-3">
+                <h4 className="text-white font-black text-base flex items-center gap-3">
                   <span className="text-marca-gold">01.</span> MECÁNICA
                 </h4>
                 <p>Esta boleta es un obsequio gratuito. Para participar, el poseedor debe escanear el QR y registrar sus datos personales en este portal oficial.</p>
               </section>
 
               <section className="space-y-3">
-                <h4 className="text-white font-black text-lg md:text-xl flex items-center gap-3">
+                <h4 className="text-white font-black text-base flex items-center gap-3">
                   <span className="text-marca-gold">02.</span> REGLA DE ORO
                 </h4>
                 <p>Las boletas NO REGISTRADAS antes de la fecha del sorteo quedarán automáticamente excluidas de la tómbola digital.</p>
               </section>
 
               <section className="space-y-3">
-                <h4 className="text-white font-black text-lg md:text-xl flex items-center gap-3">
+                <h4 className="text-white font-black text-base flex items-center gap-3">
                   <span className="text-marca-gold">03.</span> RESTRICCIONES
                 </h4>
                 <p>Actividad válida para mayores de 18 años. Premios personales e intransferibles bajo cédula registrada.</p>
               </section>
 
               <section className="space-y-3">
-                <h4 className="text-white font-black text-lg md:text-xl flex items-center gap-3">
+                <h4 className="text-white font-black text-base flex items-center gap-3">
                   <span className="text-marca-gold">04.</span> EL SORTEO
                 </h4>
                 <p>Se realizará en las instalaciones de la campaña y se transmitirá por canales oficiales de redes sociales.</p>
               </section>
 
               <section className="space-y-3">
-                <h4 className="text-white font-black text-lg md:text-xl flex items-center gap-3">
+                <h4 className="text-white font-black text-base flex items-center gap-3">
                   <span className="text-marca-gold">05.</span> CADUCIDAD
                 </h4>
                 <p>El ganador tiene 30 días calendario para reclamar su premio con boleta física y documento original.</p>

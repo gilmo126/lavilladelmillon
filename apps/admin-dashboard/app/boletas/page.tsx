@@ -1,5 +1,4 @@
 export const dynamic = 'force-dynamic'
-export const runtime = 'edge';
 import React from 'react';
 import BoletasBrowser from '../components/BoletasBrowser';
 

@@ -1,5 +1,4 @@
 export const dynamic = 'force-dynamic'
-export const runtime = 'edge';
 import { createClient } from '../../utils/supabase/server';
 import { redirect } from 'next/navigation';
 import CreateZonaForm from './CreateZonaForm';

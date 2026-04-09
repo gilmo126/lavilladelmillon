@@ -128,15 +128,19 @@ export async function anularBoletaAction(adminId: string, idBoleta: number) {
 // ==========================================
 // Módulo: GEOGRAFÍA Y RANKING
 // ==========================================
-export async function getRankingZonas() {
+export async function getRankingZonas(distribuidorId?: string) {
   // Atomic Join para evitar errores 500 de PostgREST
   const [resBoletas, resZonas] = await Promise.all([
-      supabaseAdmin.from('boletas').select('zona_id, zona_destino_id, estado'),
+      (() => {
+        let q = supabaseAdmin.from('boletas').select('zona_id, zona_destino_id, estado');
+        if (distribuidorId) q = q.eq('distribuidor_id', distribuidorId);
+        return q;
+      })(),
       supabaseAdmin.from('zonas').select('id, nombre')
   ]);
 
   if (resBoletas.error) throw resBoletas.error;
-  
+
   const zonasMap = (resZonas.data || []).reduce((acc: any, z) => {
     acc[z.id] = z.nombre;
     return acc;
@@ -149,10 +153,10 @@ export async function getRankingZonas() {
 
     const zonaName = zonasMap[zId] || 'Otras';
     if (!acc[zonaName]) acc[zonaName] = { nombre: zonaName, activadas: 0, registradas: 0 };
-    
-    if (curr.estado >= 2) acc[zonaName].activadas++;
-    if (curr.estado >= 3) acc[zonaName].registradas++;
-    
+
+    if (curr.estado === 2) acc[zonaName].activadas++;
+    if (curr.estado === 3) acc[zonaName].registradas++;
+
     return acc;
   }, {});
 
@@ -369,8 +373,8 @@ export async function cerrarSorteoAction(adminId: string, campanaId: string) {
 }
 
 export async function getDashboardCounts(distribuidorId?: string) {
-  const baseQuery = supabaseAdmin.from('boletas').select('*', { count: 'exact', head: true });
-  if (distribuidorId) baseQuery.eq('distribuidor_id', distribuidorId);
+  let baseQuery = supabaseAdmin.from('boletas').select('*', { count: 'exact', head: true });
+  if (distribuidorId) baseQuery = baseQuery.eq('distribuidor_id', distribuidorId);
 
   const [t, a, r] = await Promise.all([
     baseQuery,

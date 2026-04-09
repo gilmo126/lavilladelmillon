@@ -22,12 +22,10 @@ export default async function DashboardPage() {
   const isDist = profile.rol === 'distribuidor';
 
   // Construir consultas base dependientes del ROL
-  const baseBoletas = supabaseAdmin.from('boletas').select('*', { count: 'exact', head: true });
-  const recientesQuery = supabaseAdmin.from('boletas').select('id_boleta, token_integridad, zona_comercio, estado, nombre_usuario, updated_at').order('updated_at', { ascending: false }).limit(10);
+  let baseBoletas = supabaseAdmin.from('boletas').select('*', { count: 'exact', head: true });
 
   if (isDist) {
-    baseBoletas.eq('distribuidor_id', user?.id);
-    recientesQuery.eq('distribuidor_id', user?.id);
+    baseBoletas = baseBoletas.eq('distribuidor_id', user!.id);
   }
 
   const { getBoletasPaged, getRankingZonas, getConfiguracion } = await import('../lib/actions');
@@ -46,7 +44,7 @@ export default async function DashboardPage() {
         const { count: r } = await supabaseAdmin.from('boletas').select('*', { count: 'exact', head: true }).eq('estado', 3).match(isDist ? { distribuidor_id: user?.id } : {});
         return { total: t || 0, activas: a || 0, registradas: r || 0 };
     })(),
-    getRankingZonas()
+    getRankingZonas(isDist ? user!.id : undefined)
   ]);
 
   const nombreCampana = config?.nombre_campana || "Sin Campaña Activa";

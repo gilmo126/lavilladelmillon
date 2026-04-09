@@ -38,7 +38,7 @@ export default function LandingPage() {
   useEffect(() => {
     const fetchConfig = async () => {
       try {
-        const { data: config, error } = await supabase.from('configuracion_campana').select('*').single();
+        const { data: config, error } = await supabase.from('configuracion_campana').select('*').limit(1).single();
         if (error) throw error;
         
         if (config) {

@@ -110,9 +110,9 @@ export default function RealtimeDashboard({ initialConfig, initialCounts, initia
   }, [page, fetchPagedData]);
 
   const bodega = total - (activas + registradas);
-  const pctRegistradas = total > 0 ? Math.round((registradas / total) * 100) : 0;
-  const pctActivas = total > 0 ? Math.round((activas / total) * 100) : 0;
-  const pctBodega = total > 0 ? Math.round((bodega / total) * 100) : 0;
+  const pctRegistradas = total > 0 ? parseFloat(((registradas / total) * 100).toFixed(1)) : 0;
+  const pctActivas = total > 0 ? parseFloat(((activas / total) * 100).toFixed(1)) : 0;
+  const pctBodega = total > 0 ? parseFloat(((bodega / total) * 100).toFixed(1)) : 0;
 
   const kpis = [
     { label: 'Campaña Activa', value: initialConfig, color: 'text-admin-gold' },

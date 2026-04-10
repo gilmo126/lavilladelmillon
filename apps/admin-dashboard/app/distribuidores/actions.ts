@@ -14,7 +14,7 @@ export async function createPersonalAction(formData: FormData) {
     const { data: profile } = await supabase.from('perfiles').select('rol').eq('id', user.id).single();
     if (profile?.rol !== 'admin') return { success: false, error: 'Solo la gerencia puede crear personal.' };
 
-    const rol      = formData.get('rol') as string; // 'distribuidor' | 'operativo'
+    const rol      = formData.get('rol') as string;
     const email    = formData.get('email') as string;
     const password = formData.get('password') as string;
     const nombre   = formData.get('nombre') as string;
@@ -81,7 +81,6 @@ export async function createPersonalAction(formData: FormData) {
     }
 
     revalidatePath('/distribuidores');
-    revalidatePath('/asignaciones');
     return { success: true };
 
   } catch (err: any) {
@@ -98,9 +97,8 @@ export async function updatePerfilAction(formData: FormData) {
     if (!user) return { success: false, error: 'Acceso Denegado' };
 
     const { data: me } = await supabase.from('perfiles').select('rol').eq('id', user.id).single();
-    const isAdmin     = me?.rol === 'admin';
-    const isOperativo = me?.rol === 'operativo';
-    if (!isAdmin && !isOperativo) return { success: false, error: 'Sin permisos.' };
+    const isAdmin = me?.rol === 'admin';
+    if (!isAdmin) return { success: false, error: 'Sin permisos.' };
 
     const target_id = formData.get('target_id') as string;
     const nombre    = formData.get('nombre') as string;
@@ -125,7 +123,7 @@ export async function updatePerfilAction(formData: FormData) {
     if (error) throw error;
 
     // Sincronización Directa y N:N (Misión de Estabilización)
-    if (isAdmin && target?.rol === 'distribuidor') {
+    if (target?.rol === 'distribuidor') {
       try {
         // 1. Borrar anteriores
         await supabase.from('perfil_zonas').delete().eq('perfil_id', target_id);

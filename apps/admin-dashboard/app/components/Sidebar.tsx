@@ -11,29 +11,18 @@ export default function Sidebar({ role, userName, campanaNombre }: { role: strin
 
   // ── Admin: Acceso Total ───────────────────────────────────────────
   const adminItems = [
-    { href: '/',                  label: '📊 Dashboard Principal' },
-    { href: '/trazabilidad',      label: '🔎 Buscador Trazabilidad' },
-    { href: '/ventas',            label: '📈 Reporte de Ventas' },
-    { href: '/boletas',           label: '🎟️ Explorador Boletas' },
+    { href: '/',                label: '📊 Dashboard Principal' },
+    { href: '/trazabilidad',    label: '🔎 Buscador Trazabilidad' },
+    { href: '/ventas',          label: '📈 Reporte de Ventas' },
+    { href: '/boletas',         label: '🎟️ Explorador Boletas' },
     { sep: true, label: 'LOGÍSTICA' },
-    { href: '/sorteos',           label: '📅 Gestión de Sorteos' },
-    { href: '/asignaciones',      label: '📦 Asignaciones Masivas' },
-    { href: '/bodega',            label: '📥 Ingreso a Bodega' },
+    { href: '/sorteos',         label: '📅 Gestión de Sorteos' },
     { sep: true, label: 'PERSONAL' },
-    { href: '/distribuidores',    label: '👥 Gestión de Personal' },
-    { href: '/zonas',             label: '📍 Territorios y Zonas' },
+    { href: '/distribuidores',  label: '👥 Gestión de Personal' },
+    { href: '/zonas',           label: '📍 Territorios y Zonas' },
     { sep: true, label: 'CAMPAÑA' },
-    { href: '/premios',           label: '🎁 Gestionar Premios' },
-    { href: '/configuracion',     label: '⚙️ Llaves Maestras' },
-  ];
-
-  // ── Operativo: Bodega + Auditoría ────────────────────────────────
-  const operativoItems = [
-    { href: '/asignaciones',       label: '📦 Asignaciones Masivas' },
-    { href: '/mis-distribuidores', label: '👥 Mis Distribuidores' },
-    { sep: true, label: 'AUDITORÍA' },
-    { href: '/trazabilidad',       label: '🔎 Buscador Trazabilidad' },
-    { href: '/ventas',             label: '📈 Reporte de Ventas' },
+    { href: '/premios',         label: '🎁 Gestionar Premios' },
+    { href: '/configuracion',   label: '⚙️ Llaves Maestras' },
   ];
 
   // ── Distribuidor: Operatividad de campo ─────────────────────────
@@ -42,18 +31,14 @@ export default function Sidebar({ role, userName, campanaNombre }: { role: strin
     { href: '/activar', label: '🚀 Activar Boletas' },
   ];
 
-  const menuItems = role === 'admin' ? adminItems
-    : role === 'operativo' ? operativoItems
-    : distItems;
+  const menuItems = role === 'admin' ? adminItems : distItems;
 
   const roleBadge: Record<string, string> = {
     admin:        'text-admin-gold',
-    operativo:    'text-blue-400',
     distribuidor: 'text-green-400',
   };
   const roleLabel: Record<string, string> = {
     admin:        'Gerencia',
-    operativo:    'Operativo',
     distribuidor: 'Distribuidor',
   };
 
@@ -62,7 +47,7 @@ export default function Sidebar({ role, userName, campanaNombre }: { role: strin
   return (
     <>
       {/* Botón de Hamburguesa Móvil */}
-      <button 
+      <button
         onClick={toggleSidebar}
         className="fixed top-4 left-4 z-[100] md:hidden w-12 h-12 bg-slate-900 border border-white/10 rounded-2xl flex items-center justify-center text-white shadow-2xl active:scale-95 transition-all"
       >
@@ -71,14 +56,14 @@ export default function Sidebar({ role, userName, campanaNombre }: { role: strin
 
       {/* Backdrop para móvil */}
       {isOpen && (
-        <div 
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[80] md:hidden animate-in fade-in duration-300"
-            onClick={toggleSidebar}
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[80] md:hidden animate-in fade-in duration-300"
+          onClick={toggleSidebar}
         />
       )}
 
       <aside className={`
-        fixed inset-y-0 left-0 z-[90] w-72 bg-slate-900 border-r border-white/5 p-8 flex flex-col 
+        fixed inset-y-0 left-0 z-[90] w-72 bg-slate-900 border-r border-white/5 p-8 flex flex-col
         transition-transform duration-500 ease-out shadow-2xl
         md:relative md:translate-x-0 md:flex md:w-64 md:z-auto
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
@@ -88,10 +73,10 @@ export default function Sidebar({ role, userName, campanaNombre }: { role: strin
             {campanaNombre.substring(0, 2)}
           </div>
           <div>
-              <h1 className="font-black tracking-tighter text-sm text-white truncate leading-none">
-                {campanaNombre}
-              </h1>
-              <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-1">Ecosistema V180C</p>
+            <h1 className="font-black tracking-tighter text-sm text-white truncate leading-none">
+              {campanaNombre}
+            </h1>
+            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-1">Ecosistema V180C</p>
           </div>
         </div>
 
@@ -108,10 +93,10 @@ export default function Sidebar({ role, userName, campanaNombre }: { role: strin
             if ('sep' in item && item.sep) {
               return (
                 <div key={`sep-${idx}`} className="flex items-center gap-3 pt-6 pb-2 px-2">
-                    <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest whitespace-nowrap">
-                        {item.label}
-                    </p>
-                    <div className="h-px bg-white/5 flex-1" />
+                  <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest whitespace-nowrap">
+                    {item.label}
+                  </p>
+                  <div className="h-px bg-white/5 flex-1" />
                 </div>
               );
             }
@@ -121,7 +106,7 @@ export default function Sidebar({ role, userName, campanaNombre }: { role: strin
               <Link
                 key={href}
                 href={href}
-                onClick={() => setIsOpen(false)} // Cerrar al navegar en móvil
+                onClick={() => setIsOpen(false)}
                 className={`flex items-center gap-4 px-4 py-3 rounded-xl font-bold transition-all text-xs uppercase tracking-tight group ${
                   isActive
                     ? 'bg-admin-blue/10 text-admin-blue border border-admin-blue/20 shadow-lg shadow-blue-500/5'

@@ -12,7 +12,7 @@ export default async function VentasReportPage({ searchParams }: { searchParams:
   if (!user) redirect('/login');
 
   const { data: profile } = await supabase.from('perfiles').select('rol').eq('id', user.id).single();
-  if (!profile || !['admin', 'operativo'].includes(profile.rol)) {
+  if (!profile || profile.rol !== 'admin') {
     redirect('/');
   }
 

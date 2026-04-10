@@ -12,7 +12,7 @@ export default async function TrazabilidadPage() {
 
   const { data: profile } = await supabase.from('perfiles').select('id, rol, nombre').eq('id', user.id).single();
   
-  if (!profile || !['admin', 'operativo', 'distribuidor'].includes(profile.rol)) {
+  if (!profile || !['admin', 'distribuidor'].includes(profile.rol)) {
     return <div className="p-8 text-red-500 font-bold">Módulo restringido.</div>;
   }
 

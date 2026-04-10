@@ -8,7 +8,7 @@ export async function buscarTrazabilidadAction(formData: FormData) {
   if (!user) return { success: false, error: 'Sesión no válida.', results: [] };
 
   const { data: me } = await supabase.from('perfiles').select('id, rol, nombre').eq('id', user.id).single();
-  if (!me || !['admin', 'operativo', 'distribuidor'].includes(me.rol)) {
+  if (!me || !['admin', 'distribuidor'].includes(me.rol)) {
     return { success: false, error: 'Acceso denegado.', results: [] };
   }
 

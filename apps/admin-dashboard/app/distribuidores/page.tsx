@@ -36,14 +36,13 @@ export default async function DistribuidoresPage() {
   }));
 
   const distribuidores = mappedPerfiles.filter(p => p.rol === 'distribuidor');
-  const operativos = mappedPerfiles.filter(p => p.rol === 'operativo');
   const zonas = allZonas;
 
   return (
     <div className="p-8 pb-20 h-full overflow-y-auto">
       <header className="mb-8">
         <h1 className="text-3xl font-bold mb-2">GestiÃ³n de Personal</h1>
-        <p className="text-slate-400">AdministraciÃ³n de Distribuidores LogÃ­sticos y Operativos de Bodega. CRUD completo con trazabilidad de identidad.</p>
+        <p className="text-slate-400">Administración de Distribuidores Logísticos. CRUD completo con trazabilidad de identidad.</p>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -54,9 +53,7 @@ export default async function DistribuidoresPage() {
           </div>
           <GestionPersonalClient
             distribuidores={distribuidores || []}
-            operativos={operativos || []}
             zonas={zonas || []}
-            catalogoZonas={zonas || []}
           />
         </div>
 

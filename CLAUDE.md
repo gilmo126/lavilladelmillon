@@ -103,6 +103,31 @@ o secret encriptado (via `wrangler secret put`). Nunca ambos.
 - **`Math.round()` aplasta fracciones pequeñas** → usar **`toFixed(1)`** para mostrar
   porcentajes con un decimal (ej: conversión en embudo).
 
+### supabase vs supabaseAdmin en Server Components
+
+- **SIEMPRE usar `supabaseAdmin`** para queries de `perfiles` y datos internos en
+  Server Components (`layout.tsx`, `page.tsx`).
+- `supabase` (cliente autenticado via `createClient()`) puede fallar silenciosamente
+  con RLS después de redirects, causando loops o "Rendering..." indefinido.
+- `supabase` solo usar en componentes cliente para operaciones del usuario autenticado.
+
+### Middleware matcher en Next.js 16
+
+- **No excluir `/login`** del matcher — si se excluye, el middleware no redirige
+  usuarios autenticados de `/login` a `/`, causando sidebar + login form simultáneos.
+- Envolver `getUser()` en try-catch para que fallos no causen redirect loops.
+- Patrón correcto del matcher:
+  ```
+  /((?!_next/static|_next/image|api|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)
+  ```
+
+### Coexistencia de datos V1 y V2
+
+- Las boletas antiguas (bodega manual) coexisten con las nuevas (generadas por pack).
+- Las nuevas boletas V2 tienen `pack_id NOT NULL`.
+- Las antiguas tienen `pack_id = null`.
+- Los filtros y queries deben considerar ambos casos durante la transición.
+
 ---
 
 ## REDISEÑO V2 — EN PROGRESO

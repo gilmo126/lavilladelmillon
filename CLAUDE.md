@@ -120,7 +120,7 @@ El modelo logístico cambia de boletas individuales asignadas por rango a **pack
 | **Fase 1** | ✅ Completada | Migraciones de base de datos |
 | **Fase 2** | ✅ Completada | Limpieza de código — módulos y rol obsoletos |
 | **Fase 3** | ✅ Completada | Nuevo módulo de venta de packs |
-| **Fase 4** | ⏳ Pendiente | Comunicación WhatsApp/email con links individuales |
+| **Fase 4** | ✅ Completada | Comunicación WhatsApp/email con links individuales |
 | **Fase 5** | ✅ Completada | Página temporal del comerciante `/pack/[token]` en landing-page |
 | **Fase 6** | ⏳ Pendiente | Actualizar módulos existentes con nuevos estados |
 
@@ -163,6 +163,21 @@ La ruta `/activar` fue completamente reemplazada. Ya no activa boletas individua
   - Codifica: `lavilladelmillon-admin.guillaumer-orion.workers.dev/validar-qr/[token_qr]`
   - La ruta `/validar-qr/[token_qr]` se construirá en Fase 6
 - Si pago pendiente: aviso con fecha límite, QR se activa al confirmar pago
+
+### Fase 4 — Comunicación WhatsApp y Email
+
+Botones en la pantalla de confirmación de `VenderPackForm.tsx` para enviar el pack al comerciante.
+
+**WhatsApp:** Link `wa.me/?text=...` con mensaje pre-formado que incluye nombre del comerciante y URL del pack. Siempre disponible.
+
+**Email (Resend):**
+- Server action `enviarEmailPackAction` en `actions.ts`
+- Remitente modo pruebas: `onboarding@resend.dev`
+- Template HTML inline con estilo dark/dorado: saludo, grid 5×5 de números, botón CTA al pack
+- Solo visible si el comerciante tiene email registrado
+- Estados del botón: idle → sending → sent / error (con reintento)
+
+**Variable de entorno:** `RESEND_API_KEY` — runtime secret en Cloudflare Worker (`wrangler secret put RESEND_API_KEY`)
 
 ### Fase 5 — Página del Comerciante (`/pack/[token]`) en landing-page
 

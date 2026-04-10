@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 import { getPacksPaged } from '../../lib/actions';
 import VentasClient from './VentasClient';
 import { createClient } from '../../utils/supabase/server';
+import { supabaseAdmin } from '../../lib/supabaseAdmin';
 import { redirect } from 'next/navigation';
 
 export const metadata = { title: 'Packs Vendidos | AdminPanel' };
@@ -11,7 +12,7 @@ export default async function VentasReportPage({ searchParams }: { searchParams:
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  const { data: profile } = await supabase.from('perfiles').select('rol').eq('id', user.id).single();
+  const { data: profile } = await supabaseAdmin.from('perfiles').select('rol').eq('id', user.id).single();
   if (!profile || profile.rol !== 'admin') {
     redirect('/');
   }

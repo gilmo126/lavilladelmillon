@@ -14,7 +14,7 @@ export default async function ActivarPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  const { data: profile } = await supabase
+  const { data: profile } = await supabaseAdmin
     .from('perfiles')
     .select('nombre, rol')
     .eq('id', user.id)

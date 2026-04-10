@@ -1,5 +1,6 @@
 export const dynamic = 'force-dynamic'
 import { createClient } from '../../utils/supabase/server';
+import { supabaseAdmin } from '../../lib/supabaseAdmin';
 import { redirect } from 'next/navigation';
 import CreateZonaForm from './CreateZonaForm';
 import { deleteZonaAction } from './actions';
@@ -30,7 +31,7 @@ export default async function ZonasPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  const { data: profile } = await supabase.from('perfiles').select('*').eq('id', user.id).single();
+  const { data: profile } = await supabaseAdmin.from('perfiles').select('*').eq('id', user.id).single();
   if (profile?.rol !== 'admin') {
     return <div className="p-8 text-red-500 font-bold">Bloqueo: MÃ³dulo exclusivo de Gerencia.</div>;
   }

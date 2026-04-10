@@ -12,6 +12,7 @@ export const metadata: Metadata = {
 };
 
 import { createClient } from '../utils/supabase/server';
+import { supabaseAdmin } from '../lib/supabaseAdmin';
 
 export default async function RootLayout({
   children,
@@ -25,11 +26,11 @@ export default async function RootLayout({
   let userName = '';
 
   // Obtener Configuración de Marca (Llaves Maestras)
-  const { data: config } = await supabase.from('configuracion_campana').select('nombre_campana').limit(1).single();
+  const { data: config } = await supabaseAdmin.from('configuracion_campana').select('nombre_campana').limit(1).single();
   const campanaNombre = config?.nombre_campana || 'La Villa del Millón';
 
   if (user) {
-    const { data: profile } = await supabase.from('perfiles').select('*').eq('id', user.id).single();
+    const { data: profile } = await supabaseAdmin.from('perfiles').select('rol, nombre').eq('id', user.id).single();
     if (profile) {
        role = profile.rol;
        userName = profile.nombre;

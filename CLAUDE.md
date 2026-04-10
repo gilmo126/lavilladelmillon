@@ -121,7 +121,7 @@ El modelo logístico cambia de boletas individuales asignadas por rango a **pack
 | **Fase 2** | ✅ Completada | Limpieza de código — módulos y rol obsoletos |
 | **Fase 3** | ✅ Completada | Nuevo módulo de venta de packs |
 | **Fase 4** | ⏳ Pendiente | Comunicación WhatsApp/email con links individuales |
-| **Fase 5** | ⏳ Pendiente | Página temporal del comerciante `/pack/[token]` en landing-page |
+| **Fase 5** | ✅ Completada | Página temporal del comerciante `/pack/[token]` en landing-page |
 | **Fase 6** | ⏳ Pendiente | Actualizar módulos existentes con nuevos estados |
 
 ### Fase 1 — Migraciones aplicadas en Supabase
@@ -163,6 +163,28 @@ La ruta `/activar` fue completamente reemplazada. Ya no activa boletas individua
   - Codifica: `lavilladelmillon-admin.guillaumer-orion.workers.dev/validar-qr/[token_qr]`
   - La ruta `/validar-qr/[token_qr]` se construirá en Fase 6
 - Si pago pendiente: aviso con fecha límite, QR se activa al confirmar pago
+
+### Fase 5 — Página del Comerciante (`/pack/[token]`) en landing-page
+
+Página pública (sin autenticación) donde el comerciante ve sus 25 números y los comparte por WhatsApp.
+
+**Migración aplicada:** `fase5_pack_publica`
+- Agrega `dias_validez_pagina_comerciante int DEFAULT 30` a `configuracion_campana`
+- Crea RPC `get_pack_publica(p_token text)` — SECURITY DEFINER con `GRANT EXECUTE TO anon`
+- La RPC valida expiración basada en `fecha_venta + dias_validez_pagina_comerciante`
+
+**Archivos:**
+
+| Archivo | Rol |
+|---------|-----|
+| `app/pack/[token]/page.tsx` | Server component: llama RPC `get_pack_publica`, maneja error/not found/expired |
+| `app/pack/[token]/PackPageClient.tsx` | Client component: grid de números con botón WhatsApp por cada uno |
+
+**Funcionalidad:**
+- Cada número muestra botón "Compartir" que abre WhatsApp con mensaje pre-formado incluyendo link de registro
+- Botón "Copiar todos" copia lista completa de números al portapapeles
+- Header muestra nombre del comerciante, cantidad de números y fecha de vencimiento
+- URL de WhatsApp: `https://wa.me/?text=...número XXXXXX...landing-url?numero=XXXXXX`
 
 ### Fase 2 — Eliminados
 

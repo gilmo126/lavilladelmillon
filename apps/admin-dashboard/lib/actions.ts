@@ -230,7 +230,7 @@ export async function updateConfiguracion(id: string, updates: any) {
   return { success: true };
 }
 
-export async function getPacksPaged(page: number, limit: number, query: string) {
+export async function getPacksPaged(page: number, limit: number, query: string, distribuidorId?: string) {
   const from = (page - 1) * limit;
   const to = from + limit - 1;
 
@@ -238,6 +238,10 @@ export async function getPacksPaged(page: number, limit: number, query: string) 
     '*, distribuidor:perfiles!distribuidor_id(nombre)',
     { count: 'exact' }
   );
+
+  if (distribuidorId) {
+    queryBuilder = queryBuilder.eq('distribuidor_id', distribuidorId);
+  }
 
   if (query) {
     queryBuilder = queryBuilder.or(`comerciante_nombre.ilike.%${query}%,comerciante_tel.ilike.%${query}%`);
@@ -270,6 +274,25 @@ export async function getPacksPaged(page: number, limit: number, query: string) 
   }));
 
   return { data: mapped, total: count || 0, totalPages: count ? Math.ceil(count / limit) : 0 };
+}
+
+export async function getPackDetail(packId: string) {
+  const [{ data: pack, error: packErr }, { data: boletas, error: bolErr }] = await Promise.all([
+    supabaseAdmin
+      .from('packs')
+      .select('*, distribuidor:perfiles!distribuidor_id(nombre)')
+      .eq('id', packId)
+      .single(),
+    supabaseAdmin
+      .from('boletas')
+      .select('id_boleta, estado')
+      .eq('pack_id', packId)
+      .order('id_boleta', { ascending: true }),
+  ]);
+
+  if (packErr || !pack) throw new Error(packErr?.message || 'Pack no encontrado');
+
+  return { pack, boletas: boletas || [] };
 }
 
 

@@ -12,17 +12,18 @@ export default async function VentasReportPage({ searchParams }: { searchParams:
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  const { data: profile } = await supabaseAdmin.from('perfiles').select('rol').eq('id', user.id).single();
-  if (!profile || profile.rol !== 'admin') {
+  const { data: profile } = await supabaseAdmin.from('perfiles').select('id, rol, nombre').eq('id', user.id).single();
+  if (!profile || !['admin', 'distribuidor'].includes(profile.rol)) {
     redirect('/');
   }
 
+  const isDist = profile.rol === 'distribuidor';
   const sParams = await searchParams;
   const page = parseInt(sParams.page || '1');
   const query = sParams.query || '';
   const limit = 25;
 
-  const { data, total, totalPages } = await getPacksPaged(page, limit, query);
+  const { data, total, totalPages } = await getPacksPaged(page, limit, query, isDist ? user.id : undefined);
 
   return (
     <div className="p-8 pb-20 h-full overflow-y-auto">
@@ -32,16 +33,20 @@ export default async function VentasReportPage({ searchParams }: { searchParams:
             📦
           </div>
           <div>
-            <h1 className="text-2xl font-black text-white tracking-tight">Packs Vendidos</h1>
+            <h1 className="text-2xl font-black text-white tracking-tight">
+              {isDist ? 'Mis Packs Vendidos' : 'Packs Vendidos'}
+            </h1>
             <p className="text-[10px] font-bold text-admin-gold uppercase tracking-widest">Reporte de ventas</p>
           </div>
         </div>
         <p className="text-slate-400 text-sm mt-2">
-          Historial de packs vendidos por distribuidores a comerciantes. Trazabilidad de pagos y estado.
+          {isDist
+            ? `${profile.nombre} — Historial de packs vendidos a comerciantes.`
+            : 'Historial de packs vendidos por distribuidores a comerciantes. Trazabilidad de pagos y estado.'}
         </p>
       </header>
 
-      <VentasClient initialData={data || []} total={total} currentPage={page} query={query} totalPages={totalPages} />
+      <VentasClient initialData={data || []} total={total} currentPage={page} query={query} totalPages={totalPages} isDist={isDist} />
     </div>
   );
 }

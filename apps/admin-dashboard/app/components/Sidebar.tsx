@@ -29,6 +29,7 @@ export default function Sidebar({ role, userName, campanaNombre }: { role: strin
   const distItems = [
     { href: '/',        label: '📊 Mi Trazabilidad' },
     { href: '/activar', label: '🎟️ Vender Pack' },
+    { href: '/ventas',  label: '📦 Mis Packs' },
   ];
 
   const menuItems = role === 'admin' ? adminItems : distItems;

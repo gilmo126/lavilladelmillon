@@ -119,7 +119,7 @@ El modelo logístico cambia de boletas individuales asignadas por rango a **pack
 |------|--------|-------------|
 | **Fase 1** | ✅ Completada | Migraciones de base de datos |
 | **Fase 2** | ✅ Completada | Limpieza de código — módulos y rol obsoletos |
-| **Fase 3** | ⏳ Pendiente | Nuevo módulo de venta de packs |
+| **Fase 3** | ✅ Completada | Nuevo módulo de venta de packs |
 | **Fase 4** | ⏳ Pendiente | Comunicación WhatsApp/email con links individuales |
 | **Fase 5** | ⏳ Pendiente | Página temporal del comerciante `/pack/[token]` en landing-page |
 | **Fase 6** | ⏳ Pendiente | Actualizar módulos existentes con nuevos estados |
@@ -135,6 +135,34 @@ El modelo logístico cambia de boletas individuales asignadas por rango a **pack
 | `remove_operativo_from_rol_enum` | Enum `rol_usuario` ahora solo tiene `admin` y `distribuidor` |
 | `create_rpc_generar_pack` | RPC que genera 25 números aleatorios únicos y crea el pack |
 | `create_rpc_activar_numero` | RPC que activa un número individual vía `token_link` |
+
+### Fase 3 — Módulo Venta de Packs (`/activar`)
+
+La ruta `/activar` fue completamente reemplazada. Ya no activa boletas individuales — ahora vende packs de 25 números a comerciantes.
+
+**Archivos:**
+
+| Archivo | Rol |
+|---------|-----|
+| `app/activar/page.tsx` | Server component: carga perfil del distribuidor y config de campaña (`dias_vencimiento_pago`) |
+| `app/activar/VenderPackForm.tsx` | Client component con máquina de estados: `form` → `success` |
+| `app/activar/actions.ts` | `venderPackAction`: llama RPC `generar_pack`, actualiza pack con datos del comerciante |
+
+**Flujo de `venderPackAction`:**
+1. Verifica sesión → rol `distribuidor`
+2. Lee `configuracion_campana` (id, dias_vencimiento_pago, dias_validez_qr)
+3. Llama RPC `generar_pack(p_dist_id, p_campana_id)` → crea pack + 25 boletas con `token_link` único cada una
+4. Actualiza el pack: comerciante_nombre, tel, email, whatsapp, tipo_pago, estado_pago, fecha_vencimiento_pago
+5. Devuelve: token_pagina, token_qr, qr_valido_hasta, array de 25 números
+
+**Pantalla de confirmación muestra:**
+- Grid 5×5 con los 25 números en formato `000000`
+- Link del comerciante: `landing-url/pack/[token_pagina]` con botón copiar
+- QR de beneficio recreativo (solo si `tipo_pago = 'inmediato'`):
+  - Imagen generada via `api.qrserver.com`
+  - Codifica: `lavilladelmillon-admin.guillaumer-orion.workers.dev/validar-qr/[token_qr]`
+  - La ruta `/validar-qr/[token_qr]` se construirá en Fase 6
+- Si pago pendiente: aviso con fecha límite, QR se activa al confirmar pago
 
 ### Fase 2 — Eliminados
 

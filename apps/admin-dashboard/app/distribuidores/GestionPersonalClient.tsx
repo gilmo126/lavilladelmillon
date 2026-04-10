@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { updatePerfilAction, deleteDistribuidorAction } from './actions';
-import { getInventarioDistribuidorAction } from '../../lib/actions';
+import { getPacksDistribuidorAction } from '../../lib/actions';
 
 type Perfil = {
   id: string;
@@ -111,17 +111,20 @@ function EditModal({ perfil, zonas, onClose }: { perfil: Perfil; zonas: any[]; o
 
 function InventoryDrawer({ dist, onClose }: { dist: Perfil; onClose: () => void }) {
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<{ resumen: any, lotes: any[], frentes: any[] } | null>(null);
-  const [filterStatus, setFilterStatus] = useState<'todos' | 'completados' | 'pendientes'>('todos');
+  const [packs, setPacks] = useState<any[]>([]);
 
   useEffect(() => {
     async function load() {
-      const res = await getInventarioDistribuidorAction(dist.id);
-      if (res.success) setData({ resumen: res.resumen, lotes: res.lotes, frentes: res.frentes });
+      const res = await getPacksDistribuidorAction(dist.id);
+      if (res.success) setPacks(res.packs);
       setLoading(false);
     }
     load();
   }, [dist.id]);
+
+  const totalPacks = packs.length;
+  const totalNumeros = totalPacks * 25;
+  const pagados = packs.filter(p => p.estado_pago === 'pagado').length;
 
   return (
     <div className="fixed inset-0 z-[200] flex justify-end">
@@ -143,125 +146,64 @@ function InventoryDrawer({ dist, onClose }: { dist: Perfil; onClose: () => void 
           {loading ? (
             <div className="h-64 flex flex-col items-center justify-center text-admin-gold gap-4">
               <div className="w-10 h-10 border-4 border-admin-gold/20 border-t-admin-gold rounded-full animate-spin" />
-              <p className="text-xs font-bold uppercase tracking-tighter">Consultando Bóveda...</p>
+              <p className="text-xs font-bold uppercase tracking-tighter">Consultando packs...</p>
             </div>
-          ) : data ? (
+          ) : (
             <>
               <section>
                 <div className="flex items-center gap-2 mb-6">
                   <div className="w-1 h-3 bg-admin-blue rounded-full" />
-                  <h4 className="text-xs font-bold text-white uppercase tracking-wider">Inventario por Frente</h4>
+                  <h4 className="text-xs font-bold text-white uppercase tracking-wider">Resumen</h4>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  {data.frentes.map((f, i) => (
-                    <div key={i} className="bg-slate-950 border border-white/5 p-4 rounded-2xl relative overflow-hidden group">
-                      <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-30 transition-opacity">📦</div>
-                      <p className="text-[10px] font-bold text-slate-500 uppercase mb-3 truncate">{f.zona_nombre}</p>
-                      <div className="flex justify-between items-end">
-                        <p className="text-2xl font-black text-white">{f.total_asignado}</p>
-                        <div className="text-right">
-                          <p className="text-[9px] font-bold text-green-400">Act: {f.total_activado}</p>
-                          <p className="text-[9px] font-bold text-slate-600">Disp: {f.total_asignado - f.total_activado}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  {data.frentes.length === 0 && <p className="col-span-2 text-center text-slate-600 text-[10px] py-4 uppercase">Sin stock activo por zona.</p>}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="bg-slate-950 border border-white/5 p-4 rounded-2xl text-center">
+                    <p className="text-2xl font-black text-white">{totalPacks}</p>
+                    <p className="text-[9px] font-bold text-slate-500 uppercase mt-1">Packs</p>
+                  </div>
+                  <div className="bg-slate-950 border border-white/5 p-4 rounded-2xl text-center">
+                    <p className="text-2xl font-black text-white">{totalNumeros}</p>
+                    <p className="text-[9px] font-bold text-slate-500 uppercase mt-1">Números</p>
+                  </div>
+                  <div className="bg-slate-950 border border-white/5 p-4 rounded-2xl text-center">
+                    <p className="text-2xl font-black text-green-400">{pagados}</p>
+                    <p className="text-[9px] font-bold text-slate-500 uppercase mt-1">Pagados</p>
+                  </div>
                 </div>
               </section>
 
               <section>
-                <div className="flex flex-col gap-4 mb-6">
-                  <div className="flex justify-between items-center">
-                    <h4 className="text-xs font-bold text-white uppercase tracking-wider">Historial de Despachos</h4>
-                    <span className="text-[9px] font-bold text-admin-gold bg-admin-gold/10 px-2 py-0.5 rounded-full">Stock Total: {data.resumen.total_asignado}</span>
-                  </div>
-                  <div className="flex p-1 bg-slate-950 border border-white/5 rounded-xl">
-                    {[
-                      { id: 'todos', label: 'Todos' },
-                      { id: 'completados', label: 'Completados' },
-                      { id: 'pendientes', label: 'En Proceso' }
-                    ].map((tab) => (
-                      <button
-                        key={tab.id}
-                        onClick={() => setFilterStatus(tab.id as any)}
-                        className={`flex-1 py-2 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all ${
-                          filterStatus === tab.id
-                          ? 'bg-admin-gold text-slate-950 shadow-lg'
-                          : 'text-slate-500 hover:text-white'
-                        }`}
-                      >
-                        {tab.label}
-                      </button>
-                    ))}
-                  </div>
+                <div className="flex items-center gap-2 mb-6">
+                  <div className="w-1 h-3 bg-admin-gold rounded-full" />
+                  <h4 className="text-xs font-bold text-white uppercase tracking-wider">Packs Vendidos</h4>
                 </div>
-
-                <div className="space-y-4">
-                  {data.lotes
-                    .filter(l => {
-                      const isComplete = (l.activadas || 0) >= l.cantidad;
-                      if (filterStatus === 'completados') return isComplete;
-                      if (filterStatus === 'pendientes') return !isComplete;
-                      return true;
-                    })
-                    .map((lote, idx) => {
-                      const porcentaje = Math.min(100, Math.round(((lote.activadas || 0) / lote.cantidad) * 100));
-                      const isComplete = porcentaje >= 100;
-                      return (
-                        <div key={idx} className={`flex flex-col bg-slate-950 border ${isComplete ? 'border-green-500/20' : 'border-white/5'} hover:border-admin-blue/30 p-5 rounded-2xl transition-all group overflow-hidden relative`}>
-                          {isComplete && (
-                            <div className="absolute top-0 right-0 px-3 py-1 bg-green-500 text-slate-950 text-[8px] font-black uppercase tracking-tighter rounded-bl-xl shadow-lg">
-                              Completado
-                            </div>
-                          )}
-                          <div className="flex justify-between items-start mb-4">
-                            <div className="flex items-center gap-5">
-                              <div className="text-center">
-                                <p className="text-[8px] font-bold text-slate-600 uppercase mb-1">Lot</p>
-                                <p className="text-xs font-bold text-white">#{String(data.lotes.length - idx).padStart(3, '0')}</p>
-                              </div>
-                              <div>
-                                <p className="text-sm font-bold text-white font-mono">{lote.rango_inicio} — {lote.rango_fin}</p>
-                                <div className="flex items-center gap-2 mt-1">
-                                  <span className="text-[9px] font-bold text-admin-blue uppercase">{lote.zona_nombre || 'Nacional'}</span>
-                                  <span className="w-1 h-1 bg-slate-700 rounded-full" />
-                                  <span className="text-[9px] text-slate-500 uppercase">{lote.cantidad} boletas</span>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-[9px] text-slate-500 font-bold mb-1">{new Date(lote.fecha_asignacion).toLocaleDateString()}</p>
-                              <p className="text-[10px] font-black text-white">{lote.activadas || 0} / {lote.cantidad}</p>
-                            </div>
-                          </div>
-                          <div className="w-full h-1.5 bg-slate-900 rounded-full overflow-hidden mt-2 relative">
-                            <div
-                              className={`absolute inset-y-0 left-0 transition-all duration-1000 ${isComplete ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.4)]' : 'bg-admin-blue'}`}
-                              style={{ width: `${porcentaje}%` }}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  {data.lotes.length === 0 && <p className="text-center text-slate-600 text-xs py-10 italic">Sin lotes asignados aún.</p>}
+                <div className="space-y-3">
+                  {packs.map((p) => (
+                    <div key={p.id} className="bg-slate-950 border border-white/5 p-4 rounded-2xl">
+                      <div className="flex justify-between items-start mb-2">
+                        <p className="text-sm font-bold text-white">{p.comerciante_nombre}</p>
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-black border ${
+                          p.estado_pago === 'pagado' ? 'bg-green-500/10 border-green-500/20 text-green-400' :
+                          p.estado_pago === 'pendiente' ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400' :
+                          'bg-red-500/10 border-red-500/20 text-red-400'
+                        }`}>{p.estado_pago}</span>
+                      </div>
+                      <div className="flex items-center gap-3 text-[10px] text-slate-500 font-bold">
+                        <span>{p.tipo_pago === 'inmediato' ? '✅' : '⏳'} {p.tipo_pago}</span>
+                        <span className="w-1 h-1 bg-slate-700 rounded-full" />
+                        <span>{p.fecha_venta ? new Date(p.fecha_venta).toLocaleDateString('es-CO') : '—'}</span>
+                      </div>
+                    </div>
+                  ))}
+                  {packs.length === 0 && <p className="text-center text-slate-600 text-xs py-10 italic">Sin packs vendidos aún.</p>}
                 </div>
               </section>
             </>
-          ) : (
-            <p className="text-center text-red-400 py-20 font-bold">Error al cargar inventario.</p>
           )}
         </div>
 
-        <div className="p-8 bg-slate-950/80 border-t border-white/5 flex gap-4">
-          <button onClick={onClose} className="flex-1 py-4 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-2xl transition-all">
+        <div className="p-8 bg-slate-950/80 border-t border-white/5">
+          <button onClick={onClose} className="w-full py-4 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-2xl transition-all">
             Cerrar Expediente
-          </button>
-          <button
-            onClick={() => window.print()}
-            className="flex-1 py-4 bg-admin-blue hover:bg-blue-600 text-white font-bold rounded-2xl transition-all shadow-lg shadow-blue-500/20"
-          >
-            Imprimir Reporte
           </button>
         </div>
       </div>

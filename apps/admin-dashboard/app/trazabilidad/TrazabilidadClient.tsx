@@ -54,29 +54,19 @@ function ResultCard({ r }: { r: TrackResult }) {
       <div className="p-5 border-b border-admin-border">
         <p className="text-xs text-slate-500 uppercase font-bold mb-3">Cadena Logística</p>
         <div className="flex flex-wrap gap-2">
-          <StepBadge done={estado >= 1} active={estado === 0} label="📦 Bodega" />
-          <StepBadge done={estado >= 2} active={estado === 1} label="🚚 Despachada" />
-          <StepBadge done={estado >= 3} active={estado === 2} label="🏪 En Comercio" />
-          <StepBadge done={estado >= 3} active={false} label="✅ Registrada" />
+          <StepBadge done={estado >= 0} active={false} label="🆕 Generado" />
+          <StepBadge done={estado >= 1} active={estado === 0} label="🏪 Activado" />
+          <StepBadge done={estado >= 2} active={estado === 1} label="✅ Registrado" />
+          {estado === 4 && <StepBadge done={true} active={false} label="🏆 Sorteado" />}
+          {estado === 3 && <StepBadge done={false} active={false} label="❌ Anulado" />}
         </div>
       </div>
 
       {/* Detalles Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-0 divide-y md:divide-y-0 md:divide-x divide-admin-border">
-        {/* Quién despachó */}
-        <div className="p-5">
-          <p className="text-xs text-slate-500 uppercase font-bold mb-3">👤 Despachado Por</p>
-          {r.asignado_por_nombre ? (
-            <div className="space-y-1">
-              <p className="text-white font-semibold">{r.asignado_por_nombre}</p>
-              <p className="text-xs text-slate-400 capitalize">Rol: {r.asignado_por_rol}</p>
-            </div>
-          ) : <p className="text-slate-500 text-sm italic">Aún no despachada</p>}
-        </div>
-
         {/* Distribuidor */}
         <div className="p-5">
-          <p className="text-xs text-slate-500 uppercase font-bold mb-3">🚚 Distribuidor Receptor</p>
+          <p className="text-xs text-slate-500 uppercase font-bold mb-3">📦 Pack / Distribuidor</p>
           {r.distribuidor_nombre ? (
             <div className="space-y-1">
               <p className="text-white font-semibold">{r.distribuidor_nombre}</p>

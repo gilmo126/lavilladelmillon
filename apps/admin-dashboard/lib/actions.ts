@@ -12,10 +12,9 @@ export async function getBoletasPaged(page: number, limit: number, query: string
   // Consulta 1: Boletas con relaciones estables (perfiles, premios)
   // Usamos el set de tablas confirmado por el usuario: boletas, perfiles, premios, zonas.
   let queryBuilder = supabaseAdmin.from('boletas').select(`
-    *, 
-    premios(nombre_premio), 
-    distribuidor:perfiles!distribuidor_id(nombre), 
-    despachador:perfiles!asignado_por(nombre)
+    *,
+    premios(nombre_premio),
+    distribuidor:perfiles!distribuidor_id(nombre)
   `, { count: 'exact' });
 
   if (distribuidorId) {
@@ -78,37 +77,19 @@ export async function getBoletasPaged(page: number, limit: number, query: string
   };
 }
 
-// ── Auditoría por Lote Logístico ──────────────────────────────────────────
-export async function getLotesLogisticos() {
-  const { data, error } = await supabaseAdmin
-    .from('lotes_logisticos')
-    .select('*')
-    .order('created_at', { ascending: false });
-  
-  if (error) throw error;
-  return data;
-}
 
-export async function getInventarioDistribuidorAction(distId: string) {
+export async function getPacksDistribuidorAction(distId: string) {
   try {
-    // Usamos las tablas reales confirmadas: lotes_logisticos y trazabilidad_geografica
-    const { data: resumen, error: rError } = await supabaseAdmin.rpc('get_resumen_inventario_distribuidor', { p_dist_id: distId });
-    if (rError) throw rError;
+    const { data, error } = await supabaseAdmin
+      .from('packs')
+      .select('id, comerciante_nombre, tipo_pago, estado_pago, fecha_venta')
+      .eq('distribuidor_id', distId)
+      .order('fecha_venta', { ascending: false, nullsFirst: false });
 
-    const { data: lotes, error: lError } = await supabaseAdmin.rpc('get_lotes_distribuidor', { p_dist_id: distId });
-    if (lError) throw lError;
-
-    const { data: frentes, error: fError } = await supabaseAdmin.rpc('get_resumen_multizona', { p_dist_id: distId });
-    if (fError) throw fError;
-
-    return { 
-      success: true, 
-      resumen: resumen?.[0] || { total_asignado: 0, total_activado: 0, total_registrado: 0, p_conversion: 0 }, 
-      lotes: lotes || [],
-      frentes: frentes || []
-    };
+    if (error) throw error;
+    return { success: true as const, packs: data || [] };
   } catch (error: any) {
-    return { success: false, error: error.message };
+    return { success: false as const, error: error.message, packs: [] };
   }
 }
 
@@ -154,8 +135,8 @@ export async function getRankingZonas(distribuidorId?: string) {
     const zonaName = zonasMap[zId] || 'Otras';
     if (!acc[zonaName]) acc[zonaName] = { nombre: zonaName, activadas: 0, registradas: 0 };
 
-    if (curr.estado === 2) acc[zonaName].activadas++;
-    if (curr.estado === 3) acc[zonaName].registradas++;
+    if (curr.estado === 1) acc[zonaName].activadas++;
+    if (curr.estado === 2) acc[zonaName].registradas++;
 
     return acc;
   }, {});
@@ -249,60 +230,48 @@ export async function updateConfiguracion(id: string, updates: any) {
   return { success: true };
 }
 
-export async function getVentasPaged(page: number, limit: number, query: string) {
+export async function getPacksPaged(page: number, limit: number, query: string) {
   const from = (page - 1) * limit;
   const to = from + limit - 1;
-  let queryBuilder = supabaseAdmin.from('ventas_clientes').select('*, boleta:boletas(token_integridad), distribuidor:perfiles(nombre)', { count: 'exact' });
-  if (query) queryBuilder = queryBuilder.or(`cliente_id.ilike.%${query}%,cliente_nombre.ilike.%${query}%`);
-  const { data, count, error } = await queryBuilder.order('created_at', { ascending: false }).range(from, to);
+
+  let queryBuilder = supabaseAdmin.from('packs').select(
+    '*, distribuidor:perfiles!distribuidor_id(nombre)',
+    { count: 'exact' }
+  );
+
+  if (query) {
+    queryBuilder = queryBuilder.or(`comerciante_nombre.ilike.%${query}%,comerciante_tel.ilike.%${query}%`);
+  }
+
+  const { data, count, error } = await queryBuilder
+    .order('fecha_venta', { ascending: false, nullsFirst: false })
+    .range(from, to);
+
   if (error) throw error;
-  return { data, total: count || 0, totalPages: count ? Math.ceil(count / limit) : 0 };
-}
 
-// ==========================================
-// Módulo: BODEGA (Ingreso de Lotes)
-// ==========================================
-export async function verificarRangoBodegaAction(inicio: number, fin: number) {
-  try {
-    const { count, error } = await supabaseAdmin
+  // Count boletas per pack
+  const packIds = (data || []).map((p: any) => p.id);
+  let boletaCounts: Record<string, number> = {};
+  if (packIds.length > 0) {
+    const { data: counts } = await supabaseAdmin
       .from('boletas')
-      .select('id_boleta', { count: 'exact', head: true })
-      .gte('id_boleta', inicio)
-      .lte('id_boleta', fin);
-    
-    if (error) throw error;
-    return { success: true, count: count || 0 };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+      .select('pack_id', { count: 'exact', head: false })
+      .in('pack_id', packIds);
+
+    boletaCounts = (counts || []).reduce((acc: Record<string, number>, b: any) => {
+      acc[b.pack_id] = (acc[b.pack_id] || 0) + 1;
+      return acc;
+    }, {});
   }
+
+  const mapped = (data || []).map((p: any) => ({
+    ...p,
+    numeros_count: boletaCounts[p.id] || 0,
+  }));
+
+  return { data: mapped, total: count || 0, totalPages: count ? Math.ceil(count / limit) : 0 };
 }
 
-export async function crearLoteBodegaAction(inicio: number, fin: number, campanaId: string) {
-  try {
-    const boletas = [];
-    for (let i = inicio; i <= fin; i++) {
-        const paddedId = String(i).padStart(6, '0');
-        boletas.push({
-            id_boleta: i,
-            campana_id: campanaId,
-            estado: 0, // En Bodega
-            token_integridad: `TKN-${paddedId}`,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-        });
-    }
-
-    // Usamos upsert para ser resilientes si el usuario confirma saltar existentes
-    const { error } = await supabaseAdmin
-        .from('boletas')
-        .upsert(boletas, { onConflict: 'id_boleta' });
-
-    if (error) throw error;
-    return { success: true, count: boletas.length };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-}
 
 // ==========================================
 // Módulo: SORTEOS Y PREMIACIÓN
@@ -348,21 +317,21 @@ export async function upsertSorteo(payload: { id?: string, premio_id: string, fe
 
 export async function cerrarSorteoAction(adminId: string, campanaId: string) {
   try {
-    // 1. Auditamos cuántas boletas pasarán a Estado 5
+    // 1. Auditamos cuántas boletas pasarán a Estado 4 (Sorteado)
     const { count, error: cError } = await supabaseAdmin
       .from('boletas')
       .select('*', { count: 'exact', head: true })
       .eq('campana_id', campanaId)
-      .eq('estado', 3); // Registradas
-    
+      .eq('estado', 2); // Registradas
+
     if (cError) throw cError;
 
     // 2. Ejecutar actualización masiva
     const { error: uError } = await supabaseAdmin
       .from('boletas')
-      .update({ estado: 5, updated_at: new Date().toISOString() })
+      .update({ estado: 4, updated_at: new Date().toISOString() })
       .eq('campana_id', campanaId)
-      .eq('estado', 3);
+      .eq('estado', 2);
     
     if (uError) throw uError;
 
@@ -378,8 +347,8 @@ export async function getDashboardCounts(distribuidorId?: string) {
 
   const [t, a, r] = await Promise.all([
     baseQuery,
+    supabaseAdmin.from('boletas').select('*', { count: 'exact', head: true }).eq('estado', 1).match(distribuidorId ? { distribuidor_id: distribuidorId } : {}),
     supabaseAdmin.from('boletas').select('*', { count: 'exact', head: true }).eq('estado', 2).match(distribuidorId ? { distribuidor_id: distribuidorId } : {}),
-    supabaseAdmin.from('boletas').select('*', { count: 'exact', head: true }).eq('estado', 3).match(distribuidorId ? { distribuidor_id: distribuidorId } : {}),
   ]);
 
   return {

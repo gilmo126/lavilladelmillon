@@ -341,6 +341,19 @@ Todo el resto de tablas requiere sesión activa de Supabase Auth.
 
 ---
 
+## FIXES POST-IMPLEMENTACIÓN V2
+
+- [2026-04-10] Encoding UTF-8 roto en `/distribuidores/page.tsx` (caracteres mojibake `GestiÃ³n`, `MÃ³dulo`, etc.) → Corregidos 5 strings a UTF-8 correcto → `app/distribuidores/page.tsx`
+- [2026-04-10] Queries de perfiles y zonas en `/distribuidores` retornaban vacío por RLS → Cambiadas de `supabase` a `supabaseAdmin` → `app/distribuidores/page.tsx`
+- [2026-04-10] Sidebar mostraba "GUEST - Cargando..." después del login → Queries de perfil y config en layout cambiadas a `supabaseAdmin` → `app/layout.tsx`
+- [2026-04-10] Dashboard "Rendering..." indefinido para distribuidores → Query de perfil en page.tsx cambiada a `supabaseAdmin` → `app/page.tsx`
+- [2026-04-10] Loop infinito de `GET /` en dashboard → `fetchPagedData` tenía `total` en deps de `useCallback` causando ciclo → Removido de dependencias → `app/components/RealtimeDashboard.tsx`
+- [2026-04-10] Módulo `/activar` mostraba "Módulo exclusivo" al distribuidor → Query de perfil cambiada a `supabaseAdmin` → `app/activar/page.tsx`
+- [2026-04-10] Todas las pages con guard de rol fallaban por RLS post-redirect → Migradas a `supabaseAdmin` → `app/{boletas,trazabilidad,ventas,zonas}/page.tsx`
+- [2026-04-10] Estados de boletas con valores del esquema viejo en `RealtimeDashboard.tsx` y `page.tsx` → Actualizados a V2 (0=Generado, 1=Activado, 2=Registrado) → `app/components/RealtimeDashboard.tsx`, `app/page.tsx`
+
+---
+
 ## MANTENIMIENTO DE ESTE ARCHIVO
 
 Este archivo es la fuente de verdad del proyecto para agentes de IA.

@@ -351,6 +351,10 @@ Todo el resto de tablas requiere sesión activa de Supabase Auth.
 - [2026-04-10] Módulo `/activar` mostraba "Módulo exclusivo" al distribuidor → Query de perfil cambiada a `supabaseAdmin` → `app/activar/page.tsx`
 - [2026-04-10] Todas las pages con guard de rol fallaban por RLS post-redirect → Migradas a `supabaseAdmin` → `app/{boletas,trazabilidad,ventas,zonas}/page.tsx`
 - [2026-04-10] Estados de boletas con valores del esquema viejo en `RealtimeDashboard.tsx` y `page.tsx` → Actualizados a V2 (0=Generado, 1=Activado, 2=Registrado) → `app/components/RealtimeDashboard.tsx`, `app/page.tsx`
+- [2026-04-10] Server actions fallaban por RLS al verificar rol del usuario → Todas las queries de `perfiles` en actions migradas a `supabaseAdmin` → `app/{activar,trazabilidad,zonas,distribuidores}/actions.ts`
+- [2026-04-10] Encoding UTF-8 roto en `/configuracion/page.tsx` → Corregido mojibake en metadata → `app/configuracion/page.tsx`
+- [2026-04-10] Módulo Configuración (Llaves Maestras) no tenía campos de plazos V2 → Agregada sección "Plazos y Vencimientos" con `dias_validez_pagina_comerciante`, `dias_validez_qr`, `dias_vencimiento_pago` → `app/components/ConfiguracionManager.tsx`
+- [2026-04-10] Boletas antiguas V1 (pack_id IS NULL) eliminadas de la BD → DELETE cascada: activaciones, ventas_clientes, trazabilidad_geografica, boletas (1050 registros) → SQL directo en Supabase
 
 ---
 

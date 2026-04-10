@@ -105,16 +105,95 @@ o secret encriptado (via `wrangler secret put`). Nunca ambos.
 
 ---
 
-## BASE DE DATOS — ESTADOS DE BOLETAS
+## REDISEÑO V2 — EN PROGRESO
+
+**Rama activa:** `feature/rediseno-packs-v2`
+
+### Concepto central del rediseño
+
+El modelo logístico cambia de boletas individuales asignadas por rango a **packs de 25 números generados aleatoriamente** que el distribuidor vende directamente a un comerciante. Cada número tiene un link único que el comerciante distribuye a sus clientes.
+
+### Estado de fases
+
+| Fase | Estado | Descripción |
+|------|--------|-------------|
+| **Fase 1** | ✅ Completada | Migraciones de base de datos |
+| **Fase 2** | ✅ Completada | Limpieza de código — módulos y rol obsoletos |
+| **Fase 3** | ⏳ Pendiente | Nuevo módulo de venta de packs |
+| **Fase 4** | ⏳ Pendiente | Comunicación WhatsApp/email con links individuales |
+| **Fase 5** | ⏳ Pendiente | Página temporal del comerciante `/pack/[token]` en landing-page |
+| **Fase 6** | ⏳ Pendiente | Actualizar módulos existentes con nuevos estados |
+
+### Fase 1 — Migraciones aplicadas en Supabase
+
+| Migración | Descripción |
+|-----------|-------------|
+| `create_packs_table` | Nueva tabla `packs` con enums `tipo_pago_pack` y `estado_pago_pack` |
+| `create_activaciones_table` | Nueva tabla `activaciones` para registrar activaciones de números individuales |
+| `add_pack_columns_to_boletas` | `pack_id` (FK → packs), `token_link` (text unique) + índices |
+| `add_config_campana_columns` | `dias_vencimiento_pago` (default 8), `dias_validez_qr` (default 8), `numeros_por_pack` (default 25) |
+| `remove_operativo_from_rol_enum` | Enum `rol_usuario` ahora solo tiene `admin` y `distribuidor` |
+| `create_rpc_generar_pack` | RPC que genera 25 números aleatorios únicos y crea el pack |
+| `create_rpc_activar_numero` | RPC que activa un número individual vía `token_link` |
+
+### Fase 2 — Eliminados
+
+- Rutas y componentes: `/bodega`, `/asignaciones`, `/mis-distribuidores`
+- Rol `operativo` eliminado de UI, actions, checks de acceso y enum de BD
+- RPCs obsoletas: `validar_rango_boletas`, `sugerir_proximo_lote`, `asignar_lote_boletas`
+
+---
+
+## BASE DE DATOS
+
+### Estados de boletas — NUEVOS (Rediseño V2)
 
 | Valor | Estado | Descripción |
 |-------|--------|-------------|
-| `0` | BODEGA | En stock, no asignada |
-| `1` | DESPACHADA | En maletín del distribuidor |
-| `2` | ACTIVA/VENDIDA | En poder de un comercio |
-| `3` | REGISTRADA | Registrada por el comprador |
-| `4` | ANULADA | Anulada |
-| `5` | SORTEADA | Ganadora del sorteo |
+| `0` | GENERADO | Número creado aleatoriamente, asignado a un pack |
+| `1` | ACTIVADO | Cliente activó su número vía link individual |
+| `2` | REGISTRADO | Cliente registró sus datos completos |
+| `3` | ANULADO | Anulado por admin |
+| `4` | SORTEADO | Ganador del sorteo |
+
+### Tabla `packs`
+
+| Columna | Tipo | Descripción |
+|---------|------|-------------|
+| `id` | uuid PK | Identificador del pack |
+| `campana_id` | uuid FK | Campaña a la que pertenece |
+| `distribuidor_id` | uuid FK | Distribuidor que vendió el pack |
+| `comerciante_nombre` | text | Nombre del comerciante comprador |
+| `comerciante_tel` | text | Teléfono del comerciante |
+| `comerciante_email` | text | Email del comerciante |
+| `comerciante_whatsapp` | text | WhatsApp del comerciante |
+| `tipo_pago` | `tipo_pago_pack` | `inmediato` \| `pendiente` |
+| `estado_pago` | `estado_pago_pack` | `pagado` \| `pendiente` \| `vencido` |
+| `fecha_venta` | timestamptz | Momento de la venta |
+| `fecha_vencimiento_pago` | timestamptz | Límite para pago pendiente |
+| `token_qr` | text UNIQUE | Token del QR de beneficio recreativo |
+| `qr_valido_hasta` | timestamptz | Expiración del QR (configurable, default 8 días) |
+| `token_pagina` | text UNIQUE | Token para la página temporal del comerciante |
+
+### Tabla `activaciones`
+
+| Columna | Tipo | Descripción |
+|---------|------|-------------|
+| `id` | uuid PK | Identificador de la activación |
+| `boleta_id` | bigint FK | Número activado |
+| `pack_id` | uuid FK | Pack al que pertenece |
+| `nombre_cliente` | text | Nombre del cliente final |
+| `movil_cliente` | text | Móvil del cliente final |
+| `acepta_datos` | boolean | Habeas data aceptado |
+| `fecha_activacion` | timestamptz | Momento de activación |
+
+### Enums nuevos
+
+| Enum | Valores |
+|------|---------|
+| `tipo_pago_pack` | `inmediato`, `pendiente` |
+| `estado_pago_pack` | `pagado`, `pendiente`, `vencido` |
+| `rol_usuario` | `admin`, `distribuidor` *(eliminado: `operativo`)* |
 
 ---
 

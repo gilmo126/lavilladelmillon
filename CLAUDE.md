@@ -254,6 +254,25 @@ Página pública (sin autenticación) donde el comerciante ve sus 25 números y 
 - Agregadas: `getPacksPaged`, `getPacksDistribuidorAction`
 - Actualizados estados en: `getDashboardCounts`, `getRankingZonas`, `cerrarSorteoAction`
 
+### Post-Fase 6 — Detalle de Pack y Reenvío de QR
+
+**Drawer de detalle de pack** en `/ventas` (VentasClient.tsx):
+- Se abre al hacer click en cualquier fila de la tabla de packs
+- Muestra: datos del comerciante, tipo/estado de pago, link del comerciante, QR de beneficio, grid 5x5 de números con estado individual
+- `getPackDetail(packId)` en `lib/actions.ts` — trae pack completo + boletas con estado
+
+**Reenvío de QR de beneficio:**
+- Botón "Reenviar WhatsApp" envía QR via `wa.me/` al comerciante
+- Botón "Copiar URL QR" copia la URL de la imagen QR
+- Solo disponible si `tipo_pago = 'inmediato'` Y `qr_usado_at IS NULL`
+- Si QR canjeado: muestra "QR ya utilizado el [fecha]" sin botones
+
+**Acceso distribuidor a `/ventas`:**
+- `/ventas` ahora accesible para distribuidores (antes solo admin)
+- Filtra automáticamente por `distribuidor_id` del usuario
+- Admin ve todos los packs, distribuidor solo los suyos
+- Sidebar del distribuidor incluye "📦 Mis Packs" apuntando a `/ventas`
+
 ### Fase 2 — Eliminados
 
 - Rutas y componentes: `/bodega`, `/asignaciones`, `/mis-distribuidores`

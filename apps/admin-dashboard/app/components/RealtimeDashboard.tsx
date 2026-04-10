@@ -94,7 +94,7 @@ export default function RealtimeDashboard({ initialConfig, initialCounts, initia
       } finally {
           setLoading(false);
       }
-  }, [total, isDist, myId]);
+  }, [isDist, myId]);
 
   // Sincronización Real-time (solo para resetear a la pag 1 o actualizar contadores)
   useEffect(() => {
@@ -302,7 +302,7 @@ export default function RealtimeDashboard({ initialConfig, initialCounts, initia
                         <span className="text-white">{pctActivas}%</span>
                     </div>
                     <div className="flex justify-between items-center text-[10px] font-black uppercase text-slate-400">
-                        <span className="flex items-center gap-3"><span className="w-2 h-2 rounded-full bg-slate-700" /> {isDist ? 'En Maletín (Por Activar)' : 'Bodega Central'}</span>
+                        <span className="flex items-center gap-3"><span className="w-2 h-2 rounded-full bg-slate-700" /> {isDist ? 'Por Activar' : 'Generados (Sin Activar)'}</span>
                         <span className="text-slate-500">{pctBodega}%</span>
                     </div>
                 </div>

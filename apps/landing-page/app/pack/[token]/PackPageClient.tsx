@@ -1,0 +1,132 @@
+'use client';
+
+import { useState } from 'react';
+import type { PackData } from './page';
+
+const LANDING_URL = 'https://landing-page.guillaumer-orion.workers.dev';
+
+function NumeroCard({
+  numero,
+  nombreCampana,
+}: {
+  numero: number;
+  nombreCampana: string;
+}) {
+  const numStr = String(numero).padStart(6, '0');
+  const registroUrl = `${LANDING_URL}?numero=${numero}`;
+  const waText = encodeURIComponent(
+    `🎟️ ¡Tengo el número *${numStr}* en *${nombreCampana}*!\n\nRegistrá tus datos aquí para participar 👇\n${registroUrl}`
+  );
+  const waUrl = `https://wa.me/?text=${waText}`;
+
+  return (
+    <div className="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-3 flex flex-col items-center gap-3 hover:border-marca-gold/40 transition-all group">
+      <span className="font-mono font-black text-white text-lg tracking-wider group-hover:text-marca-gold transition-colors">
+        {numStr}
+      </span>
+      <a
+        href={waUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="w-full flex items-center justify-center gap-1.5 bg-green-600 hover:bg-green-500 text-white text-[9px] font-black uppercase tracking-widest py-2 rounded-xl transition-all active:scale-95"
+      >
+        <span>📲</span> Compartir
+      </a>
+    </div>
+  );
+}
+
+export default function PackPageClient({ pack }: { pack: PackData }) {
+  const [copied, setCopied] = useState(false);
+
+  const fechaVencimiento = new Date(pack.fecha_vencimiento).toLocaleDateString(
+    'es-CO',
+    { day: '2-digit', month: 'long', year: 'numeric' }
+  );
+
+  function handleCopyAll() {
+    const lista = pack.numeros
+      .map((n) => String(n).padStart(6, '0'))
+      .join(' · ');
+    const texto =
+      `🎟️ Mis números de ${pack.nombre_campana}:\n\n${lista}\n\n` +
+      `Registrá tus datos en: ${LANDING_URL}`;
+    navigator.clipboard.writeText(texto).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    });
+  }
+
+  return (
+    <main className="min-h-screen bg-marca-darker text-white">
+      {/* Header */}
+      <div className="bg-slate-900/80 border-b border-white/5 px-6 py-6">
+        <div className="max-w-2xl mx-auto">
+          <p className="text-[10px] font-bold text-marca-gold uppercase tracking-widest mb-1">
+            {pack.nombre_campana}
+          </p>
+          <h1 className="text-2xl font-black text-white tracking-tight">
+            🏪 {pack.comerciante_nombre}
+          </h1>
+          <div className="flex flex-wrap items-center gap-2 mt-3">
+            <span className="text-[10px] font-bold text-slate-400 bg-slate-800 px-3 py-1 rounded-full border border-slate-700">
+              {pack.numeros.length} números
+            </span>
+            <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-full">
+              ⏳ Vence {fechaVencimiento}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-2xl mx-auto px-6 py-8 space-y-6">
+        {/* Instrucciones */}
+        <div className="bg-marca-gold/5 border border-marca-gold/20 rounded-2xl p-5">
+          <p className="text-sm text-slate-300 leading-relaxed">
+            <span className="font-black text-marca-gold">¿Cómo funciona?</span>{' '}
+            Comparte cada número con tus clientes tocando{' '}
+            <span className="text-green-400 font-bold">Compartir</span>. Ellos
+            deben registrar sus datos antes del{' '}
+            <span className="text-white font-bold">{fechaVencimiento}</span> para
+            participar en el sorteo.
+          </p>
+        </div>
+
+        {/* Copiar todos */}
+        <button
+          onClick={handleCopyAll}
+          className={`w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all border ${
+            copied
+              ? 'bg-green-500/20 border-green-500 text-green-400'
+              : 'bg-slate-800 border-slate-700 text-slate-300 hover:border-marca-gold/40 hover:text-white'
+          }`}
+        >
+          {copied ? '✓ ¡Copiado!' : '📋 Copiar todos los números'}
+        </button>
+
+        {/* Grid de números */}
+        <div>
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">
+            Tus {pack.numeros.length} números — toca compartir para enviar por WhatsApp
+          </p>
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
+            {pack.numeros.map((n) => (
+              <NumeroCard
+                key={n}
+                numero={n}
+                nombreCampana={pack.nombre_campana}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="pt-6 border-t border-white/5 text-center">
+          <p className="text-[10px] text-slate-600 uppercase font-bold tracking-widest">
+            {pack.nombre_campana} · Distribución autorizada
+          </p>
+        </div>
+      </div>
+    </main>
+  );
+}

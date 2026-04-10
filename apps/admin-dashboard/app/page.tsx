@@ -13,7 +13,7 @@ export default async function DashboardPage() {
     redirect('/login');
   }
 
-  const { data: profile } = await supabase.from('perfiles').select('*').eq('id', user.id).single();
+  const { data: profile } = await supabaseAdmin.from('perfiles').select('*').eq('id', user.id).single();
 
   if (!profile) {
     redirect('/login');

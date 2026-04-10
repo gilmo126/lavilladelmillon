@@ -28,7 +28,7 @@ export default function Sidebar({ role, userName, campanaNombre }: { role: strin
   // ── Distribuidor: Operatividad de campo ─────────────────────────
   const distItems = [
     { href: '/',        label: '📊 Mi Trazabilidad' },
-    { href: '/activar', label: '🚀 Activar Boletas' },
+    { href: '/activar', label: '🎟️ Vender Pack' },
   ];
 
   const menuItems = role === 'admin' ? adminItems : distItems;

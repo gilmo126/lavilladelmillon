@@ -1,94 +1,119 @@
 'use server';
 
 import { createClient } from '../../utils/supabase/server';
-import { revalidatePath } from 'next/cache';
+import { supabaseAdmin } from '../../lib/supabaseAdmin';
 
-export async function activarBoletaAction(formData: FormData) {
+export type VenderPackResult =
+  | { success: false; error: string }
+  | {
+      success: true;
+      packId: string;
+      tokenPagina: string;
+      tokenQr: string;
+      qrValidoHasta: string | null;
+      numeros: number[];
+      comercianteNombre: string;
+      tipoPago: 'inmediato' | 'pendiente';
+      fechaVencimientoPago: string | null;
+    };
+
+export async function venderPackAction(formData: FormData): Promise<VenderPackResult> {
   const supabase = await createClient();
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { success: false, error: 'Sesión no válida.' };
 
-  if (userError || !user) {
-    return { success: false, error: 'Sesión no válida.' };
-  }
+  const { data: profile } = await supabase
+    .from('perfiles')
+    .select('rol')
+    .eq('id', user.id)
+    .single();
 
-  // Verificar que es distribuidor
-  const { data: profile } = await supabase.from('perfiles').select('*').eq('id', user.id).single();
   if (!profile || profile.rol !== 'distribuidor') {
-    return { success: false, error: 'Solo los distribuidores pueden activar boletas en comercios.' };
+    return { success: false, error: 'Solo distribuidores pueden vender packs.' };
   }
 
-  const boleta_id_raw = formData.get('boleta_id') as string;
-  const comercio_nombre = formData.get('comercio_nombre') as string;
-  
-  // Datos del Cliente y Ubicación
-  const cliente_id = formData.get('cliente_id') as string;
-  const cliente_nombre = formData.get('cliente_nombre') as string;
-  const cliente_movil = formData.get('cliente_movil') as string;
-  const cliente_direccion = formData.get('cliente_direccion') as string;
-  let cliente_barrio = formData.get('cliente_barrio') as string;
-  const cliente_barrio_otro = formData.get('cliente_barrio_otro') as string;
-  
-  // Priorizar el barrio manual si se seleccionó 'OTRO'
-  if (cliente_barrio === 'OTRO' && cliente_barrio_otro) {
-    cliente_barrio = cliente_barrio_otro;
+  const comercianteNombre = (formData.get('comerciante_nombre') as string)?.trim();
+  const comercianteTel    = (formData.get('comerciante_tel') as string)?.trim();
+  const comercianteEmail  = (formData.get('comerciante_email') as string)?.trim() || null;
+  const comercianteWa     = (formData.get('comerciante_whatsapp') as string)?.trim() || null;
+  const tipoPago          = formData.get('tipo_pago') as 'inmediato' | 'pendiente';
+
+  if (!comercianteNombre || !comercianteTel) {
+    return { success: false, error: 'Nombre y teléfono del comerciante son obligatorios.' };
+  }
+  if (!['inmediato', 'pendiente'].includes(tipoPago)) {
+    return { success: false, error: 'Tipo de pago inválido.' };
   }
 
-  const acepta_hd = formData.get('habeas_data') === 'on';
+  // Config de campaña activa
+  const { data: config } = await supabaseAdmin
+    .from('configuracion_campana')
+    .select('id, dias_vencimiento_pago, dias_validez_qr')
+    .eq('activa', true)
+    .single();
 
-  if (!boleta_id_raw || !comercio_nombre || !cliente_id || !cliente_nombre || !cliente_movil || !cliente_direccion || !cliente_barrio) {
-    return { success: false, error: 'Todos los campos de cliente, ubicación y comercio son obligatorios.' };
-  }
+  if (!config) return { success: false, error: 'No hay campaña activa configurada.' };
 
-  if (!acepta_hd) {
-    return { success: false, error: 'Es obligatorio aceptar el tratamiento de datos para registrar la venta.' };
-  }
-
-  const boleta_id = parseInt(boleta_id_raw);
-  if (isNaN(boleta_id)) {
-    return { success: false, error: 'ID de boleta no válido.' };
-  }
-
-  // 1. Activar Boleta (Logística)
-  const { data: actOk, error: actError } = await supabase.rpc('activar_boleta_comercio', {
-    p_dist_id: user.id,
-    p_boleta_id: boleta_id,
-    p_nombre_comercio: comercio_nombre,
-    p_cliente_nombre: cliente_nombre,
-    p_cliente_id: cliente_id,
-    p_cliente_movil: cliente_movil,
+  // Generar pack + 25 números aleatorios via RPC
+  const { data: packId, error: rpcError } = await supabaseAdmin.rpc('generar_pack', {
+    p_dist_id:    user.id,
+    p_campana_id: config.id,
   });
 
-  if (actError || !actOk) {
-    return { success: false, error: actError?.message || 'La boleta no pudo ser activada. Verifique su inventario.' };
+  if (rpcError || !packId) {
+    return { success: false, error: rpcError?.message || 'Error al generar el pack.' };
   }
 
-  // 2. Registrar Venta de Cliente (Auditoría y CRM)
-  const { error: saleError } = await supabase.from('ventas_clientes').insert({
-    boleta_id: boleta_id,
-    cliente_id,
-    cliente_nombre,
-    cliente_movil,
-    cliente_direccion,
-    cliente_barrio,
-    comercio_nombre,
-    distribuidor_id: user.id,
-    acepta_tratamiento_datos: true,
-    canal_consentimiento: 'App Distribuidor'
-  });
+  const fechaVencimientoPago = tipoPago === 'pendiente'
+    ? new Date(Date.now() + config.dias_vencimiento_pago * 24 * 60 * 60 * 1000).toISOString()
+    : null;
 
-  if (saleError) {
-    // Nota: La boleta quedó activada pero el registro de cliente falló. 
-    // En producción se buscaría atomicidad, pero aquí priorizamos la activación técnica.
-    console.error("Venta no registrada en tabla auxiliar:", saleError);
+  // Completar el pack con datos del comerciante y pago
+  const { error: updateError } = await supabaseAdmin
+    .from('packs')
+    .update({
+      comerciante_nombre:      comercianteNombre,
+      comerciante_tel:         comercianteTel,
+      comerciante_email:       comercianteEmail,
+      comerciante_whatsapp:    comercianteWa,
+      tipo_pago:               tipoPago,
+      estado_pago:             tipoPago === 'inmediato' ? 'pagado' : 'pendiente',
+      fecha_venta:             new Date().toISOString(),
+      fecha_vencimiento_pago:  fechaVencimientoPago,
+    })
+    .eq('id', packId);
+
+  if (updateError) {
+    return { success: false, error: `Error al registrar datos del comerciante: ${updateError.message}` };
   }
 
-  revalidatePath('/activar');
-  return { success: true, boleta_code: `TKN-${String(boleta_id).padStart(6, '0')}` };
-}
+  // Leer tokens generados por la RPC
+  const { data: pack } = await supabaseAdmin
+    .from('packs')
+    .select('token_pagina, token_qr, qr_valido_hasta')
+    .eq('id', packId)
+    .single();
 
-export async function obtenerBarriosAction() {
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc('obtener_barrios_sugeridos');
-  if (error) return [];
-  return (data || []).map((b: any) => b.barrio);
+  if (!pack) return { success: false, error: 'Error al obtener datos del pack generado.' };
+
+  // Leer los 25 números creados
+  const { data: boletas } = await supabaseAdmin
+    .from('boletas')
+    .select('id_boleta')
+    .eq('pack_id', packId)
+    .order('id_boleta', { ascending: true });
+
+  const numeros = (boletas || []).map((b: any) => Number(b.id_boleta));
+
+  return {
+    success: true,
+    packId,
+    tokenPagina:          pack.token_pagina,
+    tokenQr:              pack.token_qr,
+    qrValidoHasta:        pack.qr_valido_hasta,
+    numeros,
+    comercianteNombre,
+    tipoPago,
+    fechaVencimientoPago,
+  };
 }

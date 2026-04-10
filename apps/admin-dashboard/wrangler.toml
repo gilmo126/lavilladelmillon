@@ -6,6 +6,3 @@ compatibility_flags = ["nodejs_compat"]
 [assets]
 directory = ".open-next/assets"
 binding = "ASSETS"
-
-[vars]
-SUPABASE_SERVICE_ROLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsdXlidGV4Z2NxcGdxbWJidGN1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTU3NTkxNSwiZXhwIjoyMDkxMTUxOTE1fQ.tK2CpOdF9ZTdTuRfyxVXdCwVyh9ebSAoG_pxcptsAyM"

@@ -2,6 +2,7 @@
 
 import { createClient } from '../../utils/supabase/server';
 import { createAdminClient } from '../../utils/supabase/admin';
+import { supabaseAdmin } from '../../lib/supabaseAdmin';
 import { revalidatePath } from 'next/cache';
 
 // ── Crear Personal (Gerencia: Distribuidor u Operativo) ───────────────────────
@@ -11,7 +12,7 @@ export async function createPersonalAction(formData: FormData) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { success: false, error: 'Acceso Denegado' };
 
-    const { data: profile } = await supabase.from('perfiles').select('rol').eq('id', user.id).single();
+    const { data: profile } = await supabaseAdmin.from('perfiles').select('rol').eq('id', user.id).single();
     if (profile?.rol !== 'admin') return { success: false, error: 'Solo la gerencia puede crear personal.' };
 
     const rol      = formData.get('rol') as string;
@@ -96,7 +97,7 @@ export async function updatePerfilAction(formData: FormData) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { success: false, error: 'Acceso Denegado' };
 
-    const { data: me } = await supabase.from('perfiles').select('rol').eq('id', user.id).single();
+    const { data: me } = await supabaseAdmin.from('perfiles').select('rol').eq('id', user.id).single();
     const isAdmin = me?.rol === 'admin';
     if (!isAdmin) return { success: false, error: 'Sin permisos.' };
 
@@ -109,7 +110,7 @@ export async function updatePerfilAction(formData: FormData) {
 
     if (!target_id) return { success: false, error: 'ID de perfil inválido.' };
 
-    const { data: target } = await supabase.from('perfiles').select('rol').eq('id', target_id).single();
+    const { data: target } = await supabaseAdmin.from('perfiles').select('rol').eq('id', target_id).single();
     if (target?.rol === 'admin') return { success: false, error: 'No se puede editar una cuenta de Gerencia.' };
     
 
@@ -119,7 +120,7 @@ export async function updatePerfilAction(formData: FormData) {
     if (isAdmin && nombre)   payload.nombre = nombre;
     if (isAdmin && zona_id)  payload.zona_id = zona_id;
 
-    const { error } = await supabase.from('perfiles').update(payload).eq('id', target_id);
+    const { error } = await supabaseAdmin.from('perfiles').update(payload).eq('id', target_id);
     if (error) throw error;
 
     // Sincronización Directa y N:N (Misión de Estabilización)
@@ -152,7 +153,7 @@ export async function deleteDistribuidorAction(id: string) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { success: false, error: 'Acceso Denegado' };
 
-    const { data: profile } = await supabase.from('perfiles').select('rol').eq('id', user.id).single();
+    const { data: profile } = await supabaseAdmin.from('perfiles').select('rol').eq('id', user.id).single();
     if (profile?.rol !== 'admin') return { success: false, error: 'Permisos insuficientes.' };
 
     const adminAuthClient = createAdminClient();

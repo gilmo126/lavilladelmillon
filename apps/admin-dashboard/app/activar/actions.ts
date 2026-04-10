@@ -26,7 +26,7 @@ export async function venderPackAction(formData: FormData): Promise<VenderPackRe
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { success: false, error: 'Sesión no válida.' };
 
-  const { data: profile } = await supabase
+  const { data: profile } = await supabaseAdmin
     .from('perfiles')
     .select('rol')
     .eq('id', user.id)

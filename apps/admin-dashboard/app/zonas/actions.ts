@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from '../../utils/supabase/server';
+import { supabaseAdmin } from '../../lib/supabaseAdmin';
 import { revalidatePath } from 'next/cache';
 
 export async function createZonaAction(formData: FormData) {
@@ -10,7 +11,7 @@ export async function createZonaAction(formData: FormData) {
   if (!user) return { success: false, error: 'Acceso Denegado' };
 
   // Verificar admin
-  const { data: profile } = await supabase.from('perfiles').select('rol').eq('id', user.id).single();
+  const { data: profile } = await supabaseAdmin.from('perfiles').select('rol').eq('id', user.id).single();
   if (profile?.rol !== 'admin') return { success: false, error: 'Operación denegada.' };
 
   const nombre = formData.get('nombre') as string;
@@ -41,11 +42,11 @@ export async function deleteZonaAction(id: string) {
 
   if (!user) return { success: false, error: 'Acceso Denegado' };
 
-  const { data: profile } = await supabase.from('perfiles').select('rol').eq('id', user.id).single();
+  const { data: profile } = await supabaseAdmin.from('perfiles').select('rol').eq('id', user.id).single();
   if (profile?.rol !== 'admin') return { success: false, error: 'Permisos insuficientes.' };
 
   // El borrado solo debe proceder si no hay distribuidores en la zona (la constraint SET NULL igual lo permite, pero mejor validar)
-  const { count, error: countErr } = await supabase.from('perfiles').select('id', { count: 'exact', head: true }).eq('zona_id', id);
+  const { count, error: countErr } = await supabaseAdmin.from('perfiles').select('id', { count: 'exact', head: true }).eq('zona_id', id);
   if (count && count > 0) {
       return { success: false, error: 'No se puede eliminar la zona porque tiene agentes logísticos asignados. Reasígnales una nueva zona primero.' };
   }

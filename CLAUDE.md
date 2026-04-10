@@ -122,7 +122,7 @@ El modelo logístico cambia de boletas individuales asignadas por rango a **pack
 | **Fase 3** | ✅ Completada | Nuevo módulo de venta de packs |
 | **Fase 4** | ✅ Completada | Comunicación WhatsApp/email con links individuales |
 | **Fase 5** | ✅ Completada | Página temporal del comerciante `/pack/[token]` en landing-page |
-| **Fase 6** | ⏳ Pendiente | Actualizar módulos existentes con nuevos estados |
+| **Fase 6** | ✅ Completada | Actualizar módulos existentes con nuevos estados |
 
 ### Fase 1 — Migraciones aplicadas en Supabase
 
@@ -200,6 +200,34 @@ Página pública (sin autenticación) donde el comerciante ve sus 25 números y 
 - Botón "Copiar todos" copia lista completa de números al portapapeles
 - Header muestra nombre del comerciante, cantidad de números y fecha de vencimiento
 - URL de WhatsApp: `https://wa.me/?text=...número XXXXXX...landing-url?numero=XXXXXX`
+
+### Fase 6 — Módulos actualizados y ruta /validar-qr
+
+**Migración aplicada:** `add_qr_usado_at_to_packs` — agrega `qr_usado_at timestamptz` a `packs`
+
+**Nueva ruta: `/validar-qr/[token_qr]`**
+- Protegida (requiere auth)
+- Muestra datos del comerciante, tipo/estado de pago, validez del QR
+- Botón "Registrar Asistencia y Anular QR" con confirmación
+- Valida: QR expirado, pago no confirmado, ya canjeado
+
+**Módulo `/boletas` actualizado:**
+- Estados: 0=GENERADO, 1=ACTIVADO, 2=REGISTRADO, 3=ANULADO, 4=SORTEADO
+- Nueva columna `pack_id` en tabla
+- Timeline simplificado: Generación → Activación → Registro → Sorteo
+
+**Módulo `/ventas` reescrito:**
+- Ahora muestra packs vendidos (tabla `packs`) en vez de `ventas_clientes`
+- Columnas: Comerciante, Distribuidor, Tipo Pago, Estado Pago, Fecha Venta, Vencimiento, # Números
+
+**Módulo `/trazabilidad` actualizado:**
+- Cadena logística: 3 pasos (Generado → Activado → Registrado)
+- Sección "Pack / Distribuidor" reemplaza "Despachado Por"
+
+**`lib/actions.ts` limpiado:**
+- Eliminadas: `getLotesLogisticos`, `getInventarioDistribuidorAction`, `verificarRangoBodegaAction`, `crearLoteBodegaAction`
+- Agregadas: `getPacksPaged`, `getPacksDistribuidorAction`
+- Actualizados estados en: `getDashboardCounts`, `getRankingZonas`, `cerrarSorteoAction`
 
 ### Fase 2 — Eliminados
 

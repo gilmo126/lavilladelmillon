@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { venderPackAction, type VenderPackResult } from './actions';
+import { venderPackAction, enviarEmailPackAction, type VenderPackResult } from './actions';
 
 const ADMIN_URL   = 'https://lavilladelmillon-admin.guillaumer-orion.workers.dev';
 const LANDING_URL = 'https://landing-page.guillaumer-orion.workers.dev';
@@ -18,6 +18,8 @@ export default function VenderPackForm({ diasVencimientoPago }: Props) {
   const [error, setError]         = useState<string | null>(null);
   const [result, setResult]       = useState<SuccessData | null>(null);
   const [copied, setCopied]       = useState(false);
+  const [emailStatus, setEmailStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+  const [emailError, setEmailError]   = useState<string | null>(null);
 
   const fechaVencimientoDisplay = new Date(
     Date.now() + diasVencimientoPago * 24 * 60 * 60 * 1000
@@ -114,6 +116,74 @@ export default function VenderPackForm({ diasVencimientoPago }: Props) {
           </div>
         </div>
 
+        {/* Enviar al Comerciante */}
+        <div className="bg-admin-card border border-admin-border rounded-3xl p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-1 h-5 bg-green-500 rounded-full" />
+            <h2 className="font-black text-white uppercase tracking-wider text-sm">Enviar al Comerciante</h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <a
+              href={`https://wa.me/?text=${encodeURIComponent(`Hola ${result.comercianteNombre}, aquí está tu pack de 25 números para La Villa del Millón. Accede a tus números aquí: ${packUrl}`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-3 py-4 bg-green-600 hover:bg-green-500 text-white font-black rounded-2xl transition-all text-sm uppercase tracking-widest active:scale-[0.99]"
+            >
+              <span className="text-lg">📲</span> Enviar por WhatsApp
+            </a>
+            {result.comercianteEmail ? (
+              <button
+                onClick={async () => {
+                  setEmailStatus('sending');
+                  setEmailError(null);
+                  const res = await enviarEmailPackAction({
+                    comercianteNombre: result.comercianteNombre,
+                    comercianteEmail: result.comercianteEmail!,
+                    numeros: result.numeros,
+                    tokenPagina: result.tokenPagina,
+                  });
+                  if (res.success) {
+                    setEmailStatus('sent');
+                  } else {
+                    setEmailStatus('error');
+                    setEmailError(res.error || 'Error al enviar email');
+                  }
+                }}
+                disabled={emailStatus === 'sending' || emailStatus === 'sent'}
+                className={`flex items-center justify-center gap-3 py-4 font-black rounded-2xl transition-all text-sm uppercase tracking-widest active:scale-[0.99] ${
+                  emailStatus === 'sent'
+                    ? 'bg-green-500/20 border border-green-500 text-green-400'
+                    : emailStatus === 'error'
+                    ? 'bg-red-500/20 border border-red-500 text-red-400 hover:bg-red-500/30'
+                    : emailStatus === 'sending'
+                    ? 'bg-slate-700 text-slate-400 border border-white/5'
+                    : 'bg-admin-blue hover:bg-blue-600 text-white border border-transparent'
+                }`}
+              >
+                {emailStatus === 'sending' ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Enviando...
+                  </>
+                ) : emailStatus === 'sent' ? (
+                  <><span className="text-lg">✓</span> Email Enviado</>
+                ) : emailStatus === 'error' ? (
+                  <><span className="text-lg">✉️</span> Reintentar Email</>
+                ) : (
+                  <><span className="text-lg">✉️</span> Enviar Email</>
+                )}
+              </button>
+            ) : (
+              <div className="flex items-center justify-center py-4 bg-slate-800/50 border border-white/5 rounded-2xl">
+                <p className="text-slate-600 text-[10px] font-bold uppercase tracking-widest">Sin email registrado</p>
+              </div>
+            )}
+          </div>
+          {emailStatus === 'error' && emailError && (
+            <p className="text-red-400 text-xs font-bold mt-3">❌ {emailError}</p>
+          )}
+        </div>
+
         {/* QR de beneficio — solo pago inmediato */}
         {result.tipoPago === 'inmediato' && (
           <div className="bg-admin-card border border-admin-gold/20 rounded-3xl p-6">
@@ -158,7 +228,7 @@ export default function VenderPackForm({ diasVencimientoPago }: Props) {
         )}
 
         <button
-          onClick={() => { setResult(null); setError(null); }}
+          onClick={() => { setResult(null); setError(null); setEmailStatus('idle'); setEmailError(null); }}
           className="w-full py-4 bg-slate-800 hover:bg-slate-700 text-white font-black rounded-2xl transition-all text-sm uppercase tracking-widest border border-white/5"
         >
           Generar Nuevo Pack

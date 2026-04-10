@@ -34,11 +34,31 @@ npm run build:cf   # build para Cloudflare (dentro de cada app)
 npm run dev        # servidor de desarrollo local
 ```
 
-### Variables de entorno
+### Variables de entorno — Runtime vs Build-time
 
-Las variables `NEXT_PUBLIC_*` se **baked en build time** — deben estar configuradas
-como GitHub Secrets y pasarse al step de build en el workflow de GitHub Actions.
-No sirve definirlas solo en Cloudflare Workers env vars.
+| Tipo | Ejemplo | Cuándo se lee | Cómo inyectar |
+|------|---------|--------------|----------------|
+| `NEXT_PUBLIC_*` | `NEXT_PUBLIC_SUPABASE_URL` | Build-time (baked en bundle) | GitHub Secret → `env:` en step de **build** |
+| Sin prefijo | `SUPABASE_SERVICE_ROLE_KEY` | Runtime (en el Worker) | GitHub Secret → `wrangler secret put` en step **antes del deploy** |
+
+**Regla crítica:** pasar una variable runtime solo como `env:` en el step de `wrangler deploy`
+la hace disponible para el proceso de deploy, **no para el Worker en producción**. Causa error 500.
+
+El workflow correcto para variables runtime:
+```yaml
+- name: Set Cloudflare secrets
+  run: echo "$SUPABASE_SERVICE_ROLE_KEY" | npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+  env:
+    CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+- name: Deploy to Cloudflare Workers
+  run: npx wrangler deploy
+  env:
+    CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+```
 
 ---
 
@@ -70,6 +90,13 @@ if (distribuidorId) {
   query = query.eq('distribuidor_id', distribuidorId)
 }
 ```
+
+### Variables de entorno en Cloudflare Workers — no mezclar [vars] y secrets
+
+Si una variable existe en `wrangler.toml [vars]` **y** se intenta crear como
+secret con `wrangler secret put`, falla con error `10053: Binding name already in use`.
+Solución: elegir uno solo — o `[vars]` (texto plano, visible en dashboard)
+o secret encriptado (via `wrangler secret put`). Nunca ambos.
 
 ### Porcentajes y fracciones pequeñas
 

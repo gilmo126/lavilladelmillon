@@ -114,3 +114,19 @@ Todo el resto de tablas requiere sesión activa de Supabase Auth.
 |-----|-----|
 | **Cloudflare MCP** | Gestión de Workers, variables de entorno, secretos, dominios |
 | **Supabase MCP** | Consultas SQL, migraciones de base de datos, revisión de esquema |
+
+---
+
+## MANTENIMIENTO DE ESTE ARCHIVO
+
+Este archivo es la fuente de verdad del proyecto para agentes de IA.
+
+**Regla:** Al finalizar cualquier sesión de trabajo que introduzca:
+- Cambios arquitecturales o de stack
+- Nuevas lecciones aprendidas
+- Cambios en el pipeline de deploy
+- Nuevas tablas o cambios en la base de datos
+- Nuevos MCP configurados
+- Cambios en políticas RLS
+
+→ Actualizar este CLAUDE.md con los nuevos aprendizajes ANTES del commit final.

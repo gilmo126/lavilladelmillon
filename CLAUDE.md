@@ -330,7 +330,28 @@ Página pública (sin autenticación) donde el comerciante ve sus 25 números y 
 |------|---------|
 | `tipo_pago_pack` | `inmediato`, `pendiente` |
 | `estado_pago_pack` | `pagado`, `pendiente`, `vencido` |
-| `rol_usuario` | `admin`, `distribuidor` *(eliminado: `operativo`)* |
+| `rol_usuario` | `admin`, `distribuidor`, `asistente` *(eliminado: `operativo`)* |
+
+### Rol Asistente — Encargado de Evento
+
+Perfil con acceso limitado para validar QRs de beneficio recreativo en eventos.
+
+**Acceso permitido:** solo `/scanner` y `/validar-qr/[token_qr]`
+
+**Flujo:**
+1. Admin crea asistente desde `/distribuidores` (Gestión de Personal)
+2. Asistente hace login → redirect automático a `/scanner`
+3. En `/scanner`: ingresa token QR manualmente o escanea con cámara del dispositivo
+4. Se redirige a `/validar-qr/[token]` donde valida y registra asistencia
+
+**Archivos:**
+- `app/scanner/page.tsx` + `ScannerClient.tsx` — Página del scanner
+- `app/login/actions.ts` — Redirect post-login por rol
+- `app/page.tsx` — Redirige asistente a `/scanner`
+- `app/components/Sidebar.tsx` — Menú exclusivo con "Scanner QR"
+- `app/distribuidores/CreateDistForm.tsx` — Selector de rol (distribuidor/asistente)
+
+**Sidebar:** Badge purple, label "Asistente", solo muestra "📷 Scanner QR"
 
 ---
 

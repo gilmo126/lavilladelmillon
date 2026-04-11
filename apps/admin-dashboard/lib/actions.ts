@@ -14,7 +14,8 @@ export async function getBoletasPaged(page: number, limit: number, query: string
   let queryBuilder = supabaseAdmin.from('boletas').select(`
     *,
     premios(nombre_premio),
-    distribuidor:perfiles!distribuidor_id(nombre)
+    distribuidor:perfiles!distribuidor_id(nombre),
+    pack:packs!pack_id(numero_pack, comerciante_nombre)
   `, { count: 'exact' });
 
   if (distribuidorId) {

@@ -117,6 +117,16 @@ function BoletaDetailDrawer({ boleta, onClose, onRefresh }: { boleta: any; onClo
           </div>
         </section>
 
+        {boleta.pack && (
+          <section className="bg-slate-950 rounded-2xl p-6 border border-admin-gold/20 space-y-2">
+            <p className="text-[9px] font-bold text-slate-600 uppercase tracking-widest mb-1.5">Pack de Origen</p>
+            <p className="text-lg font-black text-admin-gold">PACK-{String(boleta.pack.numero_pack).padStart(3, '0')}</p>
+            {boleta.pack.comerciante_nombre && (
+              <p className="text-[10px] text-slate-400 font-bold">Comerciante: {boleta.pack.comerciante_nombre}</p>
+            )}
+          </section>
+        )}
+
         {(boleta.comercio_nombre || boleta.nombre_usuario) && (
           <section className="bg-slate-950 rounded-2xl p-6 border border-white/5 space-y-5">
             {boleta.comercio_nombre && (
@@ -344,7 +354,7 @@ export default function BoletasBrowser({ userProfile }: { userProfile: any }) {
                   onClick={() => setSelectedBoleta(b)}
                 >
                   <td className="p-3 pl-8 text-white font-bold font-mono">{String(b.id_boleta).padStart(6, '0')}</td>
-                  <td className="p-3 font-mono text-[10px] text-slate-500 group-hover:text-admin-blue transition-colors">{b.pack_id ? b.pack_id.slice(0, 8) + '...' : '—'}</td>
+                  <td className="p-3 text-admin-gold font-black text-[10px]">{b.pack?.numero_pack ? `PACK-${String(b.pack.numero_pack).padStart(3, '0')}` : '—'}</td>
                   <td className="p-3">
                     <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black border tracking-tighter ${
                       b.estado === 1 ? 'bg-admin-blue/10 border-admin-blue/20 text-admin-blue' :

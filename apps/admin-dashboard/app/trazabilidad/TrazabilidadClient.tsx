@@ -22,6 +22,7 @@ type TrackResult = {
   telefono_cliente: string | null;
   fecha_registro: string | null;
   premio_nombre: string | null;
+  numero_pack: number | null;
 };
 
 function StepBadge({ active, done, label }: { active: boolean; done: boolean; label: string }) {
@@ -64,9 +65,12 @@ function ResultCard({ r }: { r: TrackResult }) {
 
       {/* Detalles Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-0 divide-y md:divide-y-0 md:divide-x divide-admin-border">
-        {/* Distribuidor */}
+        {/* Pack / Distribuidor */}
         <div className="p-5">
           <p className="text-xs text-slate-500 uppercase font-bold mb-3">📦 Pack / Distribuidor</p>
+          {r.numero_pack && (
+            <p className="text-admin-gold font-black text-lg mb-2">PACK-{String(r.numero_pack).padStart(3, '0')}</p>
+          )}
           {r.distribuidor_nombre ? (
             <div className="space-y-1">
               <p className="text-white font-semibold">{r.distribuidor_nombre}</p>

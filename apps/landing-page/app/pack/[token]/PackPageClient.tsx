@@ -94,6 +94,9 @@ export default function PackPageClient({ pack }: { pack: PackData }) {
           <h1 className="text-2xl font-black text-white tracking-tight">
             🏪 {pack.comerciante_nombre}
           </h1>
+          {pack.numero_pack && (
+            <p className="text-[10px] font-black text-marca-gold mt-1">PACK-{String(pack.numero_pack).padStart(3, '0')}</p>
+          )}
           <div className="flex flex-wrap items-center gap-2 mt-3">
             <span className="text-[10px] font-bold text-slate-400 bg-slate-800 px-3 py-1 rounded-full border border-slate-700">
               {pack.numeros.length} números

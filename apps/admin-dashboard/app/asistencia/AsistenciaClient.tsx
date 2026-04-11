@@ -26,14 +26,14 @@ export default function AsistenciaClient({ initialData }: { initialData: Asisten
   function handleExportCSV() {
     if (data.length === 0) return;
 
-    const headers = ['Comerciante', 'Teléfono', 'WhatsApp', 'Hora Llegada', 'Distribuidor', 'Pack ID'];
+    const headers = ['Pack', 'Comerciante', 'Teléfono', 'WhatsApp', 'Hora Llegada', 'Distribuidor'];
     const rows = data.map((a) => [
+      a.numero_pack ? `PACK-${String(a.numero_pack).padStart(3, '0')}` : '',
       a.comerciante_nombre,
       a.comerciante_tel || '',
       a.comerciante_whatsapp || '',
       new Date(a.qr_usado_at).toLocaleString('es-CO'),
       a.distribuidor?.nombre || '',
-      a.id,
     ]);
 
     const csv = [headers, ...rows].map((r) => r.map((c) => `"${c}"`).join(',')).join('\n');
@@ -93,7 +93,7 @@ export default function AsistenciaClient({ initialData }: { initialData: Asisten
                 <th className="p-4 font-bold">Teléfono</th>
                 <th className="p-4 font-bold">WhatsApp</th>
                 <th className="p-4 font-bold">Distribuidor</th>
-                <th className="p-4 font-bold">Pack ID</th>
+                <th className="p-4 font-bold">Pack</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-admin-border">
@@ -117,7 +117,7 @@ export default function AsistenciaClient({ initialData }: { initialData: Asisten
                     <td className="p-4 text-sm text-slate-300 font-bold uppercase">
                       {a.distribuidor?.nombre || '—'}
                     </td>
-                    <td className="p-4 text-[10px] text-slate-500 font-mono">{a.id.slice(0, 8)}...</td>
+                    <td className="p-4 text-admin-gold font-black text-xs">{a.numero_pack ? `PACK-${String(a.numero_pack).padStart(3, '0')}` : '—'}</td>
                   </tr>
                 ))
               )}

@@ -281,7 +281,7 @@ export default function ScannerClient({ initialAsistencia }: { initialAsistencia
               <div key={a.id} className="p-4 flex items-center justify-between">
                 <div>
                   <p className="text-white font-bold text-sm">{a.comerciante_nombre}</p>
-                  <p className="text-[10px] text-slate-500 font-mono mt-0.5">{a.id.slice(0, 8)}...</p>
+                  <p className="text-[10px] text-admin-gold font-black mt-0.5">{a.numero_pack ? `PACK-${String(a.numero_pack).padStart(3, '0')}` : ''}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-admin-gold font-bold text-sm">

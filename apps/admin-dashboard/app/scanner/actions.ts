@@ -14,6 +14,7 @@ async function verificarRolScannerAction(): Promise<string | null> {
 
 export type AsistenciaItem = {
   id: string;
+  numero_pack: number | null;
   comerciante_nombre: string;
   comerciante_tel: string | null;
   comerciante_whatsapp: string | null;
@@ -31,7 +32,7 @@ export async function getAsistenciaAction(fecha?: string): Promise<AsistenciaIte
 
   const { data, error } = await supabaseAdmin
     .from('packs')
-    .select('id, comerciante_nombre, comerciante_tel, comerciante_whatsapp, qr_usado_at, distribuidor:perfiles!distribuidor_id(nombre)')
+    .select('id, numero_pack, comerciante_nombre, comerciante_tel, comerciante_whatsapp, qr_usado_at, distribuidor:perfiles!distribuidor_id(nombre)')
     .not('qr_usado_at', 'is', null)
     .gte('qr_usado_at', inicio)
     .lte('qr_usado_at', fin)

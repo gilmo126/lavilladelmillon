@@ -20,6 +20,7 @@ export type PackData = {
   token_qr: string | null;
   qr_valido_hasta: string | null;
   qr_usado_at: string | null;
+  numero_pack: number | null;
 };
 
 function PaginaError({ titulo, mensaje }: { titulo: string; mensaje: string }) {

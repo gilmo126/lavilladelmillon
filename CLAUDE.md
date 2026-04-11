@@ -297,6 +297,16 @@ Se muestra formateado como `PACK-001`, `PACK-002`, etc.
 
 **Migración BD:** `ALTER TABLE packs ADD COLUMN numero_pack serial`
 
+**Integración en todos los módulos:**
+- Explorador Boletas: tabla muestra `PACK-XXX` en vez de UUID truncado. Drawer de detalle muestra sección "Pack de Origen" con número y comerciante.
+- Trazabilidad: RPC `buscar_trazabilidad` incluye join a packs para `numero_pack`. ResultCard muestra `PACK-XXX` en sección "Pack / Distribuidor".
+- Asistencia Evento: tabla y CSV muestran `PACK-XXX` en vez de UUID. Scanner lista asistencia con `PACK-XXX`.
+- Landing comerciante: header muestra `PACK-XXX` debajo del nombre del comerciante.
+
+**RPCs actualizadas:**
+- `buscar_trazabilidad` → `LEFT JOIN public.packs pk ON b.pack_id = pk.id` + retorna `numero_pack`
+- `get_pack_publica` → retorna `numero_pack` en el JSON
+
 ### Control de duplicados y estado visual por número
 
 **Página del comerciante `/pack/[token]`:**

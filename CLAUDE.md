@@ -436,6 +436,11 @@ Todo el resto de tablas requiere sesión activa de Supabase Auth.
 - [2026-04-10] Drawer de detalle de pack no mostraba identificación → Agregado campo identificación en sección comerciante → `app/ventas/VentasClient.tsx`
 - [2026-04-10] Landing: "Failed to send request to Edge Function" al registrar → Edge Function `registrar-boleta` no desplegada y con lógica V1 → Reemplazada por Server Action `registrarBoletaAction` con estados V2 y `supabaseAdmin` → `apps/landing-page/app/actions.ts`, `apps/landing-page/app/page.tsx`
 - [2026-04-10] Landing: campo número de boleta no se pre-cargaba con query param `?numero=` → Agregado `useSearchParams` + campo readonly con estilo dorado y candado → `apps/landing-page/app/page.tsx`
+- [2026-04-11] Landing: campo email opcional + email confirmación con Resend tras registro → `apps/landing-page/app/actions.ts`, `apps/landing-page/app/page.tsx`
+- [2026-04-11] Landing: pantalla de confirmación post-registro (número, nombre, premio, fechas) → Reemplaza simple "Registrada con éxito" → `apps/landing-page/app/page.tsx`
+- [2026-04-11] Landing: boleta ya registrada muestra confirmación directamente al acceder con `?numero=` → `verificarBoletaAction` + pantalla de confirmación → `apps/landing-page/app/actions.ts`
+- [2026-04-11] Migración BD: `ALTER TABLE boletas ADD COLUMN email_usuario text` (aplicada manualmente)
+- [2026-04-11] Workflow deploy-landing: agregado `RESEND_API_KEY` como Cloudflare secret → `.github/workflows/deploy-landing.yml`
 
 **Migraciones BD pendientes:**
 ```sql

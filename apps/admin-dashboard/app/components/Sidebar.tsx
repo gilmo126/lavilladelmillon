@@ -17,6 +17,7 @@ export default function Sidebar({ role, userName, campanaNombre }: { role: strin
     { href: '/boletas',         label: '🎟️ Explorador Boletas' },
     { sep: true, label: 'LOGÍSTICA' },
     { href: '/sorteos',         label: '📅 Gestión de Sorteos' },
+    { href: '/asistencia',      label: '📋 Asistencia Evento' },
     { sep: true, label: 'PERSONAL' },
     { href: '/distribuidores',  label: '👥 Gestión de Personal' },
     { href: '/zonas',           label: '📍 Territorios y Zonas' },

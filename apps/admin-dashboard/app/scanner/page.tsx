@@ -4,6 +4,7 @@ import { createClient } from '../../utils/supabase/server';
 import { supabaseAdmin } from '../../lib/supabaseAdmin';
 import { redirect } from 'next/navigation';
 import ScannerClient from './ScannerClient';
+import { getAsistenciaAction } from './actions';
 
 export const metadata = {
   title: 'Scanner QR | Panel Asistente',
@@ -24,8 +25,10 @@ export default async function ScannerPage() {
     redirect('/');
   }
 
+  const asistenciaHoy = await getAsistenciaAction();
+
   return (
-    <div className="p-8 pb-20 h-full overflow-y-auto flex flex-col items-center justify-center">
+    <div className="p-8 pb-20 h-full overflow-y-auto flex flex-col items-center">
       <header className="mb-10 text-center">
         <div className="w-16 h-16 bg-admin-gold/10 border border-admin-gold/20 rounded-3xl flex items-center justify-center text-3xl mx-auto mb-4">
           📷
@@ -40,7 +43,7 @@ export default async function ScannerPage() {
       </header>
 
       <div className="w-full max-w-md">
-        <ScannerClient />
+        <ScannerClient initialAsistencia={asistenciaHoy} />
       </div>
     </div>
   );

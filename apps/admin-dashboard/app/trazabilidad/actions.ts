@@ -18,9 +18,8 @@ export async function buscarTrazabilidadAction(formData: FormData) {
     return { success: false, error: 'Ingrese un criterio válido.', results: [] };
   }
 
-  const { data, error } = await supabase.rpc('buscar_trazabilidad', { 
+  const { data, error } = await supabaseAdmin.rpc('buscar_trazabilidad', {
     p_query: query,
-    p_user_id: user.id 
   });
 
   if (error) return { success: false, error: error.message, results: [] };

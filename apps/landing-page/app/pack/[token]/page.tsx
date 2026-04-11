@@ -60,16 +60,17 @@ export default async function PackPage({
   const { data, error } = await supabase.rpc('get_pack_publica', { p_token: token });
 
   if (error) {
-    console.error('Error fetching pack:', error.message);
+    console.error('Error fetching pack:', error.message, error.code, error.details);
     return (
       <PaginaError
         titulo="Error al cargar"
-        mensaje="No pudimos cargar esta página. Por favor intenta más tarde."
+        mensaje={`No pudimos cargar esta página. Por favor intenta más tarde. (${error.code || 'unknown'})`}
       />
     );
   }
 
-  const pack = data as PackData;
+  // La RPC retorna jsonb — puede venir como objeto directo o envuelto
+  const pack = (typeof data === 'string' ? JSON.parse(data) : data) as PackData;
 
   if (!pack?.found) {
     return (

@@ -288,19 +288,47 @@ function PersonalTable({ personas, zonas, canDelete, onInspect }: { personas: Pe
 }
 
 export default function GestionPersonalClient({
-  distribuidores, zonas
+  distribuidores, asistentes, zonas
 }: {
   distribuidores: Perfil[];
+  asistentes: Perfil[];
   zonas: any[];
 }) {
   const [inspecting, setInspecting] = useState<Perfil | null>(null);
+  const [tab, setTab] = useState<'distribuidores' | 'asistentes'>('distribuidores');
+
+  const personas = tab === 'distribuidores' ? distribuidores : asistentes;
 
   return (
     <div>
       {inspecting && <InventoryDrawer dist={inspecting} onClose={() => setInspecting(null)} />}
       <div className="bg-admin-card rounded-3xl border border-admin-border overflow-hidden shadow-2xl relative">
+        {/* Tabs */}
+        <div className="flex border-b border-admin-border">
+          <button
+            onClick={() => setTab('distribuidores')}
+            className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest transition-all ${
+              tab === 'distribuidores'
+                ? 'text-admin-blue border-b-2 border-admin-blue bg-admin-blue/5'
+                : 'text-slate-500 hover:text-white'
+            }`}
+          >
+            Distribuidores ({distribuidores.length})
+          </button>
+          <button
+            onClick={() => setTab('asistentes')}
+            className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest transition-all ${
+              tab === 'asistentes'
+                ? 'text-purple-400 border-b-2 border-purple-400 bg-purple-500/5'
+                : 'text-slate-500 hover:text-white'
+            }`}
+          >
+            Asistentes ({asistentes.length})
+          </button>
+        </div>
+
         <PersonalTable
-          personas={distribuidores}
+          personas={personas}
           zonas={zonas}
           canDelete={true}
           onInspect={setInspecting}

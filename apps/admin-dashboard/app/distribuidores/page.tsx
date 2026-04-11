@@ -36,6 +36,7 @@ export default async function DistribuidoresPage() {
   }));
 
   const distribuidores = mappedPerfiles.filter(p => p.rol === 'distribuidor');
+  const asistentes = mappedPerfiles.filter(p => p.rol === 'asistente');
   const zonas = allZonas;
 
   return (
@@ -53,6 +54,7 @@ export default async function DistribuidoresPage() {
           </div>
           <GestionPersonalClient
             distribuidores={distribuidores || []}
+            asistentes={asistentes || []}
             zonas={zonas || []}
           />
         </div>

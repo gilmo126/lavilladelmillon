@@ -139,6 +139,19 @@ const mapped = data.map((p: any) => ({
 
 Si no se mapea, TypeScript falla en build con error de tipos incompatibles.
 
+### Enums eliminados persisten en RPCs y queries
+
+Al eliminar un valor de un enum PostgreSQL (ej: `operativo` de `rol_usuario`),
+las RPCs almacenadas que referencian ese enum siguen usando la versión anterior.
+Si una RPC hace `columna::TEXT` sobre un enum, falla con:
+`invalid input value for enum rol_usuario: operativo`
+
+**Checklist al eliminar un valor de enum:**
+1. Buscar TODAS las RPCs que leen columnas del enum (`\df` en psql)
+2. Actualizar cada RPC con `DROP FUNCTION` + `CREATE OR REPLACE`
+3. Usar `COALESCE(columna::TEXT, '')` para proteger contra valores residuales
+4. Verificar datos residuales en la tabla antes de alterar el enum
+
 ### Coexistencia de datos V1 y V2
 
 - Las boletas antiguas (bodega manual) coexisten con las nuevas (generadas por pack).

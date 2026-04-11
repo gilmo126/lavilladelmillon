@@ -443,6 +443,9 @@ Todo el resto de tablas requiere sesión activa de Supabase Auth.
 - [2026-04-11] Workflow deploy-landing: agregado `RESEND_API_KEY` como Cloudflare secret → `.github/workflows/deploy-landing.yml`
 - [2026-04-11] Gestión de Personal no mostraba asistentes → Agregados tabs Distribuidores/Asistentes con contadores → `app/distribuidores/page.tsx`, `GestionPersonalClient.tsx`
 - [2026-04-11] Drawer de detalle mostraba packs para asistentes → Diferenciado por rol: asistente solo ve datos básicos, distribuidor ve packs → `GestionPersonalClient.tsx`
+- [2026-04-11] Encoding UTF-8 roto en `/zonas/page.tsx` → Corregidos 8 strings mojibake (Catálogo, Logísticas, etc.) → `app/zonas/page.tsx`
+- [2026-04-11] Territorios sin botón editar → Agregado EditButton con formulario inline (nombre + descripción) + `editZonaAction` → `app/zonas/page.tsx`, `app/zonas/actions.ts`
+- [2026-04-11] Queries de zonas usaban `supabase` con RLS → Cambiadas a `supabaseAdmin` (insert, delete, select, update) → `app/zonas/page.tsx`, `app/zonas/actions.ts`
 
 **Migraciones BD pendientes:**
 ```sql

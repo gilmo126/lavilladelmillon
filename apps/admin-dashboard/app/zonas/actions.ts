@@ -19,7 +19,7 @@ export async function createZonaAction(formData: FormData) {
 
   if (!nombre) return { success: false, error: 'El nombre de la zona es obligatorio.' };
 
-  const { error } = await supabase.from('zonas').insert({
+  const { error } = await supabaseAdmin.from('zonas').insert({
     nombre,
     descripcion
   });
@@ -51,7 +51,29 @@ export async function deleteZonaAction(id: string) {
       return { success: false, error: 'No se puede eliminar la zona porque tiene agentes logísticos asignados. Reasígnales una nueva zona primero.' };
   }
 
-  const { error } = await supabase.from('zonas').delete().eq('id', id);
+  const { error } = await supabaseAdmin.from('zonas').delete().eq('id', id);
+  if (error) return { success: false, error: error.message };
+
+  revalidatePath('/zonas');
+  revalidatePath('/distribuidores');
+  return { success: true };
+}
+
+export async function editZonaAction(id: string, formData: FormData) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) return { success: false, error: 'Acceso Denegado' };
+
+  const { data: profile } = await supabaseAdmin.from('perfiles').select('rol').eq('id', user.id).single();
+  if (profile?.rol !== 'admin') return { success: false, error: 'Permisos insuficientes.' };
+
+  const nombre = (formData.get('nombre') as string)?.trim();
+  const descripcion = (formData.get('descripcion') as string)?.trim() || null;
+
+  if (!nombre) return { success: false, error: 'El nombre es obligatorio.' };
+
+  const { error } = await supabaseAdmin.from('zonas').update({ nombre, descripcion }).eq('id', id);
   if (error) return { success: false, error: error.message };
 
   revalidatePath('/zonas');

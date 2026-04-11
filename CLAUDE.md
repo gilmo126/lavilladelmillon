@@ -449,6 +449,8 @@ Todo el resto de tablas requiere sesión activa de Supabase Auth.
 - [2026-04-11] Scroll perdido en iOS Safari → `overflow-hidden` doble en body+contenedor bloqueaba scroll → Cambiado a `overflow-y-auto` en contenedor, removido del body → `app/layout.tsx`
 - [2026-04-11] Botón hamburguesa se superponía al sidebar abierto → Botón se oculta al abrir, botón ✕ dentro del sidebar para cerrar → `app/components/Sidebar.tsx`
 - [2026-04-11] Login no scrolleable en pantallas pequeñas → Cambiado `overflow-hidden` a `overflow-y-auto` → `app/login/page.tsx`
+- [2026-04-11] Login descentrado en móvil → Removido `mx-4` de LoginBox que desplazaba el formulario → `app/login/LoginBox.tsx`
+- [2026-04-11] Botón hamburguesa en esquina izquierda tapaba contenido → Movido a esquina superior derecha (`right-4`) → `app/components/Sidebar.tsx`
 
 **Migraciones BD pendientes:**
 ```sql

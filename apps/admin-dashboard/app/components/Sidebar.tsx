@@ -59,7 +59,7 @@ export default function Sidebar({ role, userName, campanaNombre }: { role: strin
       {!isOpen && (
         <button
           onClick={toggleSidebar}
-          className="fixed top-4 left-4 z-[100] md:hidden w-12 h-12 bg-slate-900 border border-white/10 rounded-2xl flex items-center justify-center text-white shadow-2xl active:scale-95 transition-all"
+          className="fixed top-4 right-4 z-[100] md:hidden w-12 h-12 bg-slate-900 border border-white/10 rounded-2xl flex items-center justify-center text-white shadow-2xl active:scale-95 transition-all"
         >
           ☰
         </button>

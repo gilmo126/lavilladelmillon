@@ -395,6 +395,17 @@ Todo el resto de tablas requiere sesión activa de Supabase Auth.
 - [2026-04-10] Encoding UTF-8 roto en `/configuracion/page.tsx` → Corregido mojibake en metadata → `app/configuracion/page.tsx`
 - [2026-04-10] Módulo Configuración (Llaves Maestras) no tenía campos de plazos V2 → Agregada sección "Plazos y Vencimientos" con `dias_validez_pagina_comerciante`, `dias_validez_qr`, `dias_vencimiento_pago` → `app/components/ConfiguracionManager.tsx`
 - [2026-04-10] Boletas antiguas V1 (pack_id IS NULL) eliminadas de la BD → DELETE cascada: activaciones, ventas_clientes, trazabilidad_geografica, boletas (1050 registros) → SQL directo en Supabase
+- [2026-04-10] PackDetailDrawer usaba `useState` para cargar datos → Error "Cannot update component while rendering" → Cambiado a `useEffect` con `[packId]` → `app/ventas/VentasClient.tsx`
+- [2026-04-10] Formulario Vender Pack no capturaba identificación del comerciante → Agregados campos tipo documento (CC/CE/NIT/PP) y número de identificación → `app/activar/VenderPackForm.tsx`, `app/activar/actions.ts`
+- [2026-04-10] Drawer de detalle de pack no mostraba identificación → Agregado campo identificación en sección comerciante → `app/ventas/VentasClient.tsx`
+
+**Migraciones BD pendientes:**
+```sql
+ALTER TYPE rol_usuario ADD VALUE 'asistente';
+ALTER TABLE packs ADD COLUMN comerciante_tipo_id text DEFAULT 'CC';
+ALTER TABLE packs ADD COLUMN comerciante_identificacion text;
+ALTER TABLE packs ADD COLUMN qr_usado_at timestamptz DEFAULT NULL;
+```
 
 ---
 

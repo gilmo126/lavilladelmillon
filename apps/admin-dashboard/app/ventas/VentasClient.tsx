@@ -110,6 +110,10 @@ function PackDetailDrawer({ packId, onClose }: { packId: string; onClose: () => 
               <h4 className="text-xs font-black text-white uppercase tracking-wider">Comerciante</h4>
             </div>
             <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="col-span-2">
+                <p className="text-[10px] text-slate-600 uppercase font-bold">Identificación</p>
+                <p className="text-slate-300">{p.comerciante_tipo_id || 'CC'} {p.comerciante_identificacion || '—'}</p>
+              </div>
               <div>
                 <p className="text-[10px] text-slate-600 uppercase font-bold">Teléfono</p>
                 <p className="text-slate-300">{p.comerciante_tel || '—'}</p>

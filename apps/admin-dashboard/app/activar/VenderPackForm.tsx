@@ -254,13 +254,39 @@ export default function VenderPackForm({ diasVencimientoPago }: Props) {
         </div>
 
         <div>
-          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Nombre del Comercio *</label>
+          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Nombre del Comerciante *</label>
           <input
             name="comerciante_nombre"
             required
-            placeholder="Ej: Tienda El Progreso"
+            placeholder="Ej: Juan Pérez / Tienda El Progreso"
             className="w-full bg-slate-950 border border-slate-700/50 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-admin-blue transition-all"
           />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Tipo Documento *</label>
+            <select
+              name="comerciante_tipo_id"
+              required
+              defaultValue="CC"
+              className="w-full bg-slate-950 border border-slate-700/50 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-admin-blue transition-all appearance-none"
+            >
+              <option value="CC">CC - Cédula de Ciudadanía</option>
+              <option value="CE">CE - Cédula de Extranjería</option>
+              <option value="NIT">NIT - Número de Identificación Tributaria</option>
+              <option value="PP">PP - Pasaporte</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Número de Identificación *</label>
+            <input
+              name="comerciante_identificacion"
+              required
+              placeholder="Ej: 1144000111"
+              className="w-full bg-slate-950 border border-slate-700/50 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-admin-blue transition-all"
+            />
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">

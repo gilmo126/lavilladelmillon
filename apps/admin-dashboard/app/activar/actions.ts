@@ -36,14 +36,16 @@ export async function venderPackAction(formData: FormData): Promise<VenderPackRe
     return { success: false, error: 'Solo distribuidores pueden vender packs.' };
   }
 
-  const comercianteNombre = (formData.get('comerciante_nombre') as string)?.trim();
-  const comercianteTel    = (formData.get('comerciante_tel') as string)?.trim();
-  const comercianteEmail  = (formData.get('comerciante_email') as string)?.trim() || null;
-  const comercianteWa     = (formData.get('comerciante_whatsapp') as string)?.trim() || null;
-  const tipoPago          = formData.get('tipo_pago') as 'inmediato' | 'pendiente';
+  const comercianteNombre   = (formData.get('comerciante_nombre') as string)?.trim();
+  const comercianteTipoId   = (formData.get('comerciante_tipo_id') as string)?.trim() || 'CC';
+  const comercianteIdent    = (formData.get('comerciante_identificacion') as string)?.trim();
+  const comercianteTel      = (formData.get('comerciante_tel') as string)?.trim();
+  const comercianteEmail    = (formData.get('comerciante_email') as string)?.trim() || null;
+  const comercianteWa       = (formData.get('comerciante_whatsapp') as string)?.trim() || null;
+  const tipoPago            = formData.get('tipo_pago') as 'inmediato' | 'pendiente';
 
-  if (!comercianteNombre || !comercianteTel) {
-    return { success: false, error: 'Nombre y teléfono del comerciante son obligatorios.' };
+  if (!comercianteNombre || !comercianteIdent || !comercianteTel) {
+    return { success: false, error: 'Nombre, identificación y teléfono del comerciante son obligatorios.' };
   }
   if (!['inmediato', 'pendiente'].includes(tipoPago)) {
     return { success: false, error: 'Tipo de pago inválido.' };
@@ -76,10 +78,12 @@ export async function venderPackAction(formData: FormData): Promise<VenderPackRe
   const { error: updateError } = await supabaseAdmin
     .from('packs')
     .update({
-      comerciante_nombre:      comercianteNombre,
-      comerciante_tel:         comercianteTel,
-      comerciante_email:       comercianteEmail,
-      comerciante_whatsapp:    comercianteWa,
+      comerciante_nombre:          comercianteNombre,
+      comerciante_tipo_id:         comercianteTipoId,
+      comerciante_identificacion:  comercianteIdent,
+      comerciante_tel:             comercianteTel,
+      comerciante_email:           comercianteEmail,
+      comerciante_whatsapp:        comercianteWa,
       tipo_pago:               tipoPago,
       estado_pago:             tipoPago === 'inmediato' ? 'pagado' : 'pendiente',
       fecha_venta:             new Date().toISOString(),

@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { getPackDetail } from '../../lib/actions';
 
 const LANDING_URL = 'https://landing-page.guillaumer-orion.workers.dev';
@@ -37,11 +37,11 @@ function PackDetailDrawer({ packId, onClose }: { packId: string; onClose: () => 
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  useState(() => {
+  useEffect(() => {
     getPackDetail(packId)
       .then((d) => { setDetail(d); setLoading(false); })
       .catch((e) => { setError(e.message); setLoading(false); });
-  });
+  }, [packId]);
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text).then(() => {

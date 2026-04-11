@@ -452,12 +452,52 @@ Todo el resto de tablas requiere sesión activa de Supabase Auth.
 - [2026-04-11] Login descentrado en móvil → Removido `mx-4` de LoginBox que desplazaba el formulario → `app/login/LoginBox.tsx`
 - [2026-04-11] Botón hamburguesa en esquina izquierda tapaba contenido → Movido a esquina superior derecha (`right-4`) → `app/components/Sidebar.tsx`
 
-**Migraciones BD pendientes:**
+### Auditoría de Seguridad Pre-Merge (2026-04-11)
+
+**Pages sin auth — CORREGIDO:**
+- `/configuracion`, `/premios`, `/sorteos` no tenían verificación de sesión ni rol → Agregados guards `getUser()` + verificación rol admin con `supabaseAdmin` + redirect
+
+**Server Actions sin auth — CORREGIDO:**
+- `enviarEmailPackAction` (activar/actions.ts) → Agregado check de sesión
+- `validarQrInlineAction` y `getAsistenciaAction` (scanner/actions.ts) → Agregado check sesión + rol admin/asistente via `verificarRolScannerAction()`
+- `anularQrAction` (validar-qr/actions.ts) → Agregado check sesión + rol admin/asistente
+
+**Validación de inputs en landing-page — CORREGIDO:**
+- Número de boleta: validación rango 6 dígitos (100000-999999)
+- `premioId` y `territorioId`: validación formato UUID con regex
+- `ubicacionManual`: máximo 255 caracteres
+- `email`: validación formato server-side con regex
+- Token en `/pack/[token]`: alfanumérico, máximo 64 caracteres
+
+**Hardcoded fallback — CORREGIDO:**
+- `lib/supabaseAdmin.ts` del admin tenía URL del proyecto como fallback → Removida, usa `?? ''`
+
+**RPC buscar_trazabilidad — CORREGIDO:**
+- RPC en BD referenciaba enum `operativo` eliminado → Actualizada con estados V2, `COALESCE` en `pa.rol`, sin `fecha_despacho`
+- Action pasaba `p_user_id` que la RPC no aceptaba → Corregido a solo `p_query` con `supabaseAdmin`
+
+**Verificado como seguro:**
+- `.env.local` nunca fue commiteado (está en `.gitignore` línea 19)
+- Service role key solo en server components/actions, no expuesto al cliente
+- RLS activado en tablas sensibles
+- Tokens QR generados con `gen_random_uuid()` (no predecibles)
+- Middleware redirige no autenticados a `/login`
+- Distribuidor solo ve sus propios packs filtrado por `distribuidor_id`
+
+**Pendiente (mejoras futuras):**
+- Rate limiting en registro de boletas y scanner (considerar Upstash/Cloudflare)
+- Headers de seguridad (CSP, CORS) en Cloudflare Workers
+- Validación de formato colombiano para cédula (5-11 dígitos) y celular (10 dígitos)
+
+**Migraciones BD aplicadas manualmente:**
 ```sql
 ALTER TYPE rol_usuario ADD VALUE 'asistente';
 ALTER TABLE packs ADD COLUMN comerciante_tipo_id text DEFAULT 'CC';
 ALTER TABLE packs ADD COLUMN comerciante_identificacion text;
 ALTER TABLE packs ADD COLUMN qr_usado_at timestamptz DEFAULT NULL;
+ALTER TABLE boletas ADD COLUMN email_usuario text;
+DROP FUNCTION buscar_trazabilidad(text);
+-- + CREATE OR REPLACE FUNCTION buscar_trazabilidad con estados V2
 ```
 
 ---

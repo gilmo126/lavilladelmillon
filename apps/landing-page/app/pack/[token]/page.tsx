@@ -17,6 +17,9 @@ export type PackData = {
   fecha_vencimiento: string;
   numeros: NumeroDetalle[];
   nombre_campana: string;
+  token_qr: string | null;
+  qr_valido_hasta: string | null;
+  qr_usado_at: string | null;
 };
 
 function PaginaError({ titulo, mensaje }: { titulo: string; mensaje: string }) {

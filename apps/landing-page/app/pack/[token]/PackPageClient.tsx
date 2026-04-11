@@ -61,6 +61,14 @@ export default function PackPageClient({ pack }: { pack: PackData }) {
 
   const totalRegistrados = pack.numeros.filter((n) => n.estado >= 2).length;
 
+  const ADMIN_URL = 'https://lavilladelmillon-admin.guillaumer-orion.workers.dev';
+  const tieneQr = pack.tipo_pago === 'inmediato' && pack.token_qr && !pack.qr_usado_at;
+  const qrDataUrl = pack.token_qr ? `${ADMIN_URL}/validar-qr/${pack.token_qr}` : '';
+  const qrImageUrl = qrDataUrl ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrDataUrl)}` : '';
+  const qrValidoHastaStr = pack.qr_valido_hasta
+    ? new Date(pack.qr_valido_hasta).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })
+    : null;
+
   function handleCopyAll() {
     const disponibles = pack.numeros.filter((n) => n.estado < 2);
     const lista = disponibles
@@ -114,6 +122,35 @@ export default function PackPageClient({ pack }: { pack: PackData }) {
             participar en el sorteo.
           </p>
         </div>
+
+        {/* QR de Beneficio Recreativo */}
+        {tieneQr && (
+          <div className="bg-marca-gold/5 border border-marca-gold/30 rounded-2xl p-6 text-center space-y-4">
+            <h2 className="font-black text-marca-gold text-sm uppercase tracking-widest">
+              🎟️ Tu QR de Beneficio Recreativo
+            </h2>
+            <div className="flex justify-center">
+              <div className="bg-white p-3 rounded-2xl shadow-xl">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={qrImageUrl} alt="QR de beneficio recreativo" width={180} height={180} className="rounded-lg" />
+              </div>
+            </div>
+            <p className="text-slate-400 text-xs leading-relaxed">
+              Presenta este QR en el evento recreativo.
+              {qrValidoHastaStr && (
+                <span className="text-marca-gold font-bold"> Válido hasta el {qrValidoHastaStr}.</span>
+              )}
+            </p>
+          </div>
+        )}
+
+        {pack.qr_usado_at && pack.tipo_pago === 'inmediato' && (
+          <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-5 text-center">
+            <p className="text-slate-400 text-sm">
+              QR utilizado el {new Date(pack.qr_usado_at).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })}
+            </p>
+          </div>
+        )}
 
         {/* Copiar todos (solo disponibles) */}
         <button

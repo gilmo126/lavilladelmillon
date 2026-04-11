@@ -7,12 +7,11 @@ import Link from 'next/link';
 
 function estadoToString(estado: number) {
   switch (estado) {
-    case 0: return 'BODEGA';
-    case 1: return 'DESPACHADA';
-    case 2: return 'ACTIVA / VENDIDA';
-    case 3: return 'REGISTRADA';
-    case 4: return 'ANULADA';
-    case 5: return 'SORTEADA';
+    case 0: return 'GENERADO';
+    case 1: return 'ACTIVADO';
+    case 2: return 'REGISTRADO';
+    case 3: return 'ANULADO';
+    case 4: return 'SORTEADO';
     default: return 'DESCONOCIDO';
   }
 }
@@ -95,7 +94,7 @@ export default function RealtimeDashboard({ initialConfig, initialCounts, initia
       } finally {
           setLoading(false);
       }
-  }, [total, isDist, myId]);
+  }, [isDist, myId]);
 
   // Sincronización Real-time (solo para resetear a la pag 1 o actualizar contadores)
   useEffect(() => {
@@ -173,9 +172,10 @@ export default function RealtimeDashboard({ initialConfig, initialCounts, initia
                                 <p className="text-sm font-black text-white font-mono">{reg.token_integridad}</p>
                             </div>
                         <span className={`px-2 py-0.5 rounded-full text-[9px] font-black border tracking-tighter ${
-                            reg.estado === 2 ? 'bg-admin-green/10 border-admin-green/20 text-admin-green' : 
                             reg.estado === 1 ? 'bg-admin-blue/10 border-admin-blue/20 text-admin-blue' :
-                            reg.estado === 3 ? 'bg-admin-gold/10 border-admin-gold/20 text-admin-gold' :
+                            reg.estado === 2 ? 'bg-admin-green/10 border-admin-green/20 text-admin-green' :
+                            reg.estado === 3 ? 'bg-red-500/10 border-red-500/20 text-red-500' :
+                            reg.estado === 4 ? 'bg-admin-gold/10 border-admin-gold/20 text-admin-gold' :
                             'bg-slate-100/10 border-white/5 text-slate-300'
                         }`}>
                             {estadoToString(reg.estado)}
@@ -213,15 +213,16 @@ export default function RealtimeDashboard({ initialConfig, initialCounts, initia
                         <td className="p-4 text-admin-gold font-black uppercase text-[10px]">{reg.zonas?.nombre || 'General'}</td>
                         <td className="p-4">
                             <span className={`px-2 py-0.5 rounded-full text-[9px] font-black border tracking-tighter ${
-                            reg.estado === 2 ? 'bg-admin-green/10 border-admin-green/20 text-admin-green' : 
                             reg.estado === 1 ? 'bg-admin-blue/10 border-admin-blue/20 text-admin-blue' :
-                            reg.estado === 3 ? 'bg-admin-gold/10 border-admin-gold/20 text-admin-gold' :
+                            reg.estado === 2 ? 'bg-admin-green/10 border-admin-green/20 text-admin-green' :
+                            reg.estado === 3 ? 'bg-red-500/10 border-red-500/20 text-red-500' :
+                            reg.estado === 4 ? 'bg-admin-gold/10 border-admin-gold/20 text-admin-gold' :
                             'bg-slate-100/10 border-white/5 text-slate-300'
                             }`}>
                             {estadoToString(reg.estado)}
                             </span>
                         </td>
-                        <td className="p-4 text-slate-400 font-bold uppercase">{reg.nombre_usuario || 'En Almacén'}</td>
+                        <td className="p-4 text-slate-400 font-bold uppercase">{reg.nombre_usuario || 'Sin titular'}</td>
                         <td className="p-4 text-right pr-8 text-slate-500 font-bold">
                             {getTimeAgo(reg.updated_at)}
                         </td>
@@ -301,7 +302,7 @@ export default function RealtimeDashboard({ initialConfig, initialCounts, initia
                         <span className="text-white">{pctActivas}%</span>
                     </div>
                     <div className="flex justify-between items-center text-[10px] font-black uppercase text-slate-400">
-                        <span className="flex items-center gap-3"><span className="w-2 h-2 rounded-full bg-slate-700" /> {isDist ? 'En Maletín (Por Activar)' : 'Bodega Central'}</span>
+                        <span className="flex items-center gap-3"><span className="w-2 h-2 rounded-full bg-slate-700" /> {isDist ? 'Por Activar' : 'Generados (Sin Activar)'}</span>
                         <span className="text-slate-500">{pctBodega}%</span>
                     </div>
                 </div>

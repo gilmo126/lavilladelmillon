@@ -6,12 +6,11 @@ import { Search as SearchIcon, Eye } from 'lucide-react';
 
 function estadoToString(estado: number) {
   switch (estado) {
-    case 0: return 'BODEGA';
-    case 1: return 'DESPACHADA';
-    case 2: return 'ACTIVA / VENDIDA';
-    case 3: return 'REGISTRADA';
-    case 4: return 'ANULADA';
-    case 5: return 'SORTEADA';
+    case 0: return 'GENERADO';
+    case 1: return 'ACTIVADO';
+    case 2: return 'REGISTRADO';
+    case 3: return 'ANULADO';
+    case 4: return 'SORTEADO';
     default: return 'DESCONOCIDO';
   }
 }
@@ -21,15 +20,14 @@ function BoletaDetailDrawer({ boleta, onClose, onRefresh }: { boleta: any; onClo
   const [isAnnulling, setIsAnnulling] = useState(false);
 
   const timeline = [
-    { label: 'Creación en Sistema', date: boleta.created_at, icon: '🆕', status: 'done' },
-    { label: 'Despacho a Distribuidor', date: boleta.fecha_despacho, icon: '🚚', status: boleta.estado >= 1 ? 'done' : 'pending' },
-    { label: 'Activación en Comercio', date: boleta.fecha_activacion, icon: '🏪', status: boleta.estado >= 2 ? 'done' : 'pending' },
-    { label: 'Registro Ganador (Landing)', date: boleta.fecha_registro, icon: '🏆', status: boleta.estado >= 3 ? 'done' : boleta.estado === 4 ? 'failed' : 'pending' },
-    { label: 'Participación en Sorteo', date: boleta.updated_at, icon: '🔒', status: boleta.estado === 5 ? 'done' : 'pending' },
+    { label: 'Generación en Pack', date: boleta.created_at, icon: '🆕', status: 'done' },
+    { label: 'Activación por Cliente', date: boleta.fecha_activacion, icon: '🏪', status: boleta.estado >= 1 ? 'done' : boleta.estado === 3 ? 'failed' : 'pending' },
+    { label: 'Registro Completo', date: boleta.fecha_registro, icon: '🏆', status: boleta.estado >= 2 ? 'done' : boleta.estado === 3 ? 'failed' : 'pending' },
+    { label: 'Participación en Sorteo', date: boleta.updated_at, icon: '🔒', status: boleta.estado === 4 ? 'done' : 'pending' },
   ];
 
   const handleAnular = async () => {
-    if (boleta.estado === 4) return;
+    if (boleta.estado === 3) return;
     if (!window.confirm(`⚠️ ADVERTENCIA CRÍTICA: ¿Estás seguro de que deseas ANULAR la boleta ${boleta.token_integridad}?\n\nEsta acción es IRREVERSIBLE.`)) return;
 
     setIsAnnulling(true);
@@ -73,7 +71,7 @@ function BoletaDetailDrawer({ boleta, onClose, onRefresh }: { boleta: any; onClo
               <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Estado de Vida</h4>
           </div>
           <div className="bg-slate-950 border border-white/5 rounded-2xl p-5 flex items-center justify-between">
-            <span className={`text-base font-black tracking-tight ${boleta.estado === 4 ? 'text-red-500' : 'text-white'}`}>
+            <span className={`text-base font-black tracking-tight ${boleta.estado === 3 ? 'text-red-500' : 'text-white'}`}>
               {estadoToString(boleta.estado)}
             </span>
             <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-admin-blue/10 border border-admin-blue/20 text-admin-blue uppercase">
@@ -110,7 +108,7 @@ function BoletaDetailDrawer({ boleta, onClose, onRefresh }: { boleta: any; onClo
                     </p>
                   ) : (
                     <p className="text-[10px] text-slate-700 italic px-1 lowercase font-bold">
-                      {boleta.estado === 4 ? 'abortado' : 'pendiente...'}
+                      {boleta.estado === 3 ? 'abortado' : 'pendiente...'}
                     </p>
                   )}
                 </div>
@@ -148,7 +146,7 @@ function BoletaDetailDrawer({ boleta, onClose, onRefresh }: { boleta: any; onClo
       </div>
 
       <div className="p-8 border-t border-white/10 bg-slate-950/80 space-y-3">
-        {boleta.estado !== 4 && (
+        {boleta.estado !== 3 && (
           <button 
             onClick={handleAnular}
             disabled={isAnnulling}
@@ -295,9 +293,10 @@ export default function BoletasBrowser({ userProfile }: { userProfile: any }) {
                             <p className="text-sm font-black text-white font-mono">{b.token_integridad}</p>
                         </div>
                         <span className={`px-2 py-0.5 rounded-full text-[9px] font-black border tracking-tighter ${
-                            b.estado === 2 ? 'bg-admin-green/10 border-admin-green/20 text-admin-green' : 
                             b.estado === 1 ? 'bg-admin-blue/10 border-admin-blue/20 text-admin-blue' :
-                            b.estado === 4 ? 'bg-red-500/10 border-red-500/20 text-red-500' :
+                            b.estado === 2 ? 'bg-admin-green/10 border-admin-green/20 text-admin-green' :
+                            b.estado === 3 ? 'bg-red-500/10 border-red-500/20 text-red-500' :
+                            b.estado === 4 ? 'bg-admin-gold/10 border-admin-gold/20 text-admin-gold' :
                             'bg-slate-100/10 border-white/5 text-slate-300'
                         }`}>
                            {estadoToString(b.estado)}
@@ -306,14 +305,8 @@ export default function BoletasBrowser({ userProfile }: { userProfile: any }) {
                     <div className="space-y-2 mb-6">
                         <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-tighter">
                             <span className="text-slate-600">Responsable</span>
-                            <span className="text-slate-300">{b.distribuidor?.nombre || 'Bodega Central'}</span>
+                            <span className="text-slate-300">{b.distribuidor?.nombre || 'Sin asignar'}</span>
                         </div>
-                        {b.despachador && (
-                            <div className="flex justify-between items-center text-[9px] font-medium uppercase tracking-tighter border-t border-white/5 pt-2 mt-2">
-                                <span className="text-slate-700">Origen</span>
-                                <span className="text-admin-gold/70">{b.despachador.nombre}</span>
-                            </div>
-                        )}
                         {b.identificacion_usuario && (
                             <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-tighter">
                                 <span className="text-slate-600">Titular</span>
@@ -333,12 +326,12 @@ export default function BoletasBrowser({ userProfile }: { userProfile: any }) {
           <table className="w-full text-left text-[11px] whitespace-nowrap min-w-[900px]">
             <thead className="sticky top-0 z-20 bg-slate-900 shadow-xl border-b border-white/5">
               <tr className="text-slate-500 uppercase font-black tracking-tighter">
-                <th className="p-4 pl-8">ID / Consecutivo</th>
-                <th className="p-4">Hash Token</th>
-                <th className="p-4">Estado Logístico</th>
+                <th className="p-4 pl-8">ID / Número</th>
+                <th className="p-4">Pack</th>
+                <th className="p-4">Estado</th>
                 <th className="p-4">Identidad</th>
-                <th className="p-4">Ubicación / Comercio</th>
-                <th className="p-4">Responsable / Origen</th>
+                <th className="p-4">Comercio</th>
+                <th className="p-4">Distribuidor</th>
                 <th className="p-4 text-admin-gold">Premio</th>
                 <th className="p-4 text-right pr-8">Auditoría</th>
               </tr>
@@ -350,14 +343,14 @@ export default function BoletasBrowser({ userProfile }: { userProfile: any }) {
                   className="hover:bg-admin-blue/5 transition-all group cursor-pointer"
                   onClick={() => setSelectedBoleta(b)}
                 >
-                  <td className="p-3 pl-8 text-white font-bold">#{b.id_boleta}</td>
-                  <td className="p-3 font-mono text-[10px] text-slate-500 group-hover:text-admin-blue transition-colors">{b.token_integridad}</td>
+                  <td className="p-3 pl-8 text-white font-bold font-mono">{String(b.id_boleta).padStart(6, '0')}</td>
+                  <td className="p-3 font-mono text-[10px] text-slate-500 group-hover:text-admin-blue transition-colors">{b.pack_id ? b.pack_id.slice(0, 8) + '...' : '—'}</td>
                   <td className="p-3">
                     <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black border tracking-tighter ${
-                      b.estado === 2 ? 'bg-admin-green/10 border-admin-green/20 text-admin-green' : 
                       b.estado === 1 ? 'bg-admin-blue/10 border-admin-blue/20 text-admin-blue' :
-                      b.estado === 3 ? 'bg-admin-gold/10 border-admin-gold/20 text-admin-gold' :
-                      b.estado === 4 ? 'bg-red-500/10 border-red-500/20 text-red-500' :
+                      b.estado === 2 ? 'bg-admin-green/10 border-admin-green/20 text-admin-green' :
+                      b.estado === 3 ? 'bg-red-500/10 border-red-500/20 text-red-500' :
+                      b.estado === 4 ? 'bg-admin-gold/10 border-admin-gold/20 text-admin-gold' :
                       'bg-slate-100/10 border-white/5 text-slate-300'
                     }`}>
                       {estadoToString(b.estado)}
@@ -369,26 +362,9 @@ export default function BoletasBrowser({ userProfile }: { userProfile: any }) {
                   </td>
                   <td className="p-3 text-slate-400 font-bold uppercase">{b.comercio_nombre || b.zonas?.nombre || '-'}</td>
                   <td className="p-3">
-                    <div className="relative group/tooltip inline-block">
-                        <span className="text-slate-500 font-bold uppercase tracking-tighter">
-                            {b.distribuidor?.nombre || 'Bodega Central'}
-                        </span>
-                        {b.distribuidor && (
-                            <div className="invisible group-hover/tooltip:visible absolute z-[100] bottom-full left-0 mb-2 w-48 p-3 bg-slate-900 border border-admin-gold/30 rounded-xl shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-                                <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-admin-gold via-transparent to-transparent opacity-30" />
-                                <p className="text-[8px] font-black text-admin-gold uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
-                                    <span className="w-1 h-1 bg-admin-gold rounded-full animate-pulse" />
-                                    Trazabilidad Logística
-                                </p>
-                                <p className="text-[10px] text-white font-bold">Asignado por:</p>
-                                <p className="text-[10px] text-admin-blue font-black uppercase tracking-tight">{b.despachador?.nombre || 'Sistema'}</p>
-                                <div className="mt-2 pt-2 border-t border-white/5">
-                                    <p className="text-[9px] text-slate-500 font-bold uppercase">📅 {b.fecha_despacho ? new Date(b.fecha_despacho).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Fecha no reg.'}</p>
-                                </div>
-                                <div className="absolute top-full left-4 w-2 h-2 bg-slate-900 border-r border-b border-admin-gold/30 rotate-45 -mt-1 shadow-xl"></div>
-                            </div>
-                        )}
-                    </div>
+                    <span className="text-slate-500 font-bold uppercase tracking-tighter">
+                      {b.distribuidor?.nombre || 'Sin asignar'}
+                    </span>
                   </td>
                   <td className="p-3 text-admin-gold font-black uppercase text-[9px]">{b.premios?.nombre_premio || '—'}</td>
                   <td className="p-3 text-right pr-8">

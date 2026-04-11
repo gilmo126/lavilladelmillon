@@ -14,7 +14,8 @@
     "@supabase/supabase-js": "^2.39.8",
     "next": "16.2.3",
     "react": "^18",
-    "react-dom": "^18"
+    "react-dom": "^18",
+    "resend": "^6.10.0"
   },
   "devDependencies": {
     "@opennextjs/cloudflare": "^1.18.1",

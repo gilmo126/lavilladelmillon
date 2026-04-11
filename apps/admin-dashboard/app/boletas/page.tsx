@@ -1,5 +1,6 @@
 export const dynamic = 'force-dynamic'
 import React from 'react';
+import { supabaseAdmin } from '../../lib/supabaseAdmin';
 import BoletasBrowser from '../components/BoletasBrowser';
 
 export const metadata = {
@@ -14,7 +15,7 @@ export default async function BoletasPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  const { data: profile } = await supabase.from('perfiles').select('*').eq('id', user.id).single();
+  const { data: profile } = await supabaseAdmin.from('perfiles').select('*').eq('id', user.id).single();
   if (!profile) redirect('/login');
 
   return <BoletasBrowser userProfile={profile} />;

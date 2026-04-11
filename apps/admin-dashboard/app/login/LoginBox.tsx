@@ -24,7 +24,7 @@ export default function LoginBox() {
   }
 
   return (
-    <div className="w-full max-w-md p-8 glass-panel rounded-2xl border border-admin-gold/30 shadow-2xl relative overflow-hidden bg-slate-900 mx-4">
+    <div className="w-full max-w-md p-8 glass-panel rounded-2xl border border-admin-gold/30 shadow-2xl relative overflow-hidden bg-slate-900">
       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-admin-gold/20 via-admin-gold to-admin-gold/20" />
       
       <div className="text-center mb-8">

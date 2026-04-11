@@ -1,28 +1,28 @@
 export const dynamic = 'force-dynamic'
 import { createClient } from '../../utils/supabase/server';
+import { supabaseAdmin } from '../../lib/supabaseAdmin';
 import { redirect } from 'next/navigation';
 import CreateDistForm from './CreateDistForm';
 import GestionPersonalClient from './GestionPersonalClient';
 
-export const metadata = { title: 'GestiÃ³n de Personal | AdminPanel' };
+export const metadata = { title: 'Gestión de Personal | AdminPanel' };
 
 export default async function DistribuidoresPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  const { data: profile } = await supabase.from('perfiles').select('*').eq('id', user.id).single();
+  const { data: profile } = await supabaseAdmin.from('perfiles').select('*').eq('id', user.id).single();
   if (profile?.rol !== 'admin') return (
-    <div className="p-8 text-red-500 font-bold">Acceso Denegado: MÃ³dulo exclusivo de Gerencia.</div>
+    <div className="p-8 text-red-500 font-bold">Acceso Denegado: Módulo exclusivo de Gerencia.</div>
   );
 
-  // MisiÃ³n de EstabilizaciÃ³n: Atomic Join para perfiles
   const [
     { data: allPerfiles },
     { data: allZonas }
   ] = await Promise.all([
-    supabase.from('perfiles').select('*').order('created_at', { ascending: false }),
-    supabase.from('zonas').select('id, nombre').order('nombre')
+    supabaseAdmin.from('perfiles').select('*').order('created_at', { ascending: false }),
+    supabaseAdmin.from('zonas').select('id, nombre').order('nombre')
   ]);
 
   const zonasMap = (allZonas || []).reduce((acc: any, z) => {
@@ -36,14 +36,14 @@ export default async function DistribuidoresPage() {
   }));
 
   const distribuidores = mappedPerfiles.filter(p => p.rol === 'distribuidor');
-  const operativos = mappedPerfiles.filter(p => p.rol === 'operativo');
+  const asistentes = mappedPerfiles.filter(p => p.rol === 'asistente');
   const zonas = allZonas;
 
   return (
     <div className="p-8 pb-20 h-full overflow-y-auto">
       <header className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">GestiÃ³n de Personal</h1>
-        <p className="text-slate-400">AdministraciÃ³n de Distribuidores LogÃ­sticos y Operativos de Bodega. CRUD completo con trazabilidad de identidad.</p>
+        <h1 className="text-3xl font-bold mb-2">Gestión de Personal</h1>
+        <p className="text-slate-400">Administración de Distribuidores Logísticos. CRUD completo con trazabilidad de identidad.</p>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -54,13 +54,12 @@ export default async function DistribuidoresPage() {
           </div>
           <GestionPersonalClient
             distribuidores={distribuidores || []}
-            operativos={operativos || []}
+            asistentes={asistentes || []}
             zonas={zonas || []}
-            catalogoZonas={zonas || []}
           />
         </div>
 
-        {/* Formulario de CreaciÃ³n */}
+        {/* Formulario de Creación */}
         <div className="lg:col-span-1 space-y-4">
           <CreateDistForm zonasDisponibles={zonas || []} />
         </div>

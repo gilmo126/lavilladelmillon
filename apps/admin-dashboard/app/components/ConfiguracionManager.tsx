@@ -16,6 +16,9 @@ export default function ConfiguracionManager() {
   const [formSlogan, setFormSlogan] = useState('');
   const [formLogoUrl, setFormLogoUrl] = useState<string | null>(null);
   const [formActiva, setFormActiva] = useState(false);
+  const [formDiasVencPago, setFormDiasVencPago] = useState(8);
+  const [formDiasValidezQr, setFormDiasValidezQr] = useState(8);
+  const [formDiasValidezPagina, setFormDiasValidezPagina] = useState(30);
 
   const loadData = async () => {
     setLoading(true);
@@ -28,6 +31,9 @@ export default function ConfiguracionManager() {
         setFormSlogan(data.slogan_principal || '');
         setFormLogoUrl(data.logo_url || null);
         setFormActiva(data.activa);
+        setFormDiasVencPago(data.dias_vencimiento_pago ?? 8);
+        setFormDiasValidezQr(data.dias_validez_qr ?? 8);
+        setFormDiasValidezPagina(data.dias_validez_pagina_comerciante ?? 30);
       }
     } catch (e) {
       console.error(e);
@@ -79,7 +85,10 @@ export default function ConfiguracionManager() {
         landing_slug: formSlug,
         activa: formActiva,
         slogan_principal: formSlogan,
-        logo_url: formLogoUrl
+        logo_url: formLogoUrl,
+        dias_vencimiento_pago: formDiasVencPago,
+        dias_validez_qr: formDiasValidezQr,
+        dias_validez_pagina_comerciante: formDiasValidezPagina,
       });
       alert('Configuración guardada exitosamente.');
       loadData();
@@ -161,6 +170,60 @@ export default function ConfiguracionManager() {
                       <p className="font-bold text-white">{formActiva ? 'EN VIVO - Recibiendo Registros' : 'PAUSADA - Landing Oculta'}</p>
                       <p className="text-xs text-slate-400">Controla la visibilidad pública de la pasarela de participación.</p>
                     </div>
+                 </div>
+               </section>
+
+               <section className="space-y-6">
+                 <h3 className="text-xl font-bold text-white border-l-4 border-admin-blue pl-4">Plazos y Vencimientos</h3>
+
+                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                   <div className="bg-slate-900/50 rounded-xl border border-admin-border p-5 space-y-3">
+                     <label className="block text-sm text-slate-400">Validez página del comerciante</label>
+                     <div className="flex items-center gap-3">
+                       <input
+                         type="number"
+                         min={1}
+                         max={365}
+                         value={formDiasValidezPagina}
+                         onChange={e => setFormDiasValidezPagina(parseInt(e.target.value) || 30)}
+                         className="w-20 bg-slate-900 border border-admin-border rounded-lg px-3 py-2 text-white text-center font-mono font-bold focus:border-admin-blue outline-none"
+                       />
+                       <span className="text-xs text-slate-500">días</span>
+                     </div>
+                     <p className="text-[10px] text-slate-600">Tiempo que el comerciante puede ver y compartir sus números desde /pack/[token]</p>
+                   </div>
+
+                   <div className="bg-slate-900/50 rounded-xl border border-admin-border p-5 space-y-3">
+                     <label className="block text-sm text-slate-400">Validez QR de beneficio</label>
+                     <div className="flex items-center gap-3">
+                       <input
+                         type="number"
+                         min={1}
+                         max={365}
+                         value={formDiasValidezQr}
+                         onChange={e => setFormDiasValidezQr(parseInt(e.target.value) || 8)}
+                         className="w-20 bg-slate-900 border border-admin-border rounded-lg px-3 py-2 text-white text-center font-mono font-bold focus:border-admin-blue outline-none"
+                       />
+                       <span className="text-xs text-slate-500">días</span>
+                     </div>
+                     <p className="text-[10px] text-slate-600">Duración del QR para invitación al evento recreativo</p>
+                   </div>
+
+                   <div className="bg-slate-900/50 rounded-xl border border-admin-border p-5 space-y-3">
+                     <label className="block text-sm text-slate-400">Plazo de pago pendiente</label>
+                     <div className="flex items-center gap-3">
+                       <input
+                         type="number"
+                         min={1}
+                         max={365}
+                         value={formDiasVencPago}
+                         onChange={e => setFormDiasVencPago(parseInt(e.target.value) || 8)}
+                         className="w-20 bg-slate-900 border border-admin-border rounded-lg px-3 py-2 text-white text-center font-mono font-bold focus:border-admin-blue outline-none"
+                       />
+                       <span className="text-xs text-slate-500">días</span>
+                     </div>
+                     <p className="text-[10px] text-slate-600">Tiempo límite para que el comerciante pague un pack pendiente</p>
+                   </div>
                  </div>
                </section>
 

@@ -1,94 +1,64 @@
-export const dynamic = 'force-dynamic'
+export const dynamic = 'force-dynamic';
+
 import { createClient } from '../../utils/supabase/server';
+import { supabaseAdmin } from '../../lib/supabaseAdmin';
 import { redirect } from 'next/navigation';
-import { createAdminClient } from '../../utils/supabase/admin';
-import ActivarForm from './ActivarForm';
+import VenderPackForm from './VenderPackForm';
 
 export const metadata = {
-  title: 'Activar Boletas | Panel Distribuidor',
+  title: 'Vender Pack | Panel Distribuidor',
 };
 
 export default async function ActivarPage() {
   const supabase = await createClient();
-  const supabaseAdmin = createAdminClient();
-
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  // 1. Obtener Perfil Base
-  const { data: profile } = await supabase
+  const { data: profile } = await supabaseAdmin
     .from('perfiles')
-    .select('*')
+    .select('nombre, rol')
     .eq('id', user.id)
     .single();
 
   if (!profile || profile.rol !== 'distribuidor') {
     return (
       <div className="p-8">
-        <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-6 rounded-lg font-bold">
-          MÃ³dulo exclusivo para Distribuidores logÃ­sticos.
+        <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-6 rounded-2xl font-bold">
+          Módulo exclusivo para Distribuidores logísticos.
         </div>
       </div>
     );
   }
 
-  // 2. Obtener Zonas (Consulta Independiente para Resiliencia)
-  const { data: userZonas } = await supabase
-    .from('perfil_zonas')
-    .select('zonas(nombre)')
-    .eq('perfil_id', user.id);
+  const { data: config } = await supabaseAdmin
+    .from('configuracion_campana')
+    .select('nombre_campana, dias_vencimiento_pago')
+    .eq('activa', true)
+    .single();
 
-  // 3. Obtener las boletas con su zona de destino especÃ­fica
-  const { data: boletas } = await supabase
-    .from('boletas')
-    .select('id_boleta, estado, zonas!zona_destino_id(nombre)')
-    .eq('distribuidor_id', user.id)
-    .eq('estado', 1)
-    .order('id_boleta', { ascending: true })
-    .limit(500);
-
-  const { data: config } = await supabase.from('configuracion_campana').select('nombre_campana').eq('activa', true).single();
-  const nombreCampana = config?.nombre_campana || "CampaÃ±a Activa";
-
-  // 4. Obtener lista de barrios para el formulario (Prioridad: Barrios registrados en ventas)
-  const { data: barriosRegistrados } = await supabaseAdmin.rpc('obtener_barrios_sugeridos');
-  const { data: territorios } = await supabaseAdmin
-    .from('territorios')
-    .select('nombre')
-    .order('nombre', { ascending: true });
-
-  // Consolidar listas
-  const listaTerritorios = [
-    ...(barriosRegistrados || []).map((b: any) => ({ nombre: typeof b === 'string' ? b : (b.barrio || '') })),
-    ...(territorios || [])
-  ];
-
-  // Eliminar duplicados y formatear
-  const barriosFinales = Array.from(new Set(listaTerritorios.map(t => t.nombre.toUpperCase())))
-    .map(name => ({ nombre: name }));
-
-  const misZonas = userZonas?.map((uz: any) => uz.zonas.nombre) || ['Nacional'];
+  const nombreCampana      = config?.nombre_campana      ?? 'Campaña Activa';
+  const diasVencimientoPago = config?.dias_vencimiento_pago ?? 8;
 
   return (
     <div className="p-8 pb-20 h-full overflow-y-auto">
       <header className="mb-10">
-        <div className="flex items-center gap-4 mb-3">
-          <h1 className="text-3xl font-bold">{nombreCampana}</h1>
-          <div className="flex flex-wrap gap-2">
-            {misZonas.map((z: string, i: number) => (
-                <span key={i} className="bg-green-500/10 border border-green-500/20 text-green-400 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest">
-                    📍 {z}
-                </span>
-            ))}
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-10 h-10 bg-admin-gold/10 border border-admin-gold/20 rounded-2xl flex items-center justify-center text-xl">
+            🎟️
+          </div>
+          <div>
+            <h1 className="text-2xl font-black text-white tracking-tight">Vender Pack</h1>
+            <p className="text-[10px] font-bold text-admin-gold uppercase tracking-widest">{nombreCampana}</p>
           </div>
         </div>
-        <p className="text-slate-400">
-          Operación de Campo: <span className="text-white font-semibold">{profile.nombre}</span> — 
-          Gestiona las ventas tácticas y activa boletas en tus frentes de trabajo autorizados.
+        <p className="text-slate-400 text-sm mt-2">
+          <span className="text-white font-semibold">{profile.nombre}</span> — Genera un pack de 25 números aleatorios y véndelo a un comerciante.
         </p>
       </header>
 
-      <ActivarForm boletas={boletas || []} territorios={barriosFinales} />
+      <div className="max-w-2xl">
+        <VenderPackForm diasVencimientoPago={diasVencimientoPago} />
+      </div>
     </div>
   );
 }

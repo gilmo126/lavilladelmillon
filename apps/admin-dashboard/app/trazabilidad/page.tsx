@@ -1,5 +1,6 @@
 export const dynamic = 'force-dynamic'
 import { createClient } from '../../utils/supabase/server';
+import { supabaseAdmin } from '../../lib/supabaseAdmin';
 import { redirect } from 'next/navigation';
 import TrazabilidadClient from './TrazabilidadClient';
 
@@ -10,9 +11,9 @@ export default async function TrazabilidadPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  const { data: profile } = await supabase.from('perfiles').select('id, rol, nombre').eq('id', user.id).single();
+  const { data: profile } = await supabaseAdmin.from('perfiles').select('id, rol, nombre').eq('id', user.id).single();
   
-  if (!profile || !['admin', 'operativo', 'distribuidor'].includes(profile.rol)) {
+  if (!profile || !['admin', 'distribuidor'].includes(profile.rol)) {
     return <div className="p-8 text-red-500 font-bold">Módulo restringido.</div>;
   }
 

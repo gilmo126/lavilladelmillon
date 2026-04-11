@@ -103,18 +103,304 @@ o secret encriptado (via `wrangler secret put`). Nunca ambos.
 - **`Math.round()` aplasta fracciones pequeñas** → usar **`toFixed(1)`** para mostrar
   porcentajes con un decimal (ej: conversión en embudo).
 
+### supabase vs supabaseAdmin en Server Components
+
+- **SIEMPRE usar `supabaseAdmin`** para queries de `perfiles` y datos internos en
+  Server Components (`layout.tsx`, `page.tsx`).
+- `supabase` (cliente autenticado via `createClient()`) puede fallar silenciosamente
+  con RLS después de redirects, causando loops o "Rendering..." indefinido.
+- `supabase` solo usar en componentes cliente para operaciones del usuario autenticado.
+
+### Middleware matcher en Next.js 16
+
+- **No excluir `/login`** del matcher — si se excluye, el middleware no redirige
+  usuarios autenticados de `/login` a `/`, causando sidebar + login form simultáneos.
+- Envolver `getUser()` en try-catch para que fallos no causen redirect loops.
+- Patrón correcto del matcher:
+  ```
+  /((?!_next/static|_next/image|api|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)
+  ```
+
+### Joins de Supabase retornan arrays, no objetos
+
+Los joins con `!foreign_key(columna)` en el query builder de Supabase retornan
+**arrays**, no objetos individuales. Siempre mapear el resultado:
+
+```typescript
+// El join retorna: { distribuidor: [{ nombre: 'Juan' }] }
+// NO retorna:      { distribuidor: { nombre: 'Juan' } }
+
+// Solución: mapear con [0] o fallback
+const mapped = data.map((p: any) => ({
+  ...p,
+  distribuidor: Array.isArray(p.distribuidor) ? p.distribuidor[0] || null : p.distribuidor,
+}));
+```
+
+Si no se mapea, TypeScript falla en build con error de tipos incompatibles.
+
+### Enums eliminados persisten en RPCs y queries
+
+Al eliminar un valor de un enum PostgreSQL (ej: `operativo` de `rol_usuario`),
+las RPCs almacenadas que referencian ese enum siguen usando la versión anterior.
+Si una RPC hace `columna::TEXT` sobre un enum, falla con:
+`invalid input value for enum rol_usuario: operativo`
+
+**Checklist al eliminar un valor de enum:**
+1. Buscar TODAS las RPCs que leen columnas del enum (`\df` en psql)
+2. Actualizar cada RPC con `DROP FUNCTION` + `CREATE OR REPLACE`
+3. Usar `COALESCE(columna::TEXT, '')` para proteger contra valores residuales
+4. Verificar datos residuales en la tabla antes de alterar el enum
+
+### Coexistencia de datos V1 y V2
+
+- Las boletas antiguas (bodega manual) coexisten con las nuevas (generadas por pack).
+- Las nuevas boletas V2 tienen `pack_id NOT NULL`.
+- Las antiguas tienen `pack_id = null`.
+- Los filtros y queries deben considerar ambos casos durante la transición.
+
 ---
 
-## BASE DE DATOS — ESTADOS DE BOLETAS
+## REDISEÑO V2 — EN PROGRESO
+
+**Rama activa:** `feature/rediseno-packs-v2`
+
+### Concepto central del rediseño
+
+El modelo logístico cambia de boletas individuales asignadas por rango a **packs de 25 números generados aleatoriamente** que el distribuidor vende directamente a un comerciante. Cada número tiene un link único que el comerciante distribuye a sus clientes.
+
+### Estado de fases
+
+| Fase | Estado | Descripción |
+|------|--------|-------------|
+| **Fase 1** | ✅ Completada | Migraciones de base de datos |
+| **Fase 2** | ✅ Completada | Limpieza de código — módulos y rol obsoletos |
+| **Fase 3** | ✅ Completada | Nuevo módulo de venta de packs |
+| **Fase 4** | ✅ Completada | Comunicación WhatsApp/email con links individuales |
+| **Fase 5** | ✅ Completada | Página temporal del comerciante `/pack/[token]` en landing-page |
+| **Fase 6** | ✅ Completada | Actualizar módulos existentes con nuevos estados |
+
+### Fase 1 — Migraciones aplicadas en Supabase
+
+| Migración | Descripción |
+|-----------|-------------|
+| `create_packs_table` | Nueva tabla `packs` con enums `tipo_pago_pack` y `estado_pago_pack` |
+| `create_activaciones_table` | Nueva tabla `activaciones` para registrar activaciones de números individuales |
+| `add_pack_columns_to_boletas` | `pack_id` (FK → packs), `token_link` (text unique) + índices |
+| `add_config_campana_columns` | `dias_vencimiento_pago` (default 8), `dias_validez_qr` (default 8), `numeros_por_pack` (default 25) |
+| `remove_operativo_from_rol_enum` | Enum `rol_usuario` ahora solo tiene `admin` y `distribuidor` |
+| `create_rpc_generar_pack` | RPC que genera 25 números aleatorios únicos y crea el pack |
+| `create_rpc_activar_numero` | RPC que activa un número individual vía `token_link` |
+
+### Fase 3 — Módulo Venta de Packs (`/activar`)
+
+La ruta `/activar` fue completamente reemplazada. Ya no activa boletas individuales — ahora vende packs de 25 números a comerciantes.
+
+**Archivos:**
+
+| Archivo | Rol |
+|---------|-----|
+| `app/activar/page.tsx` | Server component: carga perfil del distribuidor y config de campaña (`dias_vencimiento_pago`) |
+| `app/activar/VenderPackForm.tsx` | Client component con máquina de estados: `form` → `success` |
+| `app/activar/actions.ts` | `venderPackAction`: llama RPC `generar_pack`, actualiza pack con datos del comerciante |
+
+**Flujo de `venderPackAction`:**
+1. Verifica sesión → rol `distribuidor`
+2. Lee `configuracion_campana` (id, dias_vencimiento_pago, dias_validez_qr)
+3. Llama RPC `generar_pack(p_dist_id, p_campana_id)` → crea pack + 25 boletas con `token_link` único cada una
+4. Actualiza el pack: comerciante_nombre, tel, email, whatsapp, tipo_pago, estado_pago, fecha_vencimiento_pago
+5. Devuelve: token_pagina, token_qr, qr_valido_hasta, array de 25 números
+
+**Pantalla de confirmación muestra:**
+- Grid 5×5 con los 25 números en formato `000000`
+- Link del comerciante: `landing-url/pack/[token_pagina]` con botón copiar
+- QR de beneficio recreativo (solo si `tipo_pago = 'inmediato'`):
+  - Imagen generada via `api.qrserver.com`
+  - Codifica: `lavilladelmillon-admin.guillaumer-orion.workers.dev/validar-qr/[token_qr]`
+  - La ruta `/validar-qr/[token_qr]` se construirá en Fase 6
+- Si pago pendiente: aviso con fecha límite, QR se activa al confirmar pago
+
+### Fase 4 — Comunicación WhatsApp y Email
+
+Botones en la pantalla de confirmación de `VenderPackForm.tsx` para enviar el pack al comerciante.
+
+**WhatsApp:** Link `wa.me/?text=...` con mensaje pre-formado que incluye nombre del comerciante y URL del pack. Siempre disponible.
+
+**Email (Resend):**
+- Server action `enviarEmailPackAction` en `actions.ts`
+- Remitente modo pruebas: `onboarding@resend.dev`
+- Template HTML inline con estilo dark/dorado: saludo, grid 5×5 de números, botón CTA al pack
+- Solo visible si el comerciante tiene email registrado
+- Estados del botón: idle → sending → sent / error (con reintento)
+
+**Variable de entorno:** `RESEND_API_KEY` — runtime secret en Cloudflare Worker (`wrangler secret put RESEND_API_KEY`)
+
+### Fase 5 — Página del Comerciante (`/pack/[token]`) en landing-page
+
+Página pública (sin autenticación) donde el comerciante ve sus 25 números y los comparte por WhatsApp.
+
+**Migración aplicada:** `fase5_pack_publica`
+- Agrega `dias_validez_pagina_comerciante int DEFAULT 30` a `configuracion_campana`
+- Crea RPC `get_pack_publica(p_token text)` — SECURITY DEFINER con `GRANT EXECUTE TO anon`
+- La RPC valida expiración basada en `fecha_venta + dias_validez_pagina_comerciante`
+
+**Archivos:**
+
+| Archivo | Rol |
+|---------|-----|
+| `app/pack/[token]/page.tsx` | Server component: llama RPC `get_pack_publica`, maneja error/not found/expired |
+| `app/pack/[token]/PackPageClient.tsx` | Client component: grid de números con botón WhatsApp por cada uno |
+
+**Funcionalidad:**
+- Cada número muestra botón "Compartir" que abre WhatsApp con mensaje pre-formado incluyendo link de registro
+- Botón "Copiar todos" copia lista completa de números al portapapeles
+- Header muestra nombre del comerciante, cantidad de números y fecha de vencimiento
+- URL de WhatsApp: `https://wa.me/?text=...número XXXXXX...landing-url?numero=XXXXXX`
+
+### Fase 6 — Módulos actualizados y ruta /validar-qr
+
+**Migración aplicada:** `add_qr_usado_at_to_packs` — agrega `qr_usado_at timestamptz` a `packs`
+
+**Nueva ruta: `/validar-qr/[token_qr]`**
+- Protegida (requiere auth)
+- Muestra datos del comerciante, tipo/estado de pago, validez del QR
+- Botón "Registrar Asistencia y Anular QR" con confirmación
+- Valida: QR expirado, pago no confirmado, ya canjeado
+
+**Módulo `/boletas` actualizado:**
+- Estados: 0=GENERADO, 1=ACTIVADO, 2=REGISTRADO, 3=ANULADO, 4=SORTEADO
+- Nueva columna `pack_id` en tabla
+- Timeline simplificado: Generación → Activación → Registro → Sorteo
+
+**Módulo `/ventas` reescrito:**
+- Ahora muestra packs vendidos (tabla `packs`) en vez de `ventas_clientes`
+- Columnas: Comerciante, Distribuidor, Tipo Pago, Estado Pago, Fecha Venta, Vencimiento, # Números
+
+**Módulo `/trazabilidad` actualizado:**
+- Cadena logística: 3 pasos (Generado → Activado → Registrado)
+- Sección "Pack / Distribuidor" reemplaza "Despachado Por"
+
+**`lib/actions.ts` limpiado:**
+- Eliminadas: `getLotesLogisticos`, `getInventarioDistribuidorAction`, `verificarRangoBodegaAction`, `crearLoteBodegaAction`
+- Agregadas: `getPacksPaged`, `getPacksDistribuidorAction`
+- Actualizados estados en: `getDashboardCounts`, `getRankingZonas`, `cerrarSorteoAction`
+
+### Post-Fase 6 — Detalle de Pack y Reenvío de QR
+
+**Drawer de detalle de pack** en `/ventas` (VentasClient.tsx):
+- Se abre al hacer click en cualquier fila de la tabla de packs
+- Muestra: datos del comerciante, tipo/estado de pago, link del comerciante, QR de beneficio, grid 5x5 de números con estado individual
+- `getPackDetail(packId)` en `lib/actions.ts` — trae pack completo + boletas con estado
+
+**Reenvío de QR de beneficio:**
+- Botón "Reenviar WhatsApp" envía QR via `wa.me/` al comerciante
+- Botón "Copiar URL QR" copia la URL de la imagen QR
+- Solo disponible si `tipo_pago = 'inmediato'` Y `qr_usado_at IS NULL`
+- Si QR canjeado: muestra "QR ya utilizado el [fecha]" sin botones
+
+**Acceso distribuidor a `/ventas`:**
+- `/ventas` ahora accesible para distribuidores (antes solo admin)
+- Filtra automáticamente por `distribuidor_id` del usuario
+- Admin ve todos los packs, distribuidor solo los suyos
+- Sidebar del distribuidor incluye "📦 Mis Packs" apuntando a `/ventas`
+
+### Módulo Asistencia a Evento
+
+**Scanner `/scanner` (Asistente + Admin):**
+- Validación inline sin redirect — `validarQrInlineAction` en `app/scanner/actions.ts`
+- Toast de éxito/error tras cada validación
+- Lista de asistencia de hoy debajo del scanner, recarga automática
+- `getAsistenciaAction(fecha?)` — query packs con `qr_usado_at` en la fecha
+
+**Asistencia Admin `/asistencia` (solo Admin):**
+- Tabla completa: hora, comerciante, teléfono, WhatsApp, distribuidor
+- Filtro por fecha (hoy por defecto)
+- Exportar CSV client-side
+- Sidebar: "📋 Asistencia Evento" en sección LOGÍSTICA
+
+**Archivos:**
+- `app/scanner/actions.ts` — `getAsistenciaAction`, `validarQrInlineAction`
+- `app/asistencia/page.tsx` + `AsistenciaClient.tsx` — Vista admin completa
+
+### Fase 2 — Eliminados
+
+- Rutas y componentes: `/bodega`, `/asignaciones`, `/mis-distribuidores`
+- Rol `operativo` eliminado de UI, actions, checks de acceso y enum de BD
+- RPCs obsoletas: `validar_rango_boletas`, `sugerir_proximo_lote`, `asignar_lote_boletas`
+
+---
+
+## BASE DE DATOS
+
+### Estados de boletas — NUEVOS (Rediseño V2)
 
 | Valor | Estado | Descripción |
 |-------|--------|-------------|
-| `0` | BODEGA | En stock, no asignada |
-| `1` | DESPACHADA | En maletín del distribuidor |
-| `2` | ACTIVA/VENDIDA | En poder de un comercio |
-| `3` | REGISTRADA | Registrada por el comprador |
-| `4` | ANULADA | Anulada |
-| `5` | SORTEADA | Ganadora del sorteo |
+| `0` | GENERADO | Número creado aleatoriamente, asignado a un pack |
+| `1` | ACTIVADO | Cliente activó su número vía link individual |
+| `2` | REGISTRADO | Cliente registró sus datos completos |
+| `3` | ANULADO | Anulado por admin |
+| `4` | SORTEADO | Ganador del sorteo |
+
+### Tabla `packs`
+
+| Columna | Tipo | Descripción |
+|---------|------|-------------|
+| `id` | uuid PK | Identificador del pack |
+| `campana_id` | uuid FK | Campaña a la que pertenece |
+| `distribuidor_id` | uuid FK | Distribuidor que vendió el pack |
+| `comerciante_nombre` | text | Nombre del comerciante comprador |
+| `comerciante_tel` | text | Teléfono del comerciante |
+| `comerciante_email` | text | Email del comerciante |
+| `comerciante_whatsapp` | text | WhatsApp del comerciante |
+| `tipo_pago` | `tipo_pago_pack` | `inmediato` \| `pendiente` |
+| `estado_pago` | `estado_pago_pack` | `pagado` \| `pendiente` \| `vencido` |
+| `fecha_venta` | timestamptz | Momento de la venta |
+| `fecha_vencimiento_pago` | timestamptz | Límite para pago pendiente |
+| `token_qr` | text UNIQUE | Token del QR de beneficio recreativo |
+| `qr_valido_hasta` | timestamptz | Expiración del QR (configurable, default 8 días) |
+| `token_pagina` | text UNIQUE | Token para la página temporal del comerciante |
+
+### Tabla `activaciones`
+
+| Columna | Tipo | Descripción |
+|---------|------|-------------|
+| `id` | uuid PK | Identificador de la activación |
+| `boleta_id` | bigint FK | Número activado |
+| `pack_id` | uuid FK | Pack al que pertenece |
+| `nombre_cliente` | text | Nombre del cliente final |
+| `movil_cliente` | text | Móvil del cliente final |
+| `acepta_datos` | boolean | Habeas data aceptado |
+| `fecha_activacion` | timestamptz | Momento de activación |
+
+### Enums nuevos
+
+| Enum | Valores |
+|------|---------|
+| `tipo_pago_pack` | `inmediato`, `pendiente` |
+| `estado_pago_pack` | `pagado`, `pendiente`, `vencido` |
+| `rol_usuario` | `admin`, `distribuidor`, `asistente` *(eliminado: `operativo`)* |
+
+### Rol Asistente — Encargado de Evento
+
+Perfil con acceso limitado para validar QRs de beneficio recreativo en eventos.
+
+**Acceso permitido:** solo `/scanner` y `/validar-qr/[token_qr]`
+
+**Flujo:**
+1. Admin crea asistente desde `/distribuidores` (Gestión de Personal)
+2. Asistente hace login → redirect automático a `/scanner`
+3. En `/scanner`: ingresa token QR manualmente o escanea con cámara del dispositivo
+4. Se redirige a `/validar-qr/[token]` donde valida y registra asistencia
+
+**Archivos:**
+- `app/scanner/page.tsx` + `ScannerClient.tsx` — Página del scanner
+- `app/login/actions.ts` — Redirect post-login por rol
+- `app/page.tsx` — Redirige asistente a `/scanner`
+- `app/components/Sidebar.tsx` — Menú exclusivo con "Scanner QR"
+- `app/distribuidores/CreateDistForm.tsx` — Selector de rol (distribuidor/asistente)
+
+**Sidebar:** Badge purple, label "Asistente", solo muestra "📷 Scanner QR"
 
 ---
 
@@ -141,6 +427,91 @@ Todo el resto de tablas requiere sesión activa de Supabase Auth.
 |-----|-----|
 | **Cloudflare MCP** | Gestión de Workers, variables de entorno, secretos, dominios |
 | **Supabase MCP** | Consultas SQL, migraciones de base de datos, revisión de esquema |
+
+---
+
+## FIXES POST-IMPLEMENTACIÓN V2
+
+- [2026-04-10] Encoding UTF-8 roto en `/distribuidores/page.tsx` (caracteres mojibake `GestiÃ³n`, `MÃ³dulo`, etc.) → Corregidos 5 strings a UTF-8 correcto → `app/distribuidores/page.tsx`
+- [2026-04-10] Queries de perfiles y zonas en `/distribuidores` retornaban vacío por RLS → Cambiadas de `supabase` a `supabaseAdmin` → `app/distribuidores/page.tsx`
+- [2026-04-10] Sidebar mostraba "GUEST - Cargando..." después del login → Queries de perfil y config en layout cambiadas a `supabaseAdmin` → `app/layout.tsx`
+- [2026-04-10] Dashboard "Rendering..." indefinido para distribuidores → Query de perfil en page.tsx cambiada a `supabaseAdmin` → `app/page.tsx`
+- [2026-04-10] Loop infinito de `GET /` en dashboard → `fetchPagedData` tenía `total` en deps de `useCallback` causando ciclo → Removido de dependencias → `app/components/RealtimeDashboard.tsx`
+- [2026-04-10] Módulo `/activar` mostraba "Módulo exclusivo" al distribuidor → Query de perfil cambiada a `supabaseAdmin` → `app/activar/page.tsx`
+- [2026-04-10] Todas las pages con guard de rol fallaban por RLS post-redirect → Migradas a `supabaseAdmin` → `app/{boletas,trazabilidad,ventas,zonas}/page.tsx`
+- [2026-04-10] Estados de boletas con valores del esquema viejo en `RealtimeDashboard.tsx` y `page.tsx` → Actualizados a V2 (0=Generado, 1=Activado, 2=Registrado) → `app/components/RealtimeDashboard.tsx`, `app/page.tsx`
+- [2026-04-10] Server actions fallaban por RLS al verificar rol del usuario → Todas las queries de `perfiles` en actions migradas a `supabaseAdmin` → `app/{activar,trazabilidad,zonas,distribuidores}/actions.ts`
+- [2026-04-10] Encoding UTF-8 roto en `/configuracion/page.tsx` → Corregido mojibake en metadata → `app/configuracion/page.tsx`
+- [2026-04-10] Módulo Configuración (Llaves Maestras) no tenía campos de plazos V2 → Agregada sección "Plazos y Vencimientos" con `dias_validez_pagina_comerciante`, `dias_validez_qr`, `dias_vencimiento_pago` → `app/components/ConfiguracionManager.tsx`
+- [2026-04-10] Boletas antiguas V1 (pack_id IS NULL) eliminadas de la BD → DELETE cascada: activaciones, ventas_clientes, trazabilidad_geografica, boletas (1050 registros) → SQL directo en Supabase
+- [2026-04-10] PackDetailDrawer usaba `useState` para cargar datos → Error "Cannot update component while rendering" → Cambiado a `useEffect` con `[packId]` → `app/ventas/VentasClient.tsx`
+- [2026-04-10] Formulario Vender Pack no capturaba identificación del comerciante → Agregados campos tipo documento (CC/CE/NIT/PP) y número de identificación → `app/activar/VenderPackForm.tsx`, `app/activar/actions.ts`
+- [2026-04-10] Drawer de detalle de pack no mostraba identificación → Agregado campo identificación en sección comerciante → `app/ventas/VentasClient.tsx`
+- [2026-04-10] Landing: "Failed to send request to Edge Function" al registrar → Edge Function `registrar-boleta` no desplegada y con lógica V1 → Reemplazada por Server Action `registrarBoletaAction` con estados V2 y `supabaseAdmin` → `apps/landing-page/app/actions.ts`, `apps/landing-page/app/page.tsx`
+- [2026-04-10] Landing: campo número de boleta no se pre-cargaba con query param `?numero=` → Agregado `useSearchParams` + campo readonly con estilo dorado y candado → `apps/landing-page/app/page.tsx`
+- [2026-04-11] Landing: campo email opcional + email confirmación con Resend tras registro → `apps/landing-page/app/actions.ts`, `apps/landing-page/app/page.tsx`
+- [2026-04-11] Landing: pantalla de confirmación post-registro (número, nombre, premio, fechas) → Reemplaza simple "Registrada con éxito" → `apps/landing-page/app/page.tsx`
+- [2026-04-11] Landing: boleta ya registrada muestra confirmación directamente al acceder con `?numero=` → `verificarBoletaAction` + pantalla de confirmación → `apps/landing-page/app/actions.ts`
+- [2026-04-11] Migración BD: `ALTER TABLE boletas ADD COLUMN email_usuario text` (aplicada manualmente)
+- [2026-04-11] Workflow deploy-landing: agregado `RESEND_API_KEY` como Cloudflare secret → `.github/workflows/deploy-landing.yml`
+- [2026-04-11] Gestión de Personal no mostraba asistentes → Agregados tabs Distribuidores/Asistentes con contadores → `app/distribuidores/page.tsx`, `GestionPersonalClient.tsx`
+- [2026-04-11] Drawer de detalle mostraba packs para asistentes → Diferenciado por rol: asistente solo ve datos básicos, distribuidor ve packs → `GestionPersonalClient.tsx`
+- [2026-04-11] Encoding UTF-8 roto en `/zonas/page.tsx` → Corregidos 8 strings mojibake (Catálogo, Logísticas, etc.) → `app/zonas/page.tsx`
+- [2026-04-11] Territorios sin botón editar → Agregado EditButton con formulario inline (nombre + descripción) + `editZonaAction` → `app/zonas/page.tsx`, `app/zonas/actions.ts`
+- [2026-04-11] Queries de zonas usaban `supabase` con RLS → Cambiadas a `supabaseAdmin` (insert, delete, select, update) → `app/zonas/page.tsx`, `app/zonas/actions.ts`
+- [2026-04-11] Scroll perdido en iOS Safari → `overflow-hidden` doble en body+contenedor bloqueaba scroll → Cambiado a `overflow-y-auto` en contenedor, removido del body → `app/layout.tsx`
+- [2026-04-11] Botón hamburguesa se superponía al sidebar abierto → Botón se oculta al abrir, botón ✕ dentro del sidebar para cerrar → `app/components/Sidebar.tsx`
+- [2026-04-11] Login no scrolleable en pantallas pequeñas → Cambiado `overflow-hidden` a `overflow-y-auto` → `app/login/page.tsx`
+- [2026-04-11] Login descentrado en móvil → Removido `mx-4` de LoginBox que desplazaba el formulario → `app/login/LoginBox.tsx`
+- [2026-04-11] Botón hamburguesa en esquina izquierda tapaba contenido → Movido a esquina superior derecha (`right-4`) → `app/components/Sidebar.tsx`
+
+### Auditoría de Seguridad Pre-Merge (2026-04-11)
+
+**Pages sin auth — CORREGIDO:**
+- `/configuracion`, `/premios`, `/sorteos` no tenían verificación de sesión ni rol → Agregados guards `getUser()` + verificación rol admin con `supabaseAdmin` + redirect
+
+**Server Actions sin auth — CORREGIDO:**
+- `enviarEmailPackAction` (activar/actions.ts) → Agregado check de sesión
+- `validarQrInlineAction` y `getAsistenciaAction` (scanner/actions.ts) → Agregado check sesión + rol admin/asistente via `verificarRolScannerAction()`
+- `anularQrAction` (validar-qr/actions.ts) → Agregado check sesión + rol admin/asistente
+
+**Validación de inputs en landing-page — CORREGIDO:**
+- Número de boleta: validación rango 6 dígitos (100000-999999)
+- `premioId` y `territorioId`: validación formato UUID con regex
+- `ubicacionManual`: máximo 255 caracteres
+- `email`: validación formato server-side con regex
+- Token en `/pack/[token]`: alfanumérico, máximo 64 caracteres
+
+**Hardcoded fallback — CORREGIDO:**
+- `lib/supabaseAdmin.ts` del admin tenía URL del proyecto como fallback → Removida, usa `?? ''`
+
+**RPC buscar_trazabilidad — CORREGIDO:**
+- RPC en BD referenciaba enum `operativo` eliminado → Actualizada con estados V2, `COALESCE` en `pa.rol`, sin `fecha_despacho`
+- Action pasaba `p_user_id` que la RPC no aceptaba → Corregido a solo `p_query` con `supabaseAdmin`
+
+**Verificado como seguro:**
+- `.env.local` nunca fue commiteado (está en `.gitignore` línea 19)
+- Service role key solo en server components/actions, no expuesto al cliente
+- RLS activado en tablas sensibles
+- Tokens QR generados con `gen_random_uuid()` (no predecibles)
+- Middleware redirige no autenticados a `/login`
+- Distribuidor solo ve sus propios packs filtrado por `distribuidor_id`
+
+**Pendiente (mejoras futuras):**
+- Rate limiting en registro de boletas y scanner (considerar Upstash/Cloudflare)
+- Headers de seguridad (CSP, CORS) en Cloudflare Workers
+- Validación de formato colombiano para cédula (5-11 dígitos) y celular (10 dígitos)
+
+**Migraciones BD aplicadas manualmente:**
+```sql
+ALTER TYPE rol_usuario ADD VALUE 'asistente';
+ALTER TABLE packs ADD COLUMN comerciante_tipo_id text DEFAULT 'CC';
+ALTER TABLE packs ADD COLUMN comerciante_identificacion text;
+ALTER TABLE packs ADD COLUMN qr_usado_at timestamptz DEFAULT NULL;
+ALTER TABLE boletas ADD COLUMN email_usuario text;
+DROP FUNCTION buscar_trazabilidad(text);
+-- + CREATE OR REPLACE FUNCTION buscar_trazabilidad con estados V2
+```
 
 ---
 

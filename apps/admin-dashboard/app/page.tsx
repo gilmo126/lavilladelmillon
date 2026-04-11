@@ -13,10 +13,14 @@ export default async function DashboardPage() {
     redirect('/login');
   }
 
-  const { data: profile } = await supabase.from('perfiles').select('*').eq('id', user.id).single();
+  const { data: profile } = await supabaseAdmin.from('perfiles').select('*').eq('id', user.id).single();
 
   if (!profile) {
     redirect('/login');
+  }
+
+  if (profile.rol === 'asistente') {
+    redirect('/scanner');
   }
 
   const isDist = profile.rol === 'distribuidor';
@@ -40,8 +44,8 @@ export default async function DashboardPage() {
     getBoletasPaged(1, 10, "", {}, isDist ? user.id : undefined),
     (async () => {
         const { count: t } = await baseBoletas;
-        const { count: a } = await supabaseAdmin.from('boletas').select('*', { count: 'exact', head: true }).eq('estado', 2).match(isDist ? { distribuidor_id: user?.id } : {});
-        const { count: r } = await supabaseAdmin.from('boletas').select('*', { count: 'exact', head: true }).eq('estado', 3).match(isDist ? { distribuidor_id: user?.id } : {});
+        const { count: a } = await supabaseAdmin.from('boletas').select('*', { count: 'exact', head: true }).eq('estado', 1).match(isDist ? { distribuidor_id: user?.id } : {});
+        const { count: r } = await supabaseAdmin.from('boletas').select('*', { count: 'exact', head: true }).eq('estado', 2).match(isDist ? { distribuidor_id: user?.id } : {});
         return { total: t || 0, activas: a || 0, registradas: r || 0 };
     })(),
     getRankingZonas(isDist ? user!.id : undefined)

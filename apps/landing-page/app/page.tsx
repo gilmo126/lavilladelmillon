@@ -1,11 +1,24 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { supabase } from '../lib/supabaseClient';
 
 export default function LandingPage() {
+  return (
+    <Suspense>
+      <LandingPageContent />
+    </Suspense>
+  );
+}
+
+function LandingPageContent() {
+  const searchParams = useSearchParams();
+  const numeroParam = searchParams.get('numero') || '';
+  const isNumeroLocked = !!numeroParam;
+
   // Form Basic States
-  const [tokenIntegridad, setTokenIntegridad] = useState('');
+  const [tokenIntegridad, setTokenIntegridad] = useState(numeroParam);
   const [identificacion, setIdentificacion] = useState('');
   const [nombre, setNombre] = useState('');
   const [celular, setCelular] = useState('');
@@ -236,15 +249,22 @@ export default function LandingPage() {
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-5">
               <div className="space-y-3">
-                <label htmlFor="token" className="text-sm font-bold text-gray-400 uppercase tracking-widest pl-1">Número de Boleta</label>
+                <label htmlFor="token" className="text-sm font-bold text-gray-400 uppercase tracking-widest pl-1">
+                  Número de Boleta {isNumeroLocked && <span className="text-marca-gold ml-1">🔒</span>}
+                </label>
                 <input
                   id="token"
                   type="text"
                   placeholder="Ej: 000001"
                   required
+                  readOnly={isNumeroLocked}
                   value={tokenIntegridad}
-                  onChange={(e) => setTokenIntegridad(e.target.value)}
-                  className="w-full bg-marca-dark/50 border border-gray-700/50 rounded-2xl px-5 py-3 text-sm text-white focus:outline-none focus:border-marca-gold uppercase font-mono transition-all"
+                  onChange={(e) => { if (!isNumeroLocked) setTokenIntegridad(e.target.value); }}
+                  className={`w-full rounded-2xl px-5 py-3 text-sm uppercase font-mono transition-all ${
+                    isNumeroLocked
+                      ? 'bg-marca-gold/10 border-2 border-marca-gold/40 text-marca-gold font-black cursor-not-allowed'
+                      : 'bg-marca-dark/50 border border-gray-700/50 text-white focus:outline-none focus:border-marca-gold'
+                  }`}
                 />
               </div>
 

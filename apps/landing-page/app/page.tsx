@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '../lib/supabaseClient';
-import { registrarBoletaAction } from './actions';
+import { registrarBoletaAction, verificarBoletaAction, type ConfirmacionData } from './actions';
 
 export default function LandingPage() {
   return (
@@ -23,8 +23,11 @@ function LandingPageContent() {
   const [identificacion, setIdentificacion] = useState('');
   const [nombre, setNombre] = useState('');
   const [celular, setCelular] = useState('');
+  const [email, setEmail] = useState('');
   const [premioSel, setPremioSel] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [confirmacion, setConfirmacion] = useState<ConfirmacionData | null>(null);
+  const [verificando, setVerificando] = useState(!!numeroParam);
   
   // App Context States (Branding Dinámico)
   const [campana, setCampana] = useState("Cargando Campaña...");
@@ -48,6 +51,17 @@ function LandingPageContent() {
 
   // Visualization States
   const [fechaSorteoVisual, setFechaSorteoVisual] = useState<string | null>(null);
+
+  // Verificar si boleta ya registrada cuando viene con ?numero=
+  useEffect(() => {
+    if (!numeroParam) { setVerificando(false); return; }
+    verificarBoletaAction(numeroParam).then((res) => {
+      if (res.estado === 'registrado') {
+        setConfirmacion(res.data);
+      }
+      setVerificando(false);
+    });
+  }, [numeroParam]);
 
   useEffect(() => {
     const fetchConfig = async () => {
@@ -132,6 +146,7 @@ function LandingPageContent() {
         identificacion,
         nombre,
         celular,
+        email,
         premioId: premioSel,
         aceptaTerminos,
         territorioId: territorioSel.id,
@@ -142,11 +157,12 @@ function LandingPageContent() {
         throw new Error(result.error);
       }
 
-      setSuccessMSG(result.message);
+      setConfirmacion(result.data);
       setTokenIntegridad('');
       setIdentificacion('');
       setNombre('');
       setCelular('');
+      setEmail('');
       setPremioSel('');
       setTerritorioSel(null);
       setOtroBarrio('');
@@ -189,7 +205,62 @@ function LandingPageContent() {
           </div>
         </header>
 
+        {/* Pantalla de carga */}
+        {verificando && (
+          <div className="w-full max-w-md text-center py-20">
+            <div className="w-12 h-12 border-4 border-marca-gold/20 border-t-marca-gold rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-slate-400 text-sm">Verificando boleta...</p>
+          </div>
+        )}
+
+        {/* Pantalla de Confirmación */}
+        {!verificando && confirmacion && (
+          <div className="w-full max-w-md space-y-6 animate-in fade-in zoom-in duration-500">
+            <div className="bg-green-900/20 border border-green-500/30 rounded-3xl p-8 text-center space-y-4">
+              <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center text-3xl mx-auto">✅</div>
+              <h2 className="text-xl font-black text-white">¡Registro Exitoso!</h2>
+              <p className="text-green-400 font-bold text-sm">Tu número está participando</p>
+            </div>
+
+            <div className="glass-panel rounded-3xl p-6 border border-white/5 space-y-5">
+              <div className="text-center">
+                <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold mb-2">Tu Número</p>
+                <p className="text-4xl font-black text-marca-gold font-mono tracking-widest">{confirmacion.numero}</p>
+              </div>
+
+              <div className="space-y-3 pt-4 border-t border-white/5">
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] text-gray-500 uppercase font-bold">Participante</span>
+                  <span className="text-white font-bold text-sm">{confirmacion.nombre}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] text-gray-500 uppercase font-bold">Premio</span>
+                  <span className="text-marca-gold font-bold text-sm">{confirmacion.premio}</span>
+                </div>
+                {confirmacion.fechaSorteo && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] text-gray-500 uppercase font-bold">Fecha Sorteo</span>
+                    <span className="text-white text-sm">{confirmacion.fechaSorteo}</span>
+                  </div>
+                )}
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] text-gray-500 uppercase font-bold">Registrado</span>
+                  <span className="text-slate-400 text-sm">{confirmacion.fechaRegistro}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-marca-gold/5 border border-marca-gold/20 rounded-2xl p-4 text-center">
+              <p className="text-marca-gold text-xs font-bold">
+                Conserva tu boleta física. Es indispensable para reclamar el premio.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Sección: Grandes Sorteos (Galería Aspiracional) */}
+        {!verificando && !confirmacion && (
+        <>
         <div className="w-full space-y-10">
           <div className="flex items-center justify-between border-b border-gray-800 pb-2">
             <h3 className="text-base font-black text-white uppercase tracking-wider flex items-center gap-3">
@@ -300,6 +371,20 @@ function LandingPageContent() {
                   required
                   value={nombre}
                   onChange={(e) => setNombre(e.target.value)}
+                  className="w-full bg-marca-dark/50 border border-gray-700/50 rounded-2xl px-5 py-3 text-sm text-white focus:outline-none focus:border-marca-gold transition-all"
+                />
+              </div>
+
+              <div className="space-y-3">
+                <label htmlFor="email" className="text-sm font-bold text-gray-400 uppercase tracking-widest pl-1">
+                  Correo Electrónico <span className="text-gray-600 normal-case tracking-normal">(opcional)</span>
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="tucorreo@ejemplo.com"
                   className="w-full bg-marca-dark/50 border border-gray-700/50 rounded-2xl px-5 py-3 text-sm text-white focus:outline-none focus:border-marca-gold transition-all"
                 />
               </div>
@@ -471,6 +556,8 @@ function LandingPageContent() {
             © 2026 {campana} • Palmira, Valle del Cauca.
           </p>
         </div>
+        </>
+        )}
       </div>
 
       {/* Modal de Términos y Condiciones */}

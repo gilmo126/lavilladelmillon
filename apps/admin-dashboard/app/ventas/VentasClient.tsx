@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { getPackDetail } from '../../lib/actions';
+import { confirmarPagoAction } from '../activar/actions';
 
 const LANDING_URL = 'https://landing-page.guillaumer-orion.workers.dev';
 const ADMIN_URL = 'https://lavilladelmillon-admin.guillaumer-orion.workers.dev';
@@ -36,12 +37,29 @@ function PackDetailDrawer({ packId, onClose }: { packId: string; onClose: () => 
   const [detail, setDetail] = useState<{ pack: any; boletas: any[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [confirmando, setConfirmando] = useState(false);
+  const [confirmError, setConfirmError] = useState<string | null>(null);
 
-  useEffect(() => {
+  function reloadDetail() {
+    setLoading(true);
     getPackDetail(packId)
       .then((d) => { setDetail(d); setLoading(false); })
       .catch((e) => { setError(e.message); setLoading(false); });
-  }, [packId]);
+  }
+
+  useEffect(() => { reloadDetail(); }, [packId]);
+
+  async function handleConfirmarPago() {
+    setConfirmando(true);
+    setConfirmError(null);
+    const res = await confirmarPagoAction(packId);
+    if (res.success) {
+      reloadDetail();
+    } else {
+      setConfirmError(res.error);
+    }
+    setConfirmando(false);
+  }
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text).then(() => {
@@ -267,7 +285,28 @@ function PackDetailDrawer({ packId, onClose }: { packId: string; onClose: () => 
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-white/10 bg-slate-950/80">
+        <div className="p-6 border-t border-white/10 bg-slate-950/80 space-y-3">
+          {p.estado_pago === 'pendiente' && (
+            <>
+              {confirmError && (
+                <p className="text-red-400 text-xs font-bold text-center">{confirmError}</p>
+              )}
+              <button
+                onClick={handleConfirmarPago}
+                disabled={confirmando}
+                className="w-full py-4 bg-admin-gold hover:bg-yellow-500 disabled:opacity-40 text-slate-900 font-black rounded-2xl transition-all text-sm uppercase tracking-widest shadow-xl shadow-admin-gold/20 flex items-center justify-center gap-3"
+              >
+                {confirmando ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-slate-900/30 border-t-slate-900 rounded-full animate-spin" />
+                    Generando números...
+                  </>
+                ) : (
+                  'Confirmar Pago y Generar Pack'
+                )}
+              </button>
+            </>
+          )}
           <button onClick={onClose} className="w-full py-4 bg-slate-800 hover:bg-slate-700 text-white font-black rounded-2xl transition-all text-sm uppercase tracking-widest border border-white/5">
             Cerrar Detalle
           </button>

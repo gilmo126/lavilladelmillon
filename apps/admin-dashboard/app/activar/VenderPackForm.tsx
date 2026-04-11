@@ -49,9 +49,65 @@ export default function VenderPackForm({ diasVencimientoPago }: Props) {
 
   // ── PANTALLA DE CONFIRMACIÓN ────────────────────────────────────────
   if (result) {
+    // ── CONFIRMACIÓN PAGO PENDIENTE ──────────────────────────────
+    if (result.tipoPago === 'pendiente') {
+      const fechaVenc = result.fechaVencimientoPago
+        ? new Date(result.fechaVencimientoPago).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })
+        : '';
+      const waPendienteText = encodeURIComponent(
+        `Hola ${result.comercianteNombre}, hemos registrado tu reserva en La Villa del Millón. Una vez confirmes el pago recibirás tus 25 números para participar. Tienes hasta el ${fechaVenc} para realizar el pago.`
+      );
+
+      return (
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-3xl p-6 flex items-center gap-4">
+            <div className="w-12 h-12 bg-yellow-500/20 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0">⏳</div>
+            <div>
+              <p className="font-black text-white text-lg">Reserva registrada</p>
+              <p className="text-yellow-400 text-sm font-bold mt-0.5">{result.comercianteNombre} · Pago pendiente</p>
+            </div>
+          </div>
+
+          <div className="bg-admin-card border border-admin-border rounded-3xl p-6 space-y-4">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-1 h-5 bg-yellow-500 rounded-full" />
+              <h2 className="font-black text-white uppercase tracking-wider text-sm">Detalles de la Reserva</h2>
+            </div>
+            <div className="bg-slate-950 border border-white/5 rounded-2xl p-5 space-y-3">
+              <p className="text-slate-400 text-sm">
+                Los <span className="text-white font-bold">25 números</span> se generarán cuando se confirme el pago.
+              </p>
+              <p className="text-slate-400 text-sm">
+                Fecha límite: <span className="text-yellow-400 font-bold">{fechaVenc}</span>
+              </p>
+              <p className="text-slate-500 text-xs">
+                Para confirmar el pago, ve a <span className="text-admin-blue font-bold">Mis Packs</span> y presiona "Confirmar Pago".
+              </p>
+            </div>
+          </div>
+
+          <a
+            href={`https://wa.me/?text=${waPendienteText}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full flex items-center justify-center gap-3 py-4 bg-green-600 hover:bg-green-500 text-white font-black rounded-2xl transition-all text-sm uppercase tracking-widest active:scale-[0.99]"
+          >
+            <span className="text-lg">📲</span> Informar al Comerciante por WhatsApp
+          </a>
+
+          <button
+            onClick={() => { setResult(null); setError(null); }}
+            className="w-full py-4 bg-slate-800 hover:bg-slate-700 text-white font-black rounded-2xl transition-all text-sm uppercase tracking-widest border border-white/5"
+          >
+            Nueva Venta
+          </button>
+        </div>
+      );
+    }
+
+    // ── CONFIRMACIÓN PAGO INMEDIATO ─────────────────────────────
     const packUrl    = `${LANDING_URL}/pack/${result.tokenPagina}`;
     const qrDataUrl  = `${ADMIN_URL}/validar-qr/${result.tokenQr}`;
-    /* eslint-disable-next-line @next/next/no-img-element */
     const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrDataUrl)}`;
     const qrValidoHasta = result.qrValidoHasta
       ? new Date(result.qrValidoHasta).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })
@@ -59,38 +115,33 @@ export default function VenderPackForm({ diasVencimientoPago }: Props) {
 
     return (
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-
-        {/* Header éxito */}
         <div className="bg-green-500/10 border border-green-500/20 rounded-3xl p-6 flex items-center gap-4">
           <div className="w-12 h-12 bg-green-500/20 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0">✅</div>
           <div>
             <p className="font-black text-white text-lg">Pack generado exitosamente</p>
-            <p className="text-green-400 text-sm font-bold mt-0.5">
-              {result.comercianteNombre} · {result.tipoPago === 'inmediato' ? 'Pago inmediato' : 'Pago pendiente'}
-            </p>
+            <p className="text-green-400 text-sm font-bold mt-0.5">{result.comercianteNombre} · Pago inmediato</p>
           </div>
         </div>
 
         {/* Grid de 25 números */}
-        <div className="bg-admin-card border border-admin-border rounded-3xl p-6">
-          <div className="flex items-center gap-3 mb-5">
-            <div className="w-1 h-5 bg-admin-gold rounded-full" />
-            <h2 className="font-black text-white uppercase tracking-wider text-sm">25 Números Generados</h2>
-            <span className="ml-auto text-[10px] font-bold text-slate-500 bg-slate-800 px-2 py-1 rounded-lg">
-              {result.numeros.length} números
-            </span>
+        {result.numeros && result.numeros.length > 0 && (
+          <div className="bg-admin-card border border-admin-border rounded-3xl p-6">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-1 h-5 bg-admin-gold rounded-full" />
+              <h2 className="font-black text-white uppercase tracking-wider text-sm">25 Números Generados</h2>
+              <span className="ml-auto text-[10px] font-bold text-slate-500 bg-slate-800 px-2 py-1 rounded-lg">
+                {result.numeros.length} números
+              </span>
+            </div>
+            <div className="grid grid-cols-5 gap-2">
+              {result.numeros.map((n) => (
+                <div key={n} className="bg-slate-950 border border-admin-border rounded-xl p-2.5 text-center font-mono font-black text-white text-sm hover:border-admin-gold/40 transition-all">
+                  {String(n).padStart(6, '0')}
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="grid grid-cols-5 gap-2">
-            {result.numeros.map((n) => (
-              <div
-                key={n}
-                className="bg-slate-950 border border-admin-border rounded-xl p-2.5 text-center font-mono font-black text-white text-sm hover:border-admin-gold/40 transition-all"
-              >
-                {String(n).padStart(6, '0')}
-              </div>
-            ))}
-          </div>
-        </div>
+        )}
 
         {/* Link del comerciante */}
         <div className="bg-admin-card border border-admin-border rounded-3xl p-6">
@@ -98,17 +149,12 @@ export default function VenderPackForm({ diasVencimientoPago }: Props) {
             <div className="w-1 h-5 bg-admin-blue rounded-full" />
             <h2 className="font-black text-white uppercase tracking-wider text-sm">Link del Comerciante</h2>
           </div>
-          <p className="text-[10px] text-slate-500 mb-3 uppercase font-bold tracking-wide">
-            Comparte este link con {result.comercianteNombre} para que distribuya sus números
-          </p>
           <div className="flex items-center gap-3 bg-slate-950 border border-white/5 rounded-2xl p-4">
             <p className="flex-1 text-admin-blue font-mono text-xs truncate">{packUrl}</p>
             <button
               onClick={() => handleCopy(packUrl)}
               className={`px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all flex-shrink-0 ${
-                copied
-                  ? 'bg-green-500 text-white'
-                  : 'bg-admin-blue hover:bg-blue-600 text-white'
+                copied ? 'bg-green-500 text-white' : 'bg-admin-blue hover:bg-blue-600 text-white'
               }`}
             >
               {copied ? '✓ Copiado' : 'Copiar'}
@@ -131,7 +177,7 @@ export default function VenderPackForm({ diasVencimientoPago }: Props) {
             >
               <span className="text-lg">📲</span> Enviar por WhatsApp
             </a>
-            {result.comercianteEmail ? (
+            {result.comercianteEmail && result.numeros && result.tokenPagina ? (
               <button
                 onClick={async () => {
                   setEmailStatus('sending');
@@ -139,99 +185,53 @@ export default function VenderPackForm({ diasVencimientoPago }: Props) {
                   const res = await enviarEmailPackAction({
                     comercianteNombre: result.comercianteNombre,
                     comercianteEmail: result.comercianteEmail!,
-                    numeros: result.numeros,
-                    tokenPagina: result.tokenPagina,
+                    numeros: result.numeros!,
+                    tokenPagina: result.tokenPagina!,
                   });
-                  if (res.success) {
-                    setEmailStatus('sent');
-                  } else {
-                    setEmailStatus('error');
-                    setEmailError(res.error || 'Error al enviar email');
-                  }
+                  setEmailStatus(res.success ? 'sent' : 'error');
+                  if (!res.success) setEmailError(res.error || 'Error al enviar email');
                 }}
                 disabled={emailStatus === 'sending' || emailStatus === 'sent'}
                 className={`flex items-center justify-center gap-3 py-4 font-black rounded-2xl transition-all text-sm uppercase tracking-widest active:scale-[0.99] ${
-                  emailStatus === 'sent'
-                    ? 'bg-green-500/20 border border-green-500 text-green-400'
-                    : emailStatus === 'error'
-                    ? 'bg-red-500/20 border border-red-500 text-red-400 hover:bg-red-500/30'
-                    : emailStatus === 'sending'
-                    ? 'bg-slate-700 text-slate-400 border border-white/5'
-                    : 'bg-admin-blue hover:bg-blue-600 text-white border border-transparent'
+                  emailStatus === 'sent' ? 'bg-green-500/20 border border-green-500 text-green-400'
+                  : emailStatus === 'error' ? 'bg-red-500/20 border border-red-500 text-red-400'
+                  : emailStatus === 'sending' ? 'bg-slate-700 text-slate-400 border border-white/5'
+                  : 'bg-admin-blue hover:bg-blue-600 text-white border border-transparent'
                 }`}
               >
-                {emailStatus === 'sending' ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Enviando...
-                  </>
-                ) : emailStatus === 'sent' ? (
-                  <><span className="text-lg">✓</span> Email Enviado</>
-                ) : emailStatus === 'error' ? (
-                  <><span className="text-lg">✉️</span> Reintentar Email</>
-                ) : (
-                  <><span className="text-lg">✉️</span> Enviar Email</>
-                )}
+                {emailStatus === 'sending' ? 'Enviando...' : emailStatus === 'sent' ? '✓ Email Enviado' : '✉️ Enviar Email'}
               </button>
-            ) : (
-              <div className="flex items-center justify-center py-4 bg-slate-800/50 border border-white/5 rounded-2xl">
-                <p className="text-slate-600 text-[10px] font-bold uppercase tracking-widest">Sin email registrado</p>
-              </div>
-            )}
+            ) : null}
           </div>
           {emailStatus === 'error' && emailError && (
-            <p className="text-red-400 text-xs font-bold mt-3">❌ {emailError}</p>
+            <p className="text-red-400 text-xs font-bold mt-3">{emailError}</p>
           )}
         </div>
 
-        {/* QR de beneficio — solo pago inmediato */}
-        {result.tipoPago === 'inmediato' && (
-          <div className="bg-admin-card border border-admin-gold/20 rounded-3xl p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-1 h-5 bg-admin-gold rounded-full" />
-              <h2 className="font-black text-white uppercase tracking-wider text-sm">QR de Beneficio Recreativo</h2>
-              {qrValidoHasta && (
-                <span className="ml-auto text-[10px] font-bold text-admin-gold bg-admin-gold/10 px-2 py-1 rounded-lg">
-                  Válido hasta {qrValidoHasta}
-                </span>
-              )}
-            </div>
-            <div className="flex flex-col items-center gap-4">
-              <div className="bg-white p-3 rounded-2xl shadow-xl">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={qrImageUrl} alt="QR de beneficio recreativo" width={180} height={180} className="rounded-lg" />
-              </div>
-              <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wide text-center">
-                El comerciante escanea este QR para acceder al beneficio recreativo
-              </p>
+        {/* QR de beneficio */}
+        <div className="bg-admin-card border border-admin-gold/20 rounded-3xl p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-1 h-5 bg-admin-gold rounded-full" />
+            <h2 className="font-black text-white uppercase tracking-wider text-sm">QR de Beneficio Recreativo</h2>
+            {qrValidoHasta && (
+              <span className="ml-auto text-[10px] font-bold text-admin-gold bg-admin-gold/10 px-2 py-1 rounded-lg">
+                Válido hasta {qrValidoHasta}
+              </span>
+            )}
+          </div>
+          <div className="flex flex-col items-center gap-4">
+            <div className="bg-white p-3 rounded-2xl shadow-xl">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={qrImageUrl} alt="QR de beneficio recreativo" width={180} height={180} className="rounded-lg" />
             </div>
           </div>
-        )}
-
-        {/* Aviso pago pendiente */}
-        {result.tipoPago === 'pendiente' && result.fechaVencimientoPago && (
-          <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-3xl p-5 flex items-start gap-4">
-            <span className="text-2xl flex-shrink-0">⏳</span>
-            <div>
-              <p className="font-black text-yellow-400 text-sm">Pago Pendiente</p>
-              <p className="text-slate-400 text-xs mt-1">
-                El QR de beneficio se activará cuando se confirme el pago.
-                Fecha límite:{' '}
-                <span className="text-white font-bold">
-                  {new Date(result.fechaVencimientoPago).toLocaleDateString('es-CO', {
-                    day: '2-digit', month: 'long', year: 'numeric'
-                  })}
-                </span>
-              </p>
-            </div>
-          </div>
-        )}
+        </div>
 
         <button
           onClick={() => { setResult(null); setError(null); setEmailStatus('idle'); setEmailError(null); }}
           className="w-full py-4 bg-slate-800 hover:bg-slate-700 text-white font-black rounded-2xl transition-all text-sm uppercase tracking-widest border border-white/5"
         >
-          Generar Nuevo Pack
+          Nueva Venta
         </button>
       </div>
     );

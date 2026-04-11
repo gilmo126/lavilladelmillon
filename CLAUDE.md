@@ -285,6 +285,28 @@ Página pública (sin autenticación) donde el comerciante ve sus 25 números y 
 - Agregadas: `getPacksPaged`, `getPacksDistribuidorAction`
 - Actualizados estados en: `getDashboardCounts`, `getRankingZonas`, `cerrarSorteoAction`
 
+### Lógica de Pago Inmediato vs Pendiente
+
+**Pago Inmediato:**
+1. `venderPackAction` llama RPC `generar_pack` → crea pack + 25 boletas
+2. Pack queda con `estado_pago='pagado'`, QR y tokens generados
+3. Pantalla de confirmación muestra: 25 números, link, QR, botones WhatsApp/Email
+
+**Pago Pendiente:**
+1. `venderPackAction` inserta directamente en `packs` sin llamar RPC
+2. Pack queda con `estado_pago='pendiente'`, sin boletas, sin QR activo
+3. Pantalla de confirmación muestra: reserva registrada, fecha vencimiento, botón WhatsApp informativo
+4. Tokens `token_pagina` y `token_qr` se generan con `crypto.randomUUID()` para uso futuro
+
+**Confirmar Pago (`confirmarPagoAction`):**
+1. Distribuidor o admin va a Mis Packs → abre drawer del pack pendiente
+2. Botón "Confirmar Pago y Generar Pack"
+3. Action verifica sesión, rol, y que el pack sea del distribuidor
+4. Genera 25 números aleatorios únicos (100000-999999) con verificación de duplicados
+5. Inserta boletas, actualiza pack a `estado_pago='pagado'`, `tipo_pago='inmediato'`
+6. Genera `qr_valido_hasta` según `dias_validez_qr` de configuración
+7. Drawer se recarga mostrando los números y QR generados
+
 ### Post-Fase 6 — Detalle de Pack y Reenvío de QR
 
 **Drawer de detalle de pack** en `/ventas` (VentasClient.tsx):

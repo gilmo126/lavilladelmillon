@@ -11,14 +11,16 @@ export type VenderPackResult =
   | {
       success: true;
       packId: string;
-      tokenPagina: string;
-      tokenQr: string;
-      qrValidoHasta: string | null;
-      numeros: number[];
+      tipoPago: 'inmediato' | 'pendiente';
       comercianteNombre: string;
       comercianteEmail: string | null;
-      tipoPago: 'inmediato' | 'pendiente';
-      fechaVencimientoPago: string | null;
+      // Solo presente si pago inmediato
+      tokenPagina?: string;
+      tokenQr?: string;
+      qrValidoHasta?: string | null;
+      numeros?: number[];
+      // Solo presente si pago pendiente
+      fechaVencimientoPago?: string | null;
     };
 
 export async function venderPackAction(formData: FormData): Promise<VenderPackResult> {
@@ -51,7 +53,6 @@ export async function venderPackAction(formData: FormData): Promise<VenderPackRe
     return { success: false, error: 'Tipo de pago inválido.' };
   }
 
-  // Config de campaña activa
   const { data: config } = await supabaseAdmin
     .from('configuracion_campana')
     .select('id, dias_vencimiento_pago, dias_validez_qr')
@@ -60,70 +61,222 @@ export async function venderPackAction(formData: FormData): Promise<VenderPackRe
 
   if (!config) return { success: false, error: 'No hay campaña activa configurada.' };
 
-  // Generar pack + 25 números aleatorios via RPC
-  const { data: packId, error: rpcError } = await supabaseAdmin.rpc('generar_pack', {
-    p_dist_id:    user.id,
-    p_campana_id: config.id,
-  });
+  // ── PAGO INMEDIATO: genera pack + 25 números + QR ──────────────────
+  if (tipoPago === 'inmediato') {
+    const { data: packId, error: rpcError } = await supabaseAdmin.rpc('generar_pack', {
+      p_dist_id: user.id,
+      p_campana_id: config.id,
+    });
 
-  if (rpcError || !packId) {
-    return { success: false, error: rpcError?.message || 'Error al generar el pack.' };
+    if (rpcError || !packId) {
+      return { success: false, error: rpcError?.message || 'Error al generar el pack.' };
+    }
+
+    const { error: updateError } = await supabaseAdmin
+      .from('packs')
+      .update({
+        comerciante_nombre: comercianteNombre,
+        comerciante_tipo_id: comercianteTipoId,
+        comerciante_identificacion: comercianteIdent,
+        comerciante_tel: comercianteTel,
+        comerciante_email: comercianteEmail,
+        comerciante_whatsapp: comercianteWa,
+        tipo_pago: 'inmediato',
+        estado_pago: 'pagado',
+        fecha_venta: new Date().toISOString(),
+      })
+      .eq('id', packId);
+
+    if (updateError) {
+      return { success: false, error: `Error al registrar datos: ${updateError.message}` };
+    }
+
+    const { data: pack } = await supabaseAdmin
+      .from('packs')
+      .select('token_pagina, token_qr, qr_valido_hasta')
+      .eq('id', packId)
+      .single();
+
+    const { data: boletas } = await supabaseAdmin
+      .from('boletas')
+      .select('id_boleta')
+      .eq('pack_id', packId)
+      .order('id_boleta', { ascending: true });
+
+    return {
+      success: true,
+      packId,
+      tipoPago: 'inmediato',
+      comercianteNombre,
+      comercianteEmail,
+      tokenPagina: pack?.token_pagina,
+      tokenQr: pack?.token_qr,
+      qrValidoHasta: pack?.qr_valido_hasta,
+      numeros: (boletas || []).map((b: any) => Number(b.id_boleta)),
+    };
   }
 
-  const fechaVencimientoPago = tipoPago === 'pendiente'
-    ? new Date(Date.now() + config.dias_vencimiento_pago * 24 * 60 * 60 * 1000).toISOString()
+  // ── PAGO PENDIENTE: solo guarda datos, sin números ni QR ───────────
+  const fechaVencimientoPago = new Date(
+    Date.now() + config.dias_vencimiento_pago * 24 * 60 * 60 * 1000
+  ).toISOString();
+
+  const tokenPagina = crypto.randomUUID();
+  const tokenQr = crypto.randomUUID();
+
+  const { data: inserted, error: insertError } = await supabaseAdmin
+    .from('packs')
+    .insert({
+      campana_id: config.id,
+      distribuidor_id: user.id,
+      comerciante_nombre: comercianteNombre,
+      comerciante_tipo_id: comercianteTipoId,
+      comerciante_identificacion: comercianteIdent,
+      comerciante_tel: comercianteTel,
+      comerciante_email: comercianteEmail,
+      comerciante_whatsapp: comercianteWa,
+      tipo_pago: 'pendiente',
+      estado_pago: 'pendiente',
+      fecha_venta: new Date().toISOString(),
+      fecha_vencimiento_pago: fechaVencimientoPago,
+      token_pagina: tokenPagina,
+      token_qr: tokenQr,
+    })
+    .select('id')
+    .single();
+
+  if (insertError || !inserted) {
+    return { success: false, error: insertError?.message || 'Error al registrar reserva.' };
+  }
+
+  return {
+    success: true,
+    packId: inserted.id,
+    tipoPago: 'pendiente',
+    comercianteNombre,
+    comercianteEmail,
+    fechaVencimientoPago,
+  };
+}
+
+// ── CONFIRMAR PAGO Y GENERAR NÚMEROS ────────────────────────────────
+
+export type ConfirmarPagoResult =
+  | { success: false; error: string }
+  | {
+      success: true;
+      numeros: number[];
+      tokenPagina: string;
+      tokenQr: string;
+      qrValidoHasta: string | null;
+    };
+
+export async function confirmarPagoAction(packId: string): Promise<ConfirmarPagoResult> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { success: false, error: 'Sesión no válida.' };
+
+  const { data: profile } = await supabaseAdmin.from('perfiles').select('rol').eq('id', user.id).single();
+  if (!profile || !['distribuidor', 'admin'].includes(profile.rol)) {
+    return { success: false, error: 'Sin permisos.' };
+  }
+
+  // Verificar pack
+  const { data: pack, error: packErr } = await supabaseAdmin
+    .from('packs')
+    .select('id, distribuidor_id, campana_id, estado_pago')
+    .eq('id', packId)
+    .single();
+
+  if (packErr || !pack) return { success: false, error: 'Pack no encontrado.' };
+  if (pack.estado_pago !== 'pendiente') return { success: false, error: 'Este pack ya fue pagado.' };
+
+  // Distribuidor solo puede confirmar sus propios packs
+  if (profile.rol === 'distribuidor' && pack.distribuidor_id !== user.id) {
+    return { success: false, error: 'No puedes confirmar packs de otro distribuidor.' };
+  }
+
+  // Config para dias_validez_qr
+  const { data: config } = await supabaseAdmin
+    .from('configuracion_campana')
+    .select('dias_validez_qr')
+    .eq('activa', true)
+    .single();
+
+  // Generar 25 números aleatorios únicos (100000-999999)
+  const numerosGenerados: number[] = [];
+  const maxIntentos = 100;
+  let intentos = 0;
+
+  while (numerosGenerados.length < 25 && intentos < maxIntentos) {
+    const candidatos: number[] = [];
+    for (let i = 0; i < 25 - numerosGenerados.length; i++) {
+      candidatos.push(Math.floor(Math.random() * 900000) + 100000);
+    }
+
+    // Verificar que no existan en BD
+    const { data: existentes } = await supabaseAdmin
+      .from('boletas')
+      .select('id_boleta')
+      .in('id_boleta', candidatos);
+
+    const existentesSet = new Set((existentes || []).map((b: any) => b.id_boleta));
+    for (const n of candidatos) {
+      if (!existentesSet.has(n) && !numerosGenerados.includes(n)) {
+        numerosGenerados.push(n);
+        if (numerosGenerados.length >= 25) break;
+      }
+    }
+    intentos++;
+  }
+
+  if (numerosGenerados.length < 25) {
+    return { success: false, error: 'No se pudieron generar suficientes números únicos.' };
+  }
+
+  // Insertar boletas
+  const boletasPayload = numerosGenerados.map((n) => ({
+    id_boleta: n,
+    campana_id: pack.campana_id,
+    estado: 0,
+    token_integridad: `TKN-${String(n).padStart(6, '0')}`,
+    pack_id: pack.id,
+    token_link: crypto.randomUUID(),
+    distribuidor_id: pack.distribuidor_id,
+  }));
+
+  const { error: boletasErr } = await supabaseAdmin.from('boletas').insert(boletasPayload);
+  if (boletasErr) return { success: false, error: `Error al generar números: ${boletasErr.message}` };
+
+  // Actualizar pack
+  const qrValidoHasta = config?.dias_validez_qr
+    ? new Date(Date.now() + config.dias_validez_qr * 24 * 60 * 60 * 1000).toISOString()
     : null;
 
-  // Completar el pack con datos del comerciante y pago
-  const { error: updateError } = await supabaseAdmin
+  const { error: updateErr } = await supabaseAdmin
     .from('packs')
     .update({
-      comerciante_nombre:          comercianteNombre,
-      comerciante_tipo_id:         comercianteTipoId,
-      comerciante_identificacion:  comercianteIdent,
-      comerciante_tel:             comercianteTel,
-      comerciante_email:           comercianteEmail,
-      comerciante_whatsapp:        comercianteWa,
-      tipo_pago:               tipoPago,
-      estado_pago:             tipoPago === 'inmediato' ? 'pagado' : 'pendiente',
-      fecha_venta:             new Date().toISOString(),
-      fecha_vencimiento_pago:  fechaVencimientoPago,
+      tipo_pago: 'inmediato',
+      estado_pago: 'pagado',
+      qr_valido_hasta: qrValidoHasta,
     })
     .eq('id', packId);
 
-  if (updateError) {
-    return { success: false, error: `Error al registrar datos del comerciante: ${updateError.message}` };
-  }
+  if (updateErr) return { success: false, error: updateErr.message };
 
-  // Leer tokens generados por la RPC
-  const { data: pack } = await supabaseAdmin
+  // Leer tokens
+  const { data: updatedPack } = await supabaseAdmin
     .from('packs')
     .select('token_pagina, token_qr, qr_valido_hasta')
     .eq('id', packId)
     .single();
 
-  if (!pack) return { success: false, error: 'Error al obtener datos del pack generado.' };
-
-  // Leer los 25 números creados
-  const { data: boletas } = await supabaseAdmin
-    .from('boletas')
-    .select('id_boleta')
-    .eq('pack_id', packId)
-    .order('id_boleta', { ascending: true });
-
-  const numeros = (boletas || []).map((b: any) => Number(b.id_boleta));
-
   return {
     success: true,
-    packId,
-    tokenPagina:          pack.token_pagina,
-    tokenQr:              pack.token_qr,
-    qrValidoHasta:        pack.qr_valido_hasta,
-    numeros,
-    comercianteNombre,
-    comercianteEmail:     comercianteEmail,
-    tipoPago,
-    fechaVencimientoPago,
+    numeros: numerosGenerados.sort((a, b) => a - b),
+    tokenPagina: updatedPack?.token_pagina || '',
+    tokenQr: updatedPack?.token_qr || '',
+    qrValidoHasta: updatedPack?.qr_valido_hasta || null,
   };
 }
 
@@ -140,6 +293,7 @@ export async function enviarEmailPackAction(data: {
   const supabaseAuth = await createClient();
   const { data: { user } } = await supabaseAuth.auth.getUser();
   if (!user) return { success: false, error: 'Sesión no válida.' };
+
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return { success: false, error: 'RESEND_API_KEY no configurada.' };
 
@@ -163,12 +317,10 @@ export async function enviarEmailPackAction(data: {
 <head><meta charset="utf-8"></head>
 <body style="margin:0;padding:0;background:#0a0e1a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
   <div style="max-width:560px;margin:0 auto;padding:32px 20px;">
-
     <div style="text-align:center;margin-bottom:32px;">
       <h1 style="color:#facc15;font-size:22px;font-weight:900;margin:0 0 4px;">La Villa del Millón</h1>
       <p style="color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:2px;margin:0;">Pack de números</p>
     </div>
-
     <div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:24px;margin-bottom:24px;">
       <p style="color:#e2e8f0;font-size:15px;margin:0 0 12px;">
         Hola <strong style="color:#fff;">${data.comercianteNombre}</strong>,
@@ -178,18 +330,15 @@ export async function enviarEmailPackAction(data: {
         Comparte cada número con tus clientes para que registren sus datos.
       </p>
     </div>
-
     <div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:24px;margin-bottom:24px;">
       <p style="color:#facc15;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin:0 0 16px;">Tus 25 números</p>
       <table style="width:100%;border-collapse:separate;border-spacing:6px;" cellpadding="0" cellspacing="0">
         ${numerosHtml}
       </table>
     </div>
-
     <a href="${packUrl}" target="_blank" style="display:block;background:#facc15;color:#0a0e1a;text-align:center;padding:16px;border-radius:12px;font-weight:900;font-size:14px;text-transform:uppercase;letter-spacing:1px;text-decoration:none;margin-bottom:24px;">
       Ver mis números y compartir
     </a>
-
     <p style="color:#475569;font-size:11px;text-align:center;margin:0;">
       La Villa del Millón · Distribución autorizada
     </p>

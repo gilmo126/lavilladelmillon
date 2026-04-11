@@ -27,6 +27,7 @@ function LandingPageContent() {
   const [premioSel, setPremioSel] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirmacion, setConfirmacion] = useState<ConfirmacionData | null>(null);
+  const [yaRegistrado, setYaRegistrado] = useState(false);
   const [verificando, setVerificando] = useState(!!numeroParam);
   
   // App Context States (Branding Dinámico)
@@ -57,7 +58,7 @@ function LandingPageContent() {
     if (!numeroParam) { setVerificando(false); return; }
     verificarBoletaAction(numeroParam).then((res) => {
       if (res.estado === 'registrado') {
-        setConfirmacion(res.data);
+        setYaRegistrado(true);
       }
       setVerificando(false);
     });
@@ -213,7 +214,21 @@ function LandingPageContent() {
           </div>
         )}
 
-        {/* Pantalla de Confirmación */}
+        {/* Pantalla de número ya registrado (privacidad — sin datos personales) */}
+        {!verificando && yaRegistrado && !confirmacion && (
+          <div className="w-full max-w-md space-y-6 animate-in fade-in zoom-in duration-500">
+            <div className="bg-slate-800/50 border border-slate-700/50 rounded-3xl p-8 text-center space-y-4">
+              <div className="w-16 h-16 bg-slate-700/50 rounded-full flex items-center justify-center text-3xl mx-auto">🔒</div>
+              <h2 className="text-xl font-black text-white">Número ya registrado</h2>
+              <p className="text-slate-400 text-sm leading-relaxed">
+                Este número ya fue registrado y está participando en el sorteo.
+                Si crees que es un error contacta a tu distribuidor.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Pantalla de Confirmación (post-registro exitoso) */}
         {!verificando && confirmacion && (
           <div className="w-full max-w-md space-y-6 animate-in fade-in zoom-in duration-500">
             <div className="bg-green-900/20 border border-green-500/30 rounded-3xl p-8 text-center space-y-4">
@@ -259,7 +274,7 @@ function LandingPageContent() {
         )}
 
         {/* Sección: Grandes Sorteos (Galería Aspiracional) */}
-        {!verificando && !confirmacion && (
+        {!verificando && !confirmacion && !yaRegistrado && (
         <>
         <div className="w-full space-y-10">
           <div className="flex items-center justify-between border-b border-gray-800 pb-2">

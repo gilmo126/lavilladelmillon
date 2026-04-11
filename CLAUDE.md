@@ -285,6 +285,22 @@ Página pública (sin autenticación) donde el comerciante ve sus 25 números y 
 - Agregadas: `getPacksPaged`, `getPacksDistribuidorAction`
 - Actualizados estados en: `getDashboardCounts`, `getRankingZonas`, `cerrarSorteoAction`
 
+### Control de duplicados y estado visual por número
+
+**Página del comerciante `/pack/[token]`:**
+- RPC `get_pack_publica` retorna `numeros` como JSON array `[{numero, estado}, ...]`
+- Cada número muestra su estado visual:
+  - `estado < 2` → botón "Compartir" verde normal
+  - `estado >= 2` → badge "✅ Registrado" con fondo verde, botón deshabilitado
+- Header muestra contador de registrados: "✅ N registrados"
+- "Copiar todos" solo copia números disponibles (no registrados)
+
+**Landing `?numero=XXXXXX` con número ya registrado:**
+- Si `estado=2` → pantalla genérica sin datos personales (privacidad):
+  "Este número ya fue registrado y está participando en el sorteo.
+  Si crees que es un error contacta a tu distribuidor."
+- No muestra formulario, nombre ni datos del titular anterior
+
 ### Lógica de Pago Inmediato vs Pendiente
 
 **Pago Inmediato:**

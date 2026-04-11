@@ -3,6 +3,11 @@ export const dynamic = 'force-dynamic';
 import { createClient } from '@supabase/supabase-js';
 import PackPageClient from './PackPageClient';
 
+export type NumeroDetalle = {
+  numero: number;
+  estado: number;
+};
+
 export type PackData = {
   found: boolean;
   is_expired: boolean;
@@ -10,7 +15,7 @@ export type PackData = {
   tipo_pago: 'inmediato' | 'pendiente';
   estado_pago: 'pagado' | 'pendiente' | 'vencido';
   fecha_vencimiento: string;
-  numeros: number[];
+  numeros: NumeroDetalle[];
   nombre_campana: string;
 };
 

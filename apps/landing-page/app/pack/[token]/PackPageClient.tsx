@@ -1,23 +1,38 @@
 'use client';
 
 import { useState } from 'react';
-import type { PackData } from './page';
+import type { PackData, NumeroDetalle } from './page';
 
 const LANDING_URL = 'https://landing-page.guillaumer-orion.workers.dev';
 
 function NumeroCard({
-  numero,
+  detalle,
   nombreCampana,
 }: {
-  numero: number;
+  detalle: NumeroDetalle;
   nombreCampana: string;
 }) {
-  const numStr = String(numero).padStart(6, '0');
-  const registroUrl = `${LANDING_URL}?numero=${numero}`;
+  const numStr = String(detalle.numero).padStart(6, '0');
+  const registrado = detalle.estado >= 2;
+
+  const registroUrl = `${LANDING_URL}?numero=${detalle.numero}`;
   const waText = encodeURIComponent(
     `🎟️ ¡Tengo el número *${numStr}* en *${nombreCampana}*!\n\nRegistrá tus datos aquí para participar 👇\n${registroUrl}`
   );
   const waUrl = `https://wa.me/?text=${waText}`;
+
+  if (registrado) {
+    return (
+      <div className="bg-green-900/20 border border-green-500/30 rounded-2xl p-3 flex flex-col items-center gap-3">
+        <span className="font-mono font-black text-green-400 text-lg tracking-wider">
+          {numStr}
+        </span>
+        <div className="w-full flex items-center justify-center gap-1.5 bg-green-500/10 text-green-400 text-[9px] font-black uppercase tracking-widest py-2 rounded-xl">
+          ✅ Registrado
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-3 flex flex-col items-center gap-3 hover:border-marca-gold/40 transition-all group">
@@ -44,9 +59,12 @@ export default function PackPageClient({ pack }: { pack: PackData }) {
     { day: '2-digit', month: 'long', year: 'numeric' }
   );
 
+  const totalRegistrados = pack.numeros.filter((n) => n.estado >= 2).length;
+
   function handleCopyAll() {
-    const lista = pack.numeros
-      .map((n) => String(n).padStart(6, '0'))
+    const disponibles = pack.numeros.filter((n) => n.estado < 2);
+    const lista = disponibles
+      .map((n) => String(n.numero).padStart(6, '0'))
       .join(' · ');
     const texto =
       `🎟️ Mis números de ${pack.nombre_campana}:\n\n${lista}\n\n` +
@@ -72,6 +90,11 @@ export default function PackPageClient({ pack }: { pack: PackData }) {
             <span className="text-[10px] font-bold text-slate-400 bg-slate-800 px-3 py-1 rounded-full border border-slate-700">
               {pack.numeros.length} números
             </span>
+            {totalRegistrados > 0 && (
+              <span className="text-[10px] font-bold text-green-400 bg-green-500/10 border border-green-500/20 px-3 py-1 rounded-full">
+                ✅ {totalRegistrados} registrados
+              </span>
+            )}
             <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-full">
               ⏳ Vence {fechaVencimiento}
             </span>
@@ -92,7 +115,7 @@ export default function PackPageClient({ pack }: { pack: PackData }) {
           </p>
         </div>
 
-        {/* Copiar todos */}
+        {/* Copiar todos (solo disponibles) */}
         <button
           onClick={handleCopyAll}
           className={`w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all border ${
@@ -101,7 +124,7 @@ export default function PackPageClient({ pack }: { pack: PackData }) {
               : 'bg-slate-800 border-slate-700 text-slate-300 hover:border-marca-gold/40 hover:text-white'
           }`}
         >
-          {copied ? '✓ ¡Copiado!' : '📋 Copiar todos los números'}
+          {copied ? '✓ ¡Copiado!' : '📋 Copiar números disponibles'}
         </button>
 
         {/* Grid de números */}
@@ -112,8 +135,8 @@ export default function PackPageClient({ pack }: { pack: PackData }) {
           <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
             {pack.numeros.map((n) => (
               <NumeroCard
-                key={n}
-                numero={n}
+                key={n.numero}
+                detalle={n}
                 nombreCampana={pack.nombre_campana}
               />
             ))}

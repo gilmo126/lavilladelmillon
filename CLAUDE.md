@@ -441,6 +441,8 @@ Todo el resto de tablas requiere sesión activa de Supabase Auth.
 - [2026-04-11] Landing: boleta ya registrada muestra confirmación directamente al acceder con `?numero=` → `verificarBoletaAction` + pantalla de confirmación → `apps/landing-page/app/actions.ts`
 - [2026-04-11] Migración BD: `ALTER TABLE boletas ADD COLUMN email_usuario text` (aplicada manualmente)
 - [2026-04-11] Workflow deploy-landing: agregado `RESEND_API_KEY` como Cloudflare secret → `.github/workflows/deploy-landing.yml`
+- [2026-04-11] Gestión de Personal no mostraba asistentes → Agregados tabs Distribuidores/Asistentes con contadores → `app/distribuidores/page.tsx`, `GestionPersonalClient.tsx`
+- [2026-04-11] Drawer de detalle mostraba packs para asistentes → Diferenciado por rol: asistente solo ve datos básicos, distribuidor ve packs → `GestionPersonalClient.tsx`
 
 **Migraciones BD pendientes:**
 ```sql

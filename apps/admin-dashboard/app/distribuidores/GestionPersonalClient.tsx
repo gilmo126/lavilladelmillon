@@ -110,17 +110,19 @@ function EditModal({ perfil, zonas, onClose }: { perfil: Perfil; zonas: any[]; o
 }
 
 function InventoryDrawer({ dist, onClose }: { dist: Perfil; onClose: () => void }) {
-  const [loading, setLoading] = useState(true);
+  const isAsistente = dist.rol === 'asistente';
+  const [loading, setLoading] = useState(!isAsistente);
   const [packs, setPacks] = useState<any[]>([]);
 
   useEffect(() => {
+    if (isAsistente) return;
     async function load() {
       const res = await getPacksDistribuidorAction(dist.id);
       if (res.success) setPacks(res.packs);
       setLoading(false);
     }
     load();
-  }, [dist.id]);
+  }, [dist.id, isAsistente]);
 
   const totalPacks = packs.length;
   const totalNumeros = totalPacks * 25;
@@ -134,8 +136,12 @@ function InventoryDrawer({ dist, onClose }: { dist: Perfil; onClose: () => void 
           <div>
             <h3 className="text-2xl font-bold text-white mb-1">{dist.nombre}</h3>
             <div className="flex flex-wrap gap-2 mt-2">
-              <span className="bg-admin-gold/10 border border-admin-gold/20 text-admin-gold text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-tighter">
-                📍 {dist.zonas?.nombre || 'Zona General'}
+              <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-tighter ${
+                isAsistente
+                  ? 'bg-purple-500/10 border border-purple-500/20 text-purple-400'
+                  : 'bg-admin-gold/10 border border-admin-gold/20 text-admin-gold'
+              }`}>
+                {isAsistente ? '📷 Asistente' : `📍 ${dist.zonas?.nombre || 'Zona General'}`}
               </span>
             </div>
           </div>
@@ -143,61 +149,92 @@ function InventoryDrawer({ dist, onClose }: { dist: Perfil; onClose: () => void 
         </div>
 
         <div className="flex-1 overflow-y-auto p-8 space-y-10 custom-scrollbar">
-          {loading ? (
-            <div className="h-64 flex flex-col items-center justify-center text-admin-gold gap-4">
-              <div className="w-10 h-10 border-4 border-admin-gold/20 border-t-admin-gold rounded-full animate-spin" />
-              <p className="text-xs font-bold uppercase tracking-tighter">Consultando packs...</p>
+          {/* Datos básicos — siempre visibles */}
+          <section>
+            <div className="flex items-center gap-2 mb-6">
+              <div className="w-1 h-3 bg-slate-500 rounded-full" />
+              <h4 className="text-xs font-bold text-white uppercase tracking-wider">Datos del Personal</h4>
             </div>
-          ) : (
-            <>
-              <section>
-                <div className="flex items-center gap-2 mb-6">
-                  <div className="w-1 h-3 bg-admin-blue rounded-full" />
-                  <h4 className="text-xs font-bold text-white uppercase tracking-wider">Resumen</h4>
+            <div className="bg-slate-950 border border-white/5 p-5 rounded-2xl space-y-3">
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500 font-bold">Cédula</span>
+                <span className="text-white font-mono">{dist.cedula || '—'}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500 font-bold">Celular</span>
+                <span className="text-white">{dist.movil || '—'}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500 font-bold">Dirección</span>
+                <span className="text-white">{dist.direccion || '—'}</span>
+              </div>
+              {!isAsistente && dist.zonas?.nombre && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-500 font-bold">Zona</span>
+                  <span className="text-admin-gold font-bold">{dist.zonas.nombre}</span>
                 </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="bg-slate-950 border border-white/5 p-4 rounded-2xl text-center">
-                    <p className="text-2xl font-black text-white">{totalPacks}</p>
-                    <p className="text-[9px] font-bold text-slate-500 uppercase mt-1">Packs</p>
-                  </div>
-                  <div className="bg-slate-950 border border-white/5 p-4 rounded-2xl text-center">
-                    <p className="text-2xl font-black text-white">{totalNumeros}</p>
-                    <p className="text-[9px] font-bold text-slate-500 uppercase mt-1">Números</p>
-                  </div>
-                  <div className="bg-slate-950 border border-white/5 p-4 rounded-2xl text-center">
-                    <p className="text-2xl font-black text-green-400">{pagados}</p>
-                    <p className="text-[9px] font-bold text-slate-500 uppercase mt-1">Pagados</p>
-                  </div>
-                </div>
-              </section>
+              )}
+            </div>
+          </section>
 
-              <section>
-                <div className="flex items-center gap-2 mb-6">
-                  <div className="w-1 h-3 bg-admin-gold rounded-full" />
-                  <h4 className="text-xs font-bold text-white uppercase tracking-wider">Packs Vendidos</h4>
-                </div>
-                <div className="space-y-3">
-                  {packs.map((p) => (
-                    <div key={p.id} className="bg-slate-950 border border-white/5 p-4 rounded-2xl">
-                      <div className="flex justify-between items-start mb-2">
-                        <p className="text-sm font-bold text-white">{p.comerciante_nombre}</p>
-                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-black border ${
-                          p.estado_pago === 'pagado' ? 'bg-green-500/10 border-green-500/20 text-green-400' :
-                          p.estado_pago === 'pendiente' ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400' :
-                          'bg-red-500/10 border-red-500/20 text-red-400'
-                        }`}>{p.estado_pago}</span>
-                      </div>
-                      <div className="flex items-center gap-3 text-[10px] text-slate-500 font-bold">
-                        <span>{p.tipo_pago === 'inmediato' ? '✅' : '⏳'} {p.tipo_pago}</span>
-                        <span className="w-1 h-1 bg-slate-700 rounded-full" />
-                        <span>{p.fecha_venta ? new Date(p.fecha_venta).toLocaleDateString('es-CO') : '—'}</span>
-                      </div>
+          {/* Packs — solo distribuidores */}
+          {!isAsistente && (
+            loading ? (
+              <div className="h-40 flex flex-col items-center justify-center text-admin-gold gap-4">
+                <div className="w-10 h-10 border-4 border-admin-gold/20 border-t-admin-gold rounded-full animate-spin" />
+                <p className="text-xs font-bold uppercase tracking-tighter">Consultando packs...</p>
+              </div>
+            ) : (
+              <>
+                <section>
+                  <div className="flex items-center gap-2 mb-6">
+                    <div className="w-1 h-3 bg-admin-blue rounded-full" />
+                    <h4 className="text-xs font-bold text-white uppercase tracking-wider">Resumen</h4>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="bg-slate-950 border border-white/5 p-4 rounded-2xl text-center">
+                      <p className="text-2xl font-black text-white">{totalPacks}</p>
+                      <p className="text-[9px] font-bold text-slate-500 uppercase mt-1">Packs</p>
                     </div>
-                  ))}
-                  {packs.length === 0 && <p className="text-center text-slate-600 text-xs py-10 italic">Sin packs vendidos aún.</p>}
-                </div>
-              </section>
-            </>
+                    <div className="bg-slate-950 border border-white/5 p-4 rounded-2xl text-center">
+                      <p className="text-2xl font-black text-white">{totalNumeros}</p>
+                      <p className="text-[9px] font-bold text-slate-500 uppercase mt-1">Números</p>
+                    </div>
+                    <div className="bg-slate-950 border border-white/5 p-4 rounded-2xl text-center">
+                      <p className="text-2xl font-black text-green-400">{pagados}</p>
+                      <p className="text-[9px] font-bold text-slate-500 uppercase mt-1">Pagados</p>
+                    </div>
+                  </div>
+                </section>
+
+                <section>
+                  <div className="flex items-center gap-2 mb-6">
+                    <div className="w-1 h-3 bg-admin-gold rounded-full" />
+                    <h4 className="text-xs font-bold text-white uppercase tracking-wider">Packs Vendidos</h4>
+                  </div>
+                  <div className="space-y-3">
+                    {packs.map((p) => (
+                      <div key={p.id} className="bg-slate-950 border border-white/5 p-4 rounded-2xl">
+                        <div className="flex justify-between items-start mb-2">
+                          <p className="text-sm font-bold text-white">{p.comerciante_nombre}</p>
+                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-black border ${
+                            p.estado_pago === 'pagado' ? 'bg-green-500/10 border-green-500/20 text-green-400' :
+                            p.estado_pago === 'pendiente' ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400' :
+                            'bg-red-500/10 border-red-500/20 text-red-400'
+                          }`}>{p.estado_pago}</span>
+                        </div>
+                        <div className="flex items-center gap-3 text-[10px] text-slate-500 font-bold">
+                          <span>{p.tipo_pago === 'inmediato' ? '✅' : '⏳'} {p.tipo_pago}</span>
+                          <span className="w-1 h-1 bg-slate-700 rounded-full" />
+                          <span>{p.fecha_venta ? new Date(p.fecha_venta).toLocaleDateString('es-CO') : '—'}</span>
+                        </div>
+                      </div>
+                    ))}
+                    {packs.length === 0 && <p className="text-center text-slate-600 text-xs py-10 italic">Sin packs vendidos aún.</p>}
+                  </div>
+                </section>
+              </>
+            )
           )}
         </div>
 

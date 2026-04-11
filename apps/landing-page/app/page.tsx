@@ -3,6 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '../lib/supabaseClient';
+import { registrarBoletaAction } from './actions';
 
 export default function LandingPage() {
   return (
@@ -126,24 +127,22 @@ function LandingPageContent() {
     setSuccessMSG('');
 
     try {
-      const { data, error } = await supabase.functions.invoke('registrar-boleta', {
-        body: {
-          token: tokenIntegridad,
-          identificacion,
-          nombre,
-          celular,
-          premioId: premioSel,
-          aceptaTerminos: aceptaTerminos,
-          territorioId: territorioSel.id,
-          ubicacionManual: territorioSel.nombre === 'OTRO' ? otroBarrio : null
-        }
+      const result = await registrarBoletaAction({
+        numero: tokenIntegridad,
+        identificacion,
+        nombre,
+        celular,
+        premioId: premioSel,
+        aceptaTerminos,
+        territorioId: territorioSel.id,
+        ubicacionManual: territorioSel.nombre === 'OTRO' ? otroBarrio : null,
       });
 
-      if (error || (data && data.error)) {
-        throw new Error((data && data.error) || error.message);
+      if (!result.success) {
+        throw new Error(result.error);
       }
 
-      setSuccessMSG("¡Registrada con éxito! Prepárate para ganar.");
+      setSuccessMSG(result.message);
       setTokenIntegridad('');
       setIdentificacion('');
       setNombre('');

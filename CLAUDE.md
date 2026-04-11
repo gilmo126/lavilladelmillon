@@ -121,6 +121,24 @@ o secret encriptado (via `wrangler secret put`). Nunca ambos.
   /((?!_next/static|_next/image|api|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)
   ```
 
+### Joins de Supabase retornan arrays, no objetos
+
+Los joins con `!foreign_key(columna)` en el query builder de Supabase retornan
+**arrays**, no objetos individuales. Siempre mapear el resultado:
+
+```typescript
+// El join retorna: { distribuidor: [{ nombre: 'Juan' }] }
+// NO retorna:      { distribuidor: { nombre: 'Juan' } }
+
+// Solución: mapear con [0] o fallback
+const mapped = data.map((p: any) => ({
+  ...p,
+  distribuidor: Array.isArray(p.distribuidor) ? p.distribuidor[0] || null : p.distribuidor,
+}));
+```
+
+Si no se mapea, TypeScript falla en build con error de tipos incompatibles.
+
 ### Coexistencia de datos V1 y V2
 
 - Las boletas antiguas (bodega manual) coexisten con las nuevas (generadas por pack).

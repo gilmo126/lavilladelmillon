@@ -33,6 +33,16 @@ export default async function PackPage({
 }) {
   const { token } = await params;
 
+  // Validar formato del token (UUID hex, 32-36 chars)
+  if (!token || token.length > 64 || !/^[a-zA-Z0-9_-]+$/.test(token)) {
+    return (
+      <PaginaError
+        titulo="Link no válido"
+        mensaje="El formato del link no es correcto."
+      />
+    );
+  }
+
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!

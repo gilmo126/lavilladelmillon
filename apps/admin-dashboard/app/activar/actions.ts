@@ -137,6 +137,9 @@ export async function enviarEmailPackAction(data: {
   numeros: number[];
   tokenPagina: string;
 }): Promise<EnviarEmailResult> {
+  const supabaseAuth = await createClient();
+  const { data: { user } } = await supabaseAuth.auth.getUser();
+  if (!user) return { success: false, error: 'Sesión no válida.' };
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return { success: false, error: 'RESEND_API_KEY no configurada.' };
 

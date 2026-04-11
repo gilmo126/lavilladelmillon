@@ -24,9 +24,11 @@ export type VerificarResult =
 
 // ── VERIFICAR BOLETA ────────────────────────────────────────────────
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function verificarBoletaAction(numero: string): Promise<VerificarResult> {
   const idBoleta = parseInt(numero.replace(/\D/g, ''), 10);
-  if (isNaN(idBoleta)) return { estado: 'no_encontrado' };
+  if (isNaN(idBoleta) || idBoleta < 100000 || idBoleta > 999999) return { estado: 'no_encontrado' };
 
   const { data: boleta } = await supabaseAdmin
     .from('boletas')
@@ -92,9 +94,28 @@ export async function registrarBoletaAction(data: {
     return { success: false, error: 'Faltan datos obligatorios (número, aceptación legal o ubicación).' };
   }
 
+  // Validar formato UUID de premioId y territorioId
+  if (!UUID_REGEX.test(premioId)) {
+    return { success: false, error: 'Premio inválido.' };
+  }
+  if (!UUID_REGEX.test(territorioId)) {
+    return { success: false, error: 'Territorio inválido.' };
+  }
+
+  // Validar ubicación manual
+  if (ubicacionManual && ubicacionManual.length > 255) {
+    return { success: false, error: 'Nombre de sector muy largo (máx 255 caracteres).' };
+  }
+
+  // Validar email si se proporcionó
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { success: false, error: 'Formato de correo electrónico inválido.' };
+  }
+
+  // Validar número de boleta (6 dígitos, rango 100000-999999)
   const idBoleta = parseInt(numero.replace(/\D/g, ''), 10);
-  if (isNaN(idBoleta)) {
-    return { success: false, error: 'Número de boleta inválido.' };
+  if (isNaN(idBoleta) || idBoleta < 100000 || idBoleta > 999999) {
+    return { success: false, error: 'Número de boleta inválido (debe ser de 6 dígitos).' };
   }
 
   const { data: boleta, error: searchError } = await supabaseAdmin

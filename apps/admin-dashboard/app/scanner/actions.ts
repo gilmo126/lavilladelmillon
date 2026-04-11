@@ -1,6 +1,16 @@
 'use server';
 
+import { createClient } from '../../utils/supabase/server';
 import { supabaseAdmin } from '../../lib/supabaseAdmin';
+
+async function verificarRolScannerAction(): Promise<string | null> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  const { data: profile } = await supabaseAdmin.from('perfiles').select('rol').eq('id', user.id).single();
+  if (!profile || !['admin', 'asistente'].includes(profile.rol)) return null;
+  return profile.rol;
+}
 
 export type AsistenciaItem = {
   id: string;
@@ -12,6 +22,9 @@ export type AsistenciaItem = {
 };
 
 export async function getAsistenciaAction(fecha?: string): Promise<AsistenciaItem[]> {
+  const rol = await verificarRolScannerAction();
+  if (!rol) return [];
+
   const dia = fecha || new Date().toISOString().split('T')[0];
   const inicio = `${dia}T00:00:00.000Z`;
   const fin = `${dia}T23:59:59.999Z`;
@@ -36,6 +49,9 @@ export type ValidarQrResult =
   | { success: false; error: string };
 
 export async function validarQrInlineAction(tokenQr: string): Promise<ValidarQrResult> {
+  const rol = await verificarRolScannerAction();
+  if (!rol) return { success: false, error: 'Sesión no válida o sin permisos.' };
+
   const { data: pack, error: fetchError } = await supabaseAdmin
     .from('packs')
     .select('id, comerciante_nombre, qr_usado_at, qr_valido_hasta, estado_pago')

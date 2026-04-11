@@ -11,6 +11,7 @@ export type VenderPackResult =
   | {
       success: true;
       packId: string;
+      numeroPack: number;
       tipoPago: 'inmediato' | 'pendiente';
       comercianteNombre: string;
       comercianteEmail: string | null;
@@ -93,7 +94,7 @@ export async function venderPackAction(formData: FormData): Promise<VenderPackRe
 
     const { data: pack } = await supabaseAdmin
       .from('packs')
-      .select('token_pagina, token_qr, qr_valido_hasta')
+      .select('token_pagina, token_qr, qr_valido_hasta, numero_pack')
       .eq('id', packId)
       .single();
 
@@ -106,6 +107,7 @@ export async function venderPackAction(formData: FormData): Promise<VenderPackRe
     return {
       success: true,
       packId,
+      numeroPack: pack?.numero_pack || 0,
       tipoPago: 'inmediato',
       comercianteNombre,
       comercianteEmail,
@@ -142,7 +144,7 @@ export async function venderPackAction(formData: FormData): Promise<VenderPackRe
       token_pagina: tokenPagina,
       token_qr: tokenQr,
     })
-    .select('id')
+    .select('id, numero_pack')
     .single();
 
   if (insertError || !inserted) {
@@ -152,6 +154,7 @@ export async function venderPackAction(formData: FormData): Promise<VenderPackRe
   return {
     success: true,
     packId: inserted.id,
+    numeroPack: inserted.numero_pack || 0,
     tipoPago: 'pendiente',
     comercianteNombre,
     comercianteEmail,

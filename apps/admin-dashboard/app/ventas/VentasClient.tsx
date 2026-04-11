@@ -140,7 +140,11 @@ function PackDetailDrawer({ packId, onClose }: { packId: string; onClose: () => 
         <div className="p-6 border-b border-white/10 flex justify-between items-start bg-slate-950/50">
           <div>
             <h3 className="text-xl font-black text-white tracking-tight">{p.comerciante_nombre}</h3>
-            <p className="text-[10px] text-admin-gold font-bold uppercase tracking-widest mt-1">Detalle del Pack</p>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-[10px] text-admin-gold font-bold uppercase tracking-widest">
+                PACK-{String(p.numero_pack || '').padStart(3, '0')}
+              </span>
+            </div>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full text-slate-400 hover:text-white transition-all">✕</button>
         </div>
@@ -452,12 +456,12 @@ export default function VentasClient({
           <table className="w-full text-left min-w-[800px]">
             <thead>
               <tr className="border-b border-admin-border text-xs uppercase text-slate-500 bg-slate-900/50">
+                <th className="p-4 font-bold">Pack</th>
                 <th className="p-4 font-bold">Comerciante</th>
                 {!isDist && <th className="p-4 font-bold">Distribuidor</th>}
                 <th className="p-4 font-bold">Tipo Pago</th>
                 <th className="p-4 font-bold">Estado Pago</th>
                 <th className="p-4 font-bold">Fecha Venta</th>
-                <th className="p-4 font-bold">Vencimiento</th>
                 <th className="p-4 font-bold text-center"># Números</th>
                 <th className="p-4 font-bold text-right">Detalle</th>
               </tr>
@@ -476,6 +480,9 @@ export default function VentasClient({
                     className="hover:bg-slate-800/30 transition-colors cursor-pointer"
                     onClick={() => setSelectedPackId(p.id)}
                   >
+                    <td className="p-4">
+                      <span className="text-admin-gold font-black text-xs">PACK-{String(p.numero_pack || '').padStart(3, '0')}</span>
+                    </td>
                     <td className="p-4">
                       <p className="font-bold text-white text-sm">{p.comerciante_nombre}</p>
                       {p.comerciante_tel && (
@@ -510,15 +517,6 @@ export default function VentasClient({
                     <td className="p-4 text-xs text-slate-400">
                       {p.fecha_venta
                         ? new Date(p.fecha_venta).toLocaleDateString('es-CO', {
-                            day: '2-digit',
-                            month: 'short',
-                            year: 'numeric',
-                          })
-                        : '—'}
-                    </td>
-                    <td className="p-4 text-xs text-slate-400">
-                      {p.fecha_vencimiento_pago
-                        ? new Date(p.fecha_vencimiento_pago).toLocaleDateString('es-CO', {
                             day: '2-digit',
                             month: 'short',
                             year: 'numeric',

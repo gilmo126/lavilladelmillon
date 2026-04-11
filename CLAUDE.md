@@ -285,6 +285,18 @@ Página pública (sin autenticación) donde el comerciante ve sus 25 números y 
 - Agregadas: `getPacksPaged`, `getPacksDistribuidorAction`
 - Actualizados estados en: `getDashboardCounts`, `getRankingZonas`, `cerrarSorteoAction`
 
+### Identificador de Pack (PACK-XXX)
+
+Cada pack tiene un número secuencial auto-incremental `numero_pack serial` en la tabla `packs`.
+Se muestra formateado como `PACK-001`, `PACK-002`, etc.
+
+**Visible en:**
+- Pantalla de confirmación de venta (VenderPackForm) — tanto inmediato como pendiente
+- Tabla de ventas (VentasClient) — primera columna "Pack"
+- Drawer de detalle del pack — en el header
+
+**Migración BD:** `ALTER TABLE packs ADD COLUMN numero_pack serial`
+
 ### Control de duplicados y estado visual por número
 
 **Página del comerciante `/pack/[token]`:**

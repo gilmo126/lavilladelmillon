@@ -64,7 +64,7 @@ export default function VenderPackForm({ diasVencimientoPago }: Props) {
             <div className="w-12 h-12 bg-yellow-500/20 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0">⏳</div>
             <div>
               <p className="font-black text-white text-lg">Reserva registrada</p>
-              <p className="text-yellow-400 text-sm font-bold mt-0.5">{result.comercianteNombre} · Pago pendiente</p>
+              <p className="text-yellow-400 text-sm font-bold mt-0.5">PACK-{String(result.numeroPack).padStart(3, '0')} · {result.comercianteNombre}</p>
             </div>
           </div>
 
@@ -119,7 +119,7 @@ export default function VenderPackForm({ diasVencimientoPago }: Props) {
           <div className="w-12 h-12 bg-green-500/20 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0">✅</div>
           <div>
             <p className="font-black text-white text-lg">Pack generado exitosamente</p>
-            <p className="text-green-400 text-sm font-bold mt-0.5">{result.comercianteNombre} · Pago inmediato</p>
+            <p className="text-green-400 text-sm font-bold mt-0.5">PACK-{String(result.numeroPack).padStart(3, '0')} · {result.comercianteNombre}</p>
           </div>
         </div>
 

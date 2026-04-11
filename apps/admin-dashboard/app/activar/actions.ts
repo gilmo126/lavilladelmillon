@@ -171,7 +171,14 @@ export type ConfirmarPagoResult =
       qrValidoHasta: string | null;
     };
 
-export async function confirmarPagoAction(packId: string): Promise<ConfirmarPagoResult> {
+export async function confirmarPagoAction(packId: string, datosActualizados?: {
+  comerciante_nombre?: string;
+  comerciante_tipo_id?: string;
+  comerciante_identificacion?: string;
+  comerciante_tel?: string;
+  comerciante_whatsapp?: string;
+  comerciante_email?: string;
+}): Promise<ConfirmarPagoResult> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { success: false, error: 'Sesión no válida.' };
@@ -194,6 +201,21 @@ export async function confirmarPagoAction(packId: string): Promise<ConfirmarPago
   // Distribuidor solo puede confirmar sus propios packs
   if (profile.rol === 'distribuidor' && pack.distribuidor_id !== user.id) {
     return { success: false, error: 'No puedes confirmar packs de otro distribuidor.' };
+  }
+
+  // Actualizar datos del comerciante si se proporcionaron
+  if (datosActualizados) {
+    const updatePayload: Record<string, string> = {};
+    if (datosActualizados.comerciante_nombre?.trim()) updatePayload.comerciante_nombre = datosActualizados.comerciante_nombre.trim();
+    if (datosActualizados.comerciante_tipo_id?.trim()) updatePayload.comerciante_tipo_id = datosActualizados.comerciante_tipo_id.trim();
+    if (datosActualizados.comerciante_identificacion?.trim()) updatePayload.comerciante_identificacion = datosActualizados.comerciante_identificacion.trim();
+    if (datosActualizados.comerciante_tel?.trim()) updatePayload.comerciante_tel = datosActualizados.comerciante_tel.trim();
+    if (datosActualizados.comerciante_whatsapp !== undefined) updatePayload.comerciante_whatsapp = datosActualizados.comerciante_whatsapp?.trim() || '';
+    if (datosActualizados.comerciante_email !== undefined) updatePayload.comerciante_email = datosActualizados.comerciante_email?.trim() || '';
+
+    if (Object.keys(updatePayload).length > 0) {
+      await supabaseAdmin.from('packs').update(updatePayload).eq('id', packId);
+    }
   }
 
   // Config para dias_validez_qr

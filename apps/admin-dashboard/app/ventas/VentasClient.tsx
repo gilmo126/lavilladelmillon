@@ -39,11 +39,30 @@ function PackDetailDrawer({ packId, onClose }: { packId: string; onClose: () => 
   const [copied, setCopied] = useState(false);
   const [confirmando, setConfirmando] = useState(false);
   const [confirmError, setConfirmError] = useState<string | null>(null);
+  const [editNombre, setEditNombre] = useState('');
+  const [editTipoId, setEditTipoId] = useState('CC');
+  const [editIdent, setEditIdent] = useState('');
+  const [editTel, setEditTel] = useState('');
+  const [editWa, setEditWa] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [formInitialized, setFormInitialized] = useState(false);
 
   function reloadDetail() {
     setLoading(true);
     getPackDetail(packId)
-      .then((d) => { setDetail(d); setLoading(false); })
+      .then((d) => {
+        setDetail(d);
+        if (!formInitialized && d.pack.estado_pago === 'pendiente') {
+          setEditNombre(d.pack.comerciante_nombre || '');
+          setEditTipoId(d.pack.comerciante_tipo_id || 'CC');
+          setEditIdent(d.pack.comerciante_identificacion || '');
+          setEditTel(d.pack.comerciante_tel || '');
+          setEditWa(d.pack.comerciante_whatsapp || '');
+          setEditEmail(d.pack.comerciante_email || '');
+          setFormInitialized(true);
+        }
+        setLoading(false);
+      })
       .catch((e) => { setError(e.message); setLoading(false); });
   }
 
@@ -52,8 +71,16 @@ function PackDetailDrawer({ packId, onClose }: { packId: string; onClose: () => 
   async function handleConfirmarPago() {
     setConfirmando(true);
     setConfirmError(null);
-    const res = await confirmarPagoAction(packId);
+    const res = await confirmarPagoAction(packId, {
+      comerciante_nombre: editNombre,
+      comerciante_tipo_id: editTipoId,
+      comerciante_identificacion: editIdent,
+      comerciante_tel: editTel,
+      comerciante_whatsapp: editWa,
+      comerciante_email: editEmail,
+    });
     if (res.success) {
+      setFormInitialized(false);
       reloadDetail();
     } else {
       setConfirmError(res.error);
@@ -121,30 +148,76 @@ function PackDetailDrawer({ packId, onClose }: { packId: string; onClose: () => 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
 
-          {/* Datos del comerciante */}
+          {/* Datos del comerciante — editable si pendiente, solo lectura si pagado */}
           <section className="bg-slate-950 border border-white/5 rounded-2xl p-5 space-y-3">
             <div className="flex items-center gap-2 mb-2">
               <div className="w-1 h-4 bg-admin-blue rounded-full" />
-              <h4 className="text-xs font-black text-white uppercase tracking-wider">Comerciante</h4>
+              <h4 className="text-xs font-black text-white uppercase tracking-wider">
+                Comerciante {p.estado_pago === 'pendiente' && <span className="text-admin-gold ml-1">(editable)</span>}
+              </h4>
             </div>
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div className="col-span-2">
-                <p className="text-[10px] text-slate-600 uppercase font-bold">Identificación</p>
-                <p className="text-slate-300">{p.comerciante_tipo_id || 'CC'} {p.comerciante_identificacion || '—'}</p>
+            {p.estado_pago === 'pendiente' ? (
+              <div className="space-y-3">
+                <div>
+                  <label className="text-[10px] text-slate-500 uppercase font-bold block mb-1">Nombre *</label>
+                  <input value={editNombre} onChange={(e) => setEditNombre(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-admin-blue" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] text-slate-500 uppercase font-bold block mb-1">Tipo Doc</label>
+                    <select value={editTipoId} onChange={(e) => setEditTipoId(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-admin-blue appearance-none">
+                      <option value="CC">CC</option>
+                      <option value="CE">CE</option>
+                      <option value="NIT">NIT</option>
+                      <option value="PP">PP</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-slate-500 uppercase font-bold block mb-1">Identificación *</label>
+                    <input value={editIdent} onChange={(e) => setEditIdent(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-admin-blue" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] text-slate-500 uppercase font-bold block mb-1">Teléfono *</label>
+                    <input value={editTel} onChange={(e) => setEditTel(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-admin-blue" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-slate-500 uppercase font-bold block mb-1">WhatsApp</label>
+                    <input value={editWa} onChange={(e) => setEditWa(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-admin-blue" />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] text-slate-500 uppercase font-bold block mb-1">Email</label>
+                  <input value={editEmail} onChange={(e) => setEditEmail(e.target.value)} type="email"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-admin-blue" />
+                </div>
               </div>
-              <div>
-                <p className="text-[10px] text-slate-600 uppercase font-bold">Teléfono</p>
-                <p className="text-slate-300">{p.comerciante_tel || '—'}</p>
+            ) : (
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="col-span-2">
+                  <p className="text-[10px] text-slate-600 uppercase font-bold">Identificación</p>
+                  <p className="text-slate-300">{p.comerciante_tipo_id || 'CC'} {p.comerciante_identificacion || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-slate-600 uppercase font-bold">Teléfono</p>
+                  <p className="text-slate-300">{p.comerciante_tel || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-slate-600 uppercase font-bold">WhatsApp</p>
+                  <p className="text-slate-300">{p.comerciante_whatsapp || '—'}</p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-[10px] text-slate-600 uppercase font-bold">Email</p>
+                  <p className="text-slate-300">{p.comerciante_email || '—'}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-[10px] text-slate-600 uppercase font-bold">WhatsApp</p>
-                <p className="text-slate-300">{p.comerciante_whatsapp || '—'}</p>
-              </div>
-              <div className="col-span-2">
-                <p className="text-[10px] text-slate-600 uppercase font-bold">Email</p>
-                <p className="text-slate-300">{p.comerciante_email || '—'}</p>
-              </div>
-            </div>
+            )}
           </section>
 
           {/* Pago */}

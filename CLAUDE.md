@@ -342,6 +342,19 @@ Página pública (sin autenticación) donde el comerciante ve sus 25 números y 
 - Admin ve todos los packs, distribuidor solo los suyos
 - Sidebar del distribuidor incluye "📦 Mis Packs" apuntando a `/ventas`
 
+### Scanner — Búsqueda por Cédula
+
+Alternativa al escaneo QR cuando la cámara no funciona.
+
+**Tabs en `/scanner`:** "📷 Escanear QR" (default) | "🔍 Buscar por Cédula"
+
+**Tab Cédula:**
+- Campo: número de identificación del comerciante
+- `buscarPacksPorCedulaAction(cedula)` — busca packs con `comerciante_identificacion` y `estado_pago='pagado'`
+- Resultados muestran: nombre, fecha compra, estado QR (Vigente/Canjeado/Vencido)
+- Botón "Usar este QR" solo en QRs vigentes → llama `validarQrInlineAction`
+- Tras canjear: recarga resultados + lista de asistencia
+
 ### Módulo Asistencia a Evento
 
 **Scanner `/scanner` (Asistente + Admin):**

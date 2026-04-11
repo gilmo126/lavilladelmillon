@@ -311,6 +311,8 @@ export async function enviarEmailPackAction(data: {
   comercianteEmail: string;
   numeros: number[];
   tokenPagina: string;
+  tokenQr?: string;
+  qrValidoHasta?: string | null;
 }): Promise<EnviarEmailResult> {
   const supabaseAuth = await createClient();
   const { data: { user } } = await supabaseAuth.auth.getUser();
@@ -360,7 +362,12 @@ export async function enviarEmailPackAction(data: {
     </div>
     <a href="${packUrl}" target="_blank" style="display:block;background:#facc15;color:#0a0e1a;text-align:center;padding:16px;border-radius:12px;font-weight:900;font-size:14px;text-transform:uppercase;letter-spacing:1px;text-decoration:none;margin-bottom:24px;">
       Ver mis números y compartir
-    </a>
+    </a>${data.tokenQr ? `
+    <div style="background:#1e293b;border:1px solid #facc15;border-radius:16px;padding:24px;margin-bottom:24px;text-align:center;">
+      <p style="color:#facc15;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin:0 0 16px;">QR de Beneficio Recreativo</p>
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`https://lavilladelmillon-admin.guillaumer-orion.workers.dev/validar-qr/${data.tokenQr}`)}" alt="QR de beneficio" width="180" height="180" style="border-radius:8px;background:#fff;padding:8px;" />
+      <p style="color:#94a3b8;font-size:12px;margin:16px 0 0;">Presenta este QR en el evento recreativo.${data.qrValidoHasta ? ` Válido hasta el ${new Date(data.qrValidoHasta).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })}.` : ''}</p>
+    </div>` : ''}
     <p style="color:#475569;font-size:11px;text-align:center;margin:0;">
       La Villa del Millón · Distribución autorizada
     </p>

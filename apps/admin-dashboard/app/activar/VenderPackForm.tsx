@@ -170,7 +170,13 @@ export default function VenderPackForm({ diasVencimientoPago }: Props) {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <a
-              href={`https://wa.me/?text=${encodeURIComponent(`Hola ${result.comercianteNombre}, aquí está tu pack de 25 números para La Villa del Millón. Accede a tus números aquí: ${packUrl}`)}`}
+              href={`https://wa.me/?text=${encodeURIComponent(
+                `Hola ${result.comercianteNombre}, aquí está tu pack de 25 números para La Villa del Millón.\n\nAccede a tus números aquí: ${packUrl}` +
+                (result.tokenQr
+                  ? `\n\nTu QR de beneficio recreativo: ${qrImageUrl}` +
+                    (qrValidoHasta ? ` - Válido hasta ${qrValidoHasta}` : '')
+                  : '')
+              )}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center gap-3 py-4 bg-green-600 hover:bg-green-500 text-white font-black rounded-2xl transition-all text-sm uppercase tracking-widest active:scale-[0.99]"
@@ -187,6 +193,8 @@ export default function VenderPackForm({ diasVencimientoPago }: Props) {
                     comercianteEmail: result.comercianteEmail!,
                     numeros: result.numeros!,
                     tokenPagina: result.tokenPagina!,
+                    tokenQr: result.tokenQr,
+                    qrValidoHasta: result.qrValidoHasta,
                   });
                   setEmailStatus(res.success ? 'sent' : 'error');
                   if (!res.success) setEmailError(res.error || 'Error al enviar email');

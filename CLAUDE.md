@@ -398,6 +398,8 @@ Todo el resto de tablas requiere sesión activa de Supabase Auth.
 - [2026-04-10] PackDetailDrawer usaba `useState` para cargar datos → Error "Cannot update component while rendering" → Cambiado a `useEffect` con `[packId]` → `app/ventas/VentasClient.tsx`
 - [2026-04-10] Formulario Vender Pack no capturaba identificación del comerciante → Agregados campos tipo documento (CC/CE/NIT/PP) y número de identificación → `app/activar/VenderPackForm.tsx`, `app/activar/actions.ts`
 - [2026-04-10] Drawer de detalle de pack no mostraba identificación → Agregado campo identificación en sección comerciante → `app/ventas/VentasClient.tsx`
+- [2026-04-10] Landing: "Failed to send request to Edge Function" al registrar → Edge Function `registrar-boleta` no desplegada y con lógica V1 → Reemplazada por Server Action `registrarBoletaAction` con estados V2 y `supabaseAdmin` → `apps/landing-page/app/actions.ts`, `apps/landing-page/app/page.tsx`
+- [2026-04-10] Landing: campo número de boleta no se pre-cargaba con query param `?numero=` → Agregado `useSearchParams` + campo readonly con estilo dorado y candado → `apps/landing-page/app/page.tsx`
 
 **Migraciones BD pendientes:**
 ```sql

@@ -17,7 +17,7 @@ export default async function LoginPage() {
   const brand = config?.nombre_campana || "V180C Terminal";
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4 bg-admin-dark relative overflow-hidden">
+    <div className="flex min-h-screen items-center justify-center p-4 bg-admin-dark relative overflow-y-auto">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
          <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-admin-gold/5 blur-[150px] rounded-full animate-pulse"></div>
          <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-admin-blue/5 blur-[120px] rounded-full"></div>

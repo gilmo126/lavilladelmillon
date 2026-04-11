@@ -55,13 +55,15 @@ export default function Sidebar({ role, userName, campanaNombre }: { role: strin
 
   return (
     <>
-      {/* Botón de Hamburguesa Móvil */}
-      <button
-        onClick={toggleSidebar}
-        className="fixed top-4 left-4 z-[100] md:hidden w-12 h-12 bg-slate-900 border border-white/10 rounded-2xl flex items-center justify-center text-white shadow-2xl active:scale-95 transition-all"
-      >
-        {isOpen ? '✕' : '☰'}
-      </button>
+      {/* Botón de Hamburguesa Móvil — solo visible cuando sidebar está cerrado */}
+      {!isOpen && (
+        <button
+          onClick={toggleSidebar}
+          className="fixed top-4 left-4 z-[100] md:hidden w-12 h-12 bg-slate-900 border border-white/10 rounded-2xl flex items-center justify-center text-white shadow-2xl active:scale-95 transition-all"
+        >
+          ☰
+        </button>
+      )}
 
       {/* Backdrop para móvil */}
       {isOpen && (
@@ -81,12 +83,19 @@ export default function Sidebar({ role, userName, campanaNombre }: { role: strin
           <div className="w-10 h-10 rounded-xl bg-admin-gold flex items-center justify-center font-black text-admin-dark text-lg uppercase shadow-lg shadow-admin-gold/20">
             {campanaNombre.substring(0, 2)}
           </div>
-          <div>
+          <div className="flex-1 min-w-0">
             <h1 className="font-black tracking-tighter text-sm text-white truncate leading-none">
               {campanaNombre}
             </h1>
             <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-1">Ecosistema V180C</p>
           </div>
+          {/* Botón cerrar — solo visible en móvil cuando sidebar está abierto */}
+          <button
+            onClick={toggleSidebar}
+            className="md:hidden w-8 h-8 flex items-center justify-center rounded-lg bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+          >
+            ✕
+          </button>
         </div>
 
         <div className="mb-10 p-5 rounded-2xl bg-slate-950 border border-white/5 relative overflow-hidden group">

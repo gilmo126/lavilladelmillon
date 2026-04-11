@@ -446,6 +446,9 @@ Todo el resto de tablas requiere sesión activa de Supabase Auth.
 - [2026-04-11] Encoding UTF-8 roto en `/zonas/page.tsx` → Corregidos 8 strings mojibake (Catálogo, Logísticas, etc.) → `app/zonas/page.tsx`
 - [2026-04-11] Territorios sin botón editar → Agregado EditButton con formulario inline (nombre + descripción) + `editZonaAction` → `app/zonas/page.tsx`, `app/zonas/actions.ts`
 - [2026-04-11] Queries de zonas usaban `supabase` con RLS → Cambiadas a `supabaseAdmin` (insert, delete, select, update) → `app/zonas/page.tsx`, `app/zonas/actions.ts`
+- [2026-04-11] Scroll perdido en iOS Safari → `overflow-hidden` doble en body+contenedor bloqueaba scroll → Cambiado a `overflow-y-auto` en contenedor, removido del body → `app/layout.tsx`
+- [2026-04-11] Botón hamburguesa se superponía al sidebar abierto → Botón se oculta al abrir, botón ✕ dentro del sidebar para cerrar → `app/components/Sidebar.tsx`
+- [2026-04-11] Login no scrolleable en pantallas pequeñas → Cambiado `overflow-hidden` a `overflow-y-auto` → `app/login/page.tsx`
 
 **Migraciones BD pendientes:**
 ```sql

@@ -39,10 +39,10 @@ export default async function RootLayout({
 
   return (
     <html lang="es">
-      <body className={`${inter.className} antialiased bg-admin-dark text-slate-100 flex h-screen overflow-hidden`}>
+      <body className={`${inter.className} antialiased bg-admin-dark text-slate-100 flex h-screen`}>
         {/* Usamos Sidebar envuelto pasando props */}
         {user ? <Sidebar role={role} userName={userName} campanaNombre={campanaNombre} /> : null}
-        <div className="flex-1 h-screen overflow-hidden flex flex-col">
+        <div className="flex-1 h-screen overflow-y-auto flex flex-col">
           {children}
         </div>
       </body>

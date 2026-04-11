@@ -14,8 +14,7 @@ export async function getBoletasPaged(page: number, limit: number, query: string
   let queryBuilder = supabaseAdmin.from('boletas').select(`
     *,
     premios(nombre_premio),
-    distribuidor:perfiles!distribuidor_id(nombre),
-    pack:packs!pack_id(numero_pack, comerciante_nombre)
+    distribuidor:perfiles!distribuidor_id(nombre)
   `, { count: 'exact' });
 
   if (distribuidorId) {
@@ -63,12 +62,26 @@ export async function getBoletasPaged(page: number, limit: number, query: string
       return acc;
   }, {});
 
-  // Mapeo Resiliente: Usar zona_destino_id con fallback a zona_id
+  // Lookup de packs para numero_pack (join en memoria para evitar error PostgREST)
+  const packIds = Array.from(new Set((data || []).map((b: any) => b.pack_id).filter(Boolean)));
+  let packsMap: Record<string, { numero_pack: number; comerciante_nombre: string }> = {};
+  if (packIds.length > 0) {
+    const { data: packs } = await supabaseAdmin
+      .from('packs')
+      .select('id, numero_pack, comerciante_nombre')
+      .in('id', packIds);
+    packsMap = (packs || []).reduce((acc: any, p: any) => {
+      acc[p.id] = { numero_pack: p.numero_pack, comerciante_nombre: p.comerciante_nombre };
+      return acc;
+    }, {});
+  }
+
   const mappedData = (data || []).map(b => ({
       ...b,
-      zonas: { 
-          nombre: zonasMap[b.zona_destino_id || b.zona_id || ''] || 'BODEGA / SIN ZONA' 
-      }
+      zonas: {
+          nombre: zonasMap[b.zona_destino_id || b.zona_id || ''] || 'BODEGA / SIN ZONA'
+      },
+      pack: b.pack_id ? packsMap[b.pack_id] || null : null,
   }));
 
   return {

@@ -19,6 +19,10 @@ export default async function DashboardPage() {
     redirect('/login');
   }
 
+  if (profile.rol === 'asistente') {
+    redirect('/scanner');
+  }
+
   const isDist = profile.rol === 'distribuidor';
 
   // Construir consultas base dependientes del ROL

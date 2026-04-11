@@ -6,11 +6,12 @@ import { createPersonalAction } from './actions';
 export default function CreateDistForm({ zonasDisponibles }: { zonasDisponibles: {id: string, nombre: string}[] }) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [rol, setRol] = useState<'distribuidor' | 'asistente'>('distribuidor');
 
   async function handleAction(formData: FormData) {
     setLoading(true);
     setMessage(null);
-    formData.set('rol', 'distribuidor');
+    formData.set('rol', rol);
 
     try {
       const resp = await createPersonalAction(formData);
@@ -33,7 +34,27 @@ export default function CreateDistForm({ zonasDisponibles }: { zonasDisponibles:
         <div className="w-10 h-10 rounded-lg bg-admin-blue/10 flex items-center justify-center border border-admin-blue/20">
           <span className="text-xl">🛡️</span>
         </div>
-        <h2 className="text-xl font-bold text-white">Reclutar Distribuidor</h2>
+        <h2 className="text-xl font-bold text-white">Reclutar Personal</h2>
+      </div>
+
+      {/* Selector de Rol */}
+      <div className="grid grid-cols-2 gap-2 mb-6">
+        {(['distribuidor', 'asistente'] as const).map((r) => (
+          <button
+            key={r}
+            type="button"
+            onClick={() => setRol(r)}
+            className={`p-3 rounded-xl border font-bold text-xs uppercase tracking-widest transition-all ${
+              rol === r
+                ? r === 'distribuidor'
+                  ? 'bg-green-500/10 border-green-500 text-green-400'
+                  : 'bg-purple-500/10 border-purple-500 text-purple-400'
+                : 'bg-slate-950 border-white/5 text-slate-500 hover:border-white/10'
+            }`}
+          >
+            {r === 'distribuidor' ? '🚚 Distribuidor' : '📷 Asistente'}
+          </button>
+        ))}
       </div>
 
       {message && (
@@ -88,20 +109,22 @@ export default function CreateDistForm({ zonasDisponibles }: { zonasDisponibles:
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-slate-300 mb-1 font-bold text-admin-gold">📍 Zona Territorial</label>
-          <select
-            name="zona_id"
-            required
-            defaultValue=""
-            className="w-full bg-slate-900 border border-admin-gold/30 rounded-lg px-4 py-2 text-white outline-none focus:border-admin-gold transition-colors text-sm appearance-none"
-          >
-            <option value="" disabled>-- Selecciona un Territorio --</option>
-            {zonasDisponibles.map((z: any) => (
-              <option key={z.id} value={z.id}>{z.nombre}</option>
-            ))}
-          </select>
-        </div>
+        {rol === 'distribuidor' && (
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-1 font-bold text-admin-gold">📍 Zona Territorial</label>
+            <select
+              name="zona_id"
+              required
+              defaultValue=""
+              className="w-full bg-slate-900 border border-admin-gold/30 rounded-lg px-4 py-2 text-white outline-none focus:border-admin-gold transition-colors text-sm appearance-none"
+            >
+              <option value="" disabled>-- Selecciona un Territorio --</option>
+              {zonasDisponibles.map((z: any) => (
+                <option key={z.id} value={z.id}>{z.nombre}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div className="pt-4 border-t border-admin-border mt-6">
           <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Credenciales GoTrue</h3>

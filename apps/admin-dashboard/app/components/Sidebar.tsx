@@ -32,15 +32,22 @@ export default function Sidebar({ role, userName, campanaNombre }: { role: strin
     { href: '/ventas',  label: '📦 Mis Packs' },
   ];
 
-  const menuItems = role === 'admin' ? adminItems : distItems;
+  // ── Asistente: Solo validación de QR ──────────────────────────
+  const asistenteItems = [
+    { href: '/scanner', label: '📷 Scanner QR' },
+  ];
+
+  const menuItems = role === 'admin' ? adminItems : role === 'asistente' ? asistenteItems : distItems;
 
   const roleBadge: Record<string, string> = {
     admin:        'text-admin-gold',
     distribuidor: 'text-green-400',
+    asistente:    'text-purple-400',
   };
   const roleLabel: Record<string, string> = {
     admin:        'Gerencia',
     distribuidor: 'Distribuidor',
+    asistente:    'Asistente',
   };
 
   const toggleSidebar = () => setIsOpen(!isOpen);

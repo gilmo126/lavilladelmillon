@@ -273,6 +273,24 @@ Página pública (sin autenticación) donde el comerciante ve sus 25 números y 
 - Admin ve todos los packs, distribuidor solo los suyos
 - Sidebar del distribuidor incluye "📦 Mis Packs" apuntando a `/ventas`
 
+### Módulo Asistencia a Evento
+
+**Scanner `/scanner` (Asistente + Admin):**
+- Validación inline sin redirect — `validarQrInlineAction` en `app/scanner/actions.ts`
+- Toast de éxito/error tras cada validación
+- Lista de asistencia de hoy debajo del scanner, recarga automática
+- `getAsistenciaAction(fecha?)` — query packs con `qr_usado_at` en la fecha
+
+**Asistencia Admin `/asistencia` (solo Admin):**
+- Tabla completa: hora, comerciante, teléfono, WhatsApp, distribuidor
+- Filtro por fecha (hoy por defecto)
+- Exportar CSV client-side
+- Sidebar: "📋 Asistencia Evento" en sección LOGÍSTICA
+
+**Archivos:**
+- `app/scanner/actions.ts` — `getAsistenciaAction`, `validarQrInlineAction`
+- `app/asistencia/page.tsx` + `AsistenciaClient.tsx` — Vista admin completa
+
 ### Fase 2 — Eliminados
 
 - Rutas y componentes: `/bodega`, `/asignaciones`, `/mis-distribuidores`

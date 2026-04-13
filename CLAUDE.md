@@ -388,6 +388,14 @@ Se muestra formateado como `PACK-001`, `PACK-002`, etc.
 
 **Scanner:** `validarQrInlineAction` busca en packs Y en invitaciones. QRs de invitación también se validan.
 
+**Drawer de detalle:** Click en fila → drawer lateral con:
+- Datos comerciante editables (nombre, dirección, teléfono, WhatsApp, email) en todos los estados
+- `actualizarInvitacionAction` para guardar cambios
+- Info del evento (tipo, fecha creación, estado badge)
+- Link de invitación con copiar + compartir WhatsApp
+- QR de asistencia (si aceptada) con descargar
+- Acciones: reenviar email, reactivar si rechazada
+
 **Sidebar:** "🎪 Invitaciones" para distribuidor, "🎪 Invitaciones Evento" para admin en sección LOGÍSTICA.
 
 **Archivos:**

@@ -190,3 +190,66 @@ export async function reenviarInvitacionAction(invitacionId: string): Promise<{ 
 
   return { success: true };
 }
+
+// ── DETALLE DE INVITACIÓN ───────────────────────────────────────────
+
+export type InvitacionDetail = {
+  id: string;
+  tipo_evento: string;
+  comerciante_nombre: string;
+  comerciante_direccion: string | null;
+  comerciante_tel: string | null;
+  comerciante_whatsapp: string | null;
+  comerciante_email: string | null;
+  token: string;
+  token_qr: string;
+  estado: string;
+  qr_generado_at: string | null;
+  created_at: string;
+};
+
+export async function getInvitacionDetailAction(id: string): Promise<InvitacionDetail | null> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data } = await supabaseAdmin
+    .from('invitaciones')
+    .select('id, tipo_evento, comerciante_nombre, comerciante_direccion, comerciante_tel, comerciante_whatsapp, comerciante_email, token, token_qr, estado, qr_generado_at, created_at')
+    .eq('id', id)
+    .single();
+
+  return data as InvitacionDetail | null;
+}
+
+// ── ACTUALIZAR DATOS DEL COMERCIANTE ────────────────────────────────
+
+export async function actualizarInvitacionAction(
+  id: string,
+  datos: {
+    comerciante_nombre?: string;
+    comerciante_direccion?: string;
+    comerciante_tel?: string;
+    comerciante_whatsapp?: string;
+    comerciante_email?: string;
+  }
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { success: false, error: 'Sesión no válida.' };
+
+  const payload: Record<string, string> = {};
+  if (datos.comerciante_nombre?.trim()) payload.comerciante_nombre = datos.comerciante_nombre.trim();
+  if (datos.comerciante_direccion !== undefined) payload.comerciante_direccion = datos.comerciante_direccion?.trim() || '';
+  if (datos.comerciante_tel !== undefined) payload.comerciante_tel = datos.comerciante_tel?.trim() || '';
+  if (datos.comerciante_whatsapp !== undefined) payload.comerciante_whatsapp = datos.comerciante_whatsapp?.trim() || '';
+  if (datos.comerciante_email !== undefined) payload.comerciante_email = datos.comerciante_email?.trim() || '';
+
+  if (Object.keys(payload).length === 0) return { success: true };
+
+  payload.updated_at = new Date().toISOString();
+
+  const { error } = await supabaseAdmin.from('invitaciones').update(payload).eq('id', id);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}

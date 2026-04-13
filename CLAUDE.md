@@ -364,6 +364,38 @@ Se muestra formateado como `PACK-001`, `PACK-002`, etc.
 - Admin ve todos los packs, distribuidor solo los suyos
 - Sidebar del distribuidor incluye "📦 Mis Packs" apuntando a `/ventas`
 
+### Módulo de Invitaciones a Eventos
+
+**Tabla BD:** `invitaciones` con estado (pendiente/aceptada/rechazada), token único, token_qr para asistencia.
+
+**Admin-dashboard `/invitaciones`:**
+- Admin ve todas las invitaciones, distribuidor ve las suyas
+- Formulario: tipo evento (parametrizable), datos comerciante, envío WhatsApp + email
+- Tabs: Todas / Aceptadas / Pendientes
+- Botón "Reenviar" para invitaciones pendientes/rechazadas
+
+**Landing-page `/invitacion/[token]`:**
+- Página pública con mensaje de bienvenida y auspiciantes (KIA, YAMAHA, ODONTO PROTECT)
+- Botones "Acepto" / "No puedo asistir"
+- Al aceptar: genera QR, envía email con QR al comerciante, notifica al distribuidor
+- Si ya aceptada: muestra QR existente
+- Si rechazada: mensaje de agradecimiento
+
+**Tipos de evento parametrizables:**
+- Columna `tipos_evento text[]` en `configuracion_campana`
+- Editable desde Configuración (Llaves Maestras) — sección "Tipos de Evento"
+- Default: Lanzamiento, Capacitación, Feria Comercial, Premiación, Networking
+
+**Scanner:** `validarQrInlineAction` busca en packs Y en invitaciones. QRs de invitación también se validan.
+
+**Sidebar:** "🎪 Invitaciones" para distribuidor, "🎪 Invitaciones Evento" para admin en sección LOGÍSTICA.
+
+**Archivos:**
+- `admin-dashboard/app/invitaciones/{page,InvitacionesClient,actions}.tsx`
+- `landing-page/app/invitacion/[token]/{page,InvitacionClient,actions}.tsx`
+- `admin-dashboard/app/components/ConfiguracionManager.tsx` — tipos evento
+- `admin-dashboard/app/scanner/actions.ts` — soporte QR invitaciones
+
 ### Scanner — Búsqueda por Cédula
 
 Alternativa al escaneo QR cuando la cámara no funciona.

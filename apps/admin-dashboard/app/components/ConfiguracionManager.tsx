@@ -19,6 +19,7 @@ export default function ConfiguracionManager() {
   const [formDiasVencPago, setFormDiasVencPago] = useState(8);
   const [formDiasValidezQr, setFormDiasValidezQr] = useState(8);
   const [formDiasValidezPagina, setFormDiasValidezPagina] = useState(30);
+  const [formTiposEvento, setFormTiposEvento] = useState<string[]>([]);
 
   const loadData = async () => {
     setLoading(true);
@@ -34,6 +35,7 @@ export default function ConfiguracionManager() {
         setFormDiasVencPago(data.dias_vencimiento_pago ?? 8);
         setFormDiasValidezQr(data.dias_validez_qr ?? 8);
         setFormDiasValidezPagina(data.dias_validez_pagina_comerciante ?? 30);
+        setFormTiposEvento(data.tipos_evento ?? ['Lanzamiento', 'Capacitación', 'Feria Comercial', 'Premiación', 'Networking']);
       }
     } catch (e) {
       console.error(e);
@@ -89,6 +91,7 @@ export default function ConfiguracionManager() {
         dias_vencimiento_pago: formDiasVencPago,
         dias_validez_qr: formDiasValidezQr,
         dias_validez_pagina_comerciante: formDiasValidezPagina,
+        tipos_evento: formTiposEvento,
       });
       alert('Configuración guardada exitosamente.');
       loadData();
@@ -224,6 +227,39 @@ export default function ConfiguracionManager() {
                      </div>
                      <p className="text-[10px] text-slate-600">Tiempo límite para que el comerciante pague un pack pendiente</p>
                    </div>
+                 </div>
+               </section>
+
+               <section className="space-y-6">
+                 <h3 className="text-xl font-bold text-white border-l-4 border-purple-500 pl-4">Tipos de Evento</h3>
+                 <div className="space-y-2">
+                   {formTiposEvento.map((tipo, idx) => (
+                     <div key={idx} className="flex items-center gap-2">
+                       <input
+                         value={tipo}
+                         onChange={(e) => {
+                           const updated = [...formTiposEvento];
+                           updated[idx] = e.target.value;
+                           setFormTiposEvento(updated);
+                         }}
+                         className="flex-1 bg-slate-900 border border-admin-border rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-purple-500"
+                       />
+                       <button
+                         type="button"
+                         onClick={() => setFormTiposEvento(formTiposEvento.filter((_, i) => i !== idx))}
+                         className="text-red-400 hover:text-red-300 text-sm font-bold px-2"
+                       >
+                         ✕
+                       </button>
+                     </div>
+                   ))}
+                   <button
+                     type="button"
+                     onClick={() => setFormTiposEvento([...formTiposEvento, ''])}
+                     className="text-purple-400 hover:text-purple-300 text-xs font-bold uppercase tracking-widest"
+                   >
+                     + Agregar tipo de evento
+                   </button>
                  </div>
                </section>
 

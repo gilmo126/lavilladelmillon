@@ -18,6 +18,7 @@ export default function Sidebar({ role, userName, campanaNombre }: { role: strin
     { sep: true, label: 'LOGÍSTICA' },
     { href: '/sorteos',         label: '📅 Gestión de Sorteos' },
     { href: '/asistencia',      label: '📋 Asistencia Evento' },
+    { href: '/invitaciones',    label: '🎪 Invitaciones Evento' },
     { sep: true, label: 'PERSONAL' },
     { href: '/distribuidores',  label: '👥 Gestión de Personal' },
     { href: '/zonas',           label: '📍 Territorios y Zonas' },
@@ -30,7 +31,8 @@ export default function Sidebar({ role, userName, campanaNombre }: { role: strin
   const distItems = [
     { href: '/',        label: '📊 Mi Trazabilidad' },
     { href: '/activar', label: '🎟️ Vender Pack' },
-    { href: '/ventas',  label: '📦 Mis Packs' },
+    { href: '/ventas',        label: '📦 Mis Packs' },
+    { href: '/invitaciones',  label: '🎪 Invitaciones' },
   ];
 
   // ── Asistente: Solo validación de QR ──────────────────────────

@@ -53,38 +53,53 @@ export async function validarQrInlineAction(tokenQr: string): Promise<ValidarQrR
   const rol = await verificarRolScannerAction();
   if (!rol) return { success: false, error: 'Sesión no válida o sin permisos.' };
 
-  const { data: pack, error: fetchError } = await supabaseAdmin
+  // Buscar primero en packs (QR de beneficio recreativo)
+  const { data: pack } = await supabaseAdmin
     .from('packs')
     .select('id, comerciante_nombre, qr_usado_at, qr_valido_hasta, estado_pago')
     .eq('token_qr', tokenQr)
-    .single();
+    .maybeSingle();
 
-  if (fetchError || !pack) {
-    return { success: false, error: 'QR no encontrado en el sistema.' };
+  if (pack) {
+    if (pack.qr_usado_at) {
+      return { success: false, error: `QR ya canjeado el ${new Date(pack.qr_usado_at).toLocaleString('es-CO')}.` };
+    }
+    if (pack.qr_valido_hasta && new Date(pack.qr_valido_hasta) < new Date()) {
+      return { success: false, error: 'El plazo de validez de este QR ha vencido.' };
+    }
+    if (pack.estado_pago !== 'pagado') {
+      return { success: false, error: 'Pago no confirmado. El QR se activa al confirmar el pago.' };
+    }
+    const { error: updateError } = await supabaseAdmin
+      .from('packs')
+      .update({ qr_usado_at: new Date().toISOString() })
+      .eq('id', pack.id);
+    if (updateError) return { success: false, error: updateError.message };
+    return { success: true, comercianteNombre: pack.comerciante_nombre };
   }
 
-  if (pack.qr_usado_at) {
-    return { success: false, error: `QR ya canjeado el ${new Date(pack.qr_usado_at).toLocaleString('es-CO')}.` };
+  // Si no está en packs, buscar en invitaciones
+  const { data: inv } = await supabaseAdmin
+    .from('invitaciones')
+    .select('id, comerciante_nombre, estado, qr_generado_at')
+    .eq('token_qr', tokenQr)
+    .maybeSingle();
+
+  if (inv) {
+    if (inv.estado !== 'aceptada') {
+      return { success: false, error: 'Esta invitación no ha sido aceptada aún.' };
+    }
+    if (inv.qr_generado_at) {
+      // Marcar como "escaneado" usando updated_at como timestamp de escaneo
+      await supabaseAdmin
+        .from('invitaciones')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', inv.id);
+    }
+    return { success: true, comercianteNombre: `${inv.comerciante_nombre} (Invitación)` };
   }
 
-  if (pack.qr_valido_hasta && new Date(pack.qr_valido_hasta) < new Date()) {
-    return { success: false, error: 'El plazo de validez de este QR ha vencido.' };
-  }
-
-  if (pack.estado_pago !== 'pagado') {
-    return { success: false, error: 'Pago no confirmado. El QR se activa al confirmar el pago.' };
-  }
-
-  const { error: updateError } = await supabaseAdmin
-    .from('packs')
-    .update({ qr_usado_at: new Date().toISOString() })
-    .eq('id', pack.id);
-
-  if (updateError) {
-    return { success: false, error: updateError.message };
-  }
-
-  return { success: true, comercianteNombre: pack.comerciante_nombre };
+  return { success: false, error: 'QR no encontrado en el sistema.' };
 }
 
 // ── BUSCAR PACKS POR CÉDULA ─────────────────────────────────────────

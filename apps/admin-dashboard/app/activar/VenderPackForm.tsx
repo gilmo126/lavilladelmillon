@@ -14,9 +14,11 @@ type SuccessData = Extract<VenderPackResult, { success: true }>;
 
 export default function VenderPackForm({ diasVencimientoPago }: Props) {
   const [tipoPago, setTipoPago]   = useState<'inmediato' | 'pendiente'>('inmediato');
+  const [cantidadPacks, setCantidadPacks] = useState(1);
   const [loading, setLoading]     = useState(false);
   const [error, setError]         = useState<string | null>(null);
   const [result, setResult]       = useState<SuccessData | null>(null);
+  const [resultados, setResultados] = useState<SuccessData[]>([]);
   const [copied, setCopied]       = useState(false);
   const [emailStatus, setEmailStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [emailError, setEmailError]   = useState<string | null>(null);
@@ -29,14 +31,31 @@ export default function VenderPackForm({ diasVencimientoPago }: Props) {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setResultados([]);
+
     const fd = new FormData(e.currentTarget);
     fd.set('tipo_pago', tipoPago);
-    const res = await venderPackAction(fd);
+
+    const exitosos: SuccessData[] = [];
+
+    for (let i = 0; i < cantidadPacks; i++) {
+      const res = await venderPackAction(fd);
+      if (!res.success) {
+        setError(`Error en pack ${i + 1}: ${res.error}`);
+        break;
+      }
+      exitosos.push(res);
+    }
+
     setLoading(false);
-    if (!res.success) {
-      setError(res.error);
-    } else {
-      setResult(res);
+
+    if (exitosos.length > 0) {
+      if (exitosos.length === 1) {
+        setResult(exitosos[0]);
+      } else {
+        setResultados(exitosos);
+        setResult(exitosos[0]);
+      }
     }
   }
 
@@ -63,8 +82,12 @@ export default function VenderPackForm({ diasVencimientoPago }: Props) {
           <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-3xl p-6 flex items-center gap-4">
             <div className="w-12 h-12 bg-yellow-500/20 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0">⏳</div>
             <div>
-              <p className="font-black text-white text-lg">Reserva registrada</p>
-              <p className="text-yellow-400 text-sm font-bold mt-0.5">PACK-{String(result.numeroPack).padStart(3, '0')} · {result.comercianteNombre}</p>
+              <p className="font-black text-white text-lg">{resultados.length > 1 ? `${resultados.length} Reservas registradas` : 'Reserva registrada'}</p>
+              <p className="text-yellow-400 text-sm font-bold mt-0.5">
+                {resultados.length > 1
+                  ? `${resultados.map(r => `PACK-${String(r.numeroPack).padStart(3, '0')}`).join(', ')} · ${result.comercianteNombre}`
+                  : `PACK-${String(result.numeroPack).padStart(3, '0')} · ${result.comercianteNombre}`}
+              </p>
             </div>
           </div>
 
@@ -96,7 +119,7 @@ export default function VenderPackForm({ diasVencimientoPago }: Props) {
           </a>
 
           <button
-            onClick={() => { setResult(null); setError(null); }}
+            onClick={() => { setResult(null); setResultados([]); setError(null); setCantidadPacks(1); }}
             className="w-full py-4 bg-slate-800 hover:bg-slate-700 text-white font-black rounded-2xl transition-all text-sm uppercase tracking-widest border border-white/5"
           >
             Nueva Venta
@@ -118,30 +141,36 @@ export default function VenderPackForm({ diasVencimientoPago }: Props) {
         <div className="bg-green-500/10 border border-green-500/20 rounded-3xl p-6 flex items-center gap-4">
           <div className="w-12 h-12 bg-green-500/20 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0">✅</div>
           <div>
-            <p className="font-black text-white text-lg">Pack generado exitosamente</p>
-            <p className="text-green-400 text-sm font-bold mt-0.5">PACK-{String(result.numeroPack).padStart(3, '0')} · {result.comercianteNombre}</p>
+            <p className="font-black text-white text-lg">{resultados.length > 1 ? `${resultados.length} Packs generados` : 'Pack generado exitosamente'}</p>
+            <p className="text-green-400 text-sm font-bold mt-0.5">
+              {resultados.length > 1
+                ? `${resultados.map(r => `PACK-${String(r.numeroPack).padStart(3, '0')}`).join(', ')} · ${result.comercianteNombre}`
+                : `PACK-${String(result.numeroPack).padStart(3, '0')} · ${result.comercianteNombre}`}
+            </p>
           </div>
         </div>
 
-        {/* Grid de 25 números */}
-        {result.numeros && result.numeros.length > 0 && (
-          <div className="bg-admin-card border border-admin-border rounded-3xl p-6">
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-1 h-5 bg-admin-gold rounded-full" />
-              <h2 className="font-black text-white uppercase tracking-wider text-sm">25 Números Generados</h2>
-              <span className="ml-auto text-[10px] font-bold text-slate-500 bg-slate-800 px-2 py-1 rounded-lg">
-                {result.numeros.length} números
-              </span>
+        {/* Grid de números — todos los packs */}
+        {(resultados.length > 1 ? resultados : [result]).map((r) => (
+          r.numeros && r.numeros.length > 0 && (
+            <div key={r.packId} className="bg-admin-card border border-admin-border rounded-3xl p-6">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-1 h-5 bg-admin-gold rounded-full" />
+                <h2 className="font-black text-white uppercase tracking-wider text-sm">PACK-{String(r.numeroPack).padStart(3, '0')}</h2>
+                <span className="ml-auto text-[10px] font-bold text-slate-500 bg-slate-800 px-2 py-1 rounded-lg">
+                  {r.numeros.length} números
+                </span>
+              </div>
+              <div className="grid grid-cols-5 gap-2">
+                {r.numeros.map((n) => (
+                  <div key={n} className="bg-slate-950 border border-admin-border rounded-xl p-2.5 text-center font-mono font-black text-white text-sm hover:border-admin-gold/40 transition-all">
+                    {String(n).padStart(6, '0')}
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="grid grid-cols-5 gap-2">
-              {result.numeros.map((n) => (
-                <div key={n} className="bg-slate-950 border border-admin-border rounded-xl p-2.5 text-center font-mono font-black text-white text-sm hover:border-admin-gold/40 transition-all">
-                  {String(n).padStart(6, '0')}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+          )
+        ))}
 
         {/* Link del comerciante */}
         <div className="bg-admin-card border border-admin-border rounded-3xl p-6">
@@ -236,7 +265,7 @@ export default function VenderPackForm({ diasVencimientoPago }: Props) {
         </div>
 
         <button
-          onClick={() => { setResult(null); setError(null); setEmailStatus('idle'); setEmailError(null); }}
+          onClick={() => { setResult(null); setResultados([]); setError(null); setEmailStatus('idle'); setEmailError(null); setCantidadPacks(1); }}
           className="w-full py-4 bg-slate-800 hover:bg-slate-700 text-white font-black rounded-2xl transition-all text-sm uppercase tracking-widest border border-white/5"
         >
           Nueva Venta
@@ -374,6 +403,24 @@ export default function VenderPackForm({ diasVencimientoPago }: Props) {
         )}
       </div>
 
+      {/* Cantidad de packs */}
+      <div className="bg-admin-card border border-admin-border rounded-3xl p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-1 h-5 bg-admin-blue rounded-full" />
+          <h2 className="font-black text-white uppercase tracking-wider text-sm">Cantidad de Packs</h2>
+        </div>
+        <div className="flex items-center gap-4">
+          <button type="button" onClick={() => setCantidadPacks(Math.max(1, cantidadPacks - 1))}
+            className="w-12 h-12 bg-slate-950 border border-white/10 rounded-xl text-white font-black text-xl hover:bg-slate-800 transition-all active:scale-95">−</button>
+          <div className="flex-1 text-center">
+            <p className="text-3xl font-black text-white">{cantidadPacks}</p>
+            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">{cantidadPacks * 25} números totales</p>
+          </div>
+          <button type="button" onClick={() => setCantidadPacks(Math.min(10, cantidadPacks + 1))}
+            className="w-12 h-12 bg-slate-950 border border-white/10 rounded-xl text-white font-black text-xl hover:bg-slate-800 transition-all active:scale-95">+</button>
+        </div>
+      </div>
+
       <button
         type="submit"
         disabled={loading}
@@ -382,10 +429,12 @@ export default function VenderPackForm({ diasVencimientoPago }: Props) {
         {loading ? (
           <>
             <div className="w-5 h-5 border-2 border-slate-900/30 border-t-slate-900 rounded-full animate-spin" />
-            Generando pack...
+            Generando {cantidadPacks > 1 ? `${cantidadPacks} packs...` : 'pack...'}
           </>
         ) : (
-          '🎟️ Generar Pack de 25 Números'
+          cantidadPacks > 1
+            ? `🎟️ Generar ${cantidadPacks} Packs (${cantidadPacks * 25} Números)`
+            : '🎟️ Generar Pack de 25 Números'
         )}
       </button>
     </form>

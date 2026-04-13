@@ -243,7 +243,16 @@ export default function ScannerClient({
                   <p className="text-white font-bold text-sm">{inv.comerciante_nombre}</p>
                   <p className="text-[10px] text-purple-400 font-bold mt-0.5">{inv.tipo_evento}</p>
                 </div>
-                <p className="text-purple-400 font-bold text-sm">{new Date(inv.qr_generado_at).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}</p>
+                <div className="text-right">
+                  {inv.qr_escaneado_at ? (
+                    <>
+                      <p className="text-green-400 font-bold text-[10px]">✅ Escaneado</p>
+                      <p className="text-[9px] text-slate-500">{new Date(inv.qr_escaneado_at).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}</p>
+                    </>
+                  ) : (
+                    <p className="text-yellow-400 font-bold text-[10px]">⏳ Pendiente</p>
+                  )}
+                </div>
               </div>
             ))}
           </div>

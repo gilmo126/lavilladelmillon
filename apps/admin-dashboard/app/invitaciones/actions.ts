@@ -205,6 +205,7 @@ export type InvitacionDetail = {
   token_qr: string;
   estado: string;
   qr_generado_at: string | null;
+  qr_escaneado_at: string | null;
   created_at: string;
 };
 
@@ -215,7 +216,7 @@ export async function getInvitacionDetailAction(id: string): Promise<InvitacionD
 
   const { data } = await supabaseAdmin
     .from('invitaciones')
-    .select('id, tipo_evento, comerciante_nombre, comerciante_direccion, comerciante_tel, comerciante_whatsapp, comerciante_email, token, token_qr, estado, qr_generado_at, created_at')
+    .select('id, tipo_evento, comerciante_nombre, comerciante_direccion, comerciante_tel, comerciante_whatsapp, comerciante_email, token, token_qr, estado, qr_generado_at, qr_escaneado_at, created_at')
     .eq('id', id)
     .single();
 

@@ -76,7 +76,7 @@ export async function validarQrInlineAction(tokenQr: string): Promise<ValidarQrR
   // Si no está en packs, buscar en invitaciones
   const { data: inv } = await supabaseAdmin
     .from('invitaciones')
-    .select('id, comerciante_nombre, estado, qr_generado_at')
+    .select('id, comerciante_nombre, estado, qr_generado_at, qr_escaneado_at')
     .eq('token_qr', tokenQr)
     .maybeSingle();
 
@@ -84,13 +84,13 @@ export async function validarQrInlineAction(tokenQr: string): Promise<ValidarQrR
     if (inv.estado !== 'aceptada') {
       return { success: false, error: 'Esta invitación no ha sido aceptada aún.' };
     }
-    if (inv.qr_generado_at) {
-      // Marcar como "escaneado" usando updated_at como timestamp de escaneo
-      await supabaseAdmin
-        .from('invitaciones')
-        .update({ updated_at: new Date().toISOString() })
-        .eq('id', inv.id);
+    if (inv.qr_escaneado_at) {
+      return { success: false, error: `QR de invitación ya escaneado el ${new Date(inv.qr_escaneado_at).toLocaleString('es-CO')}.` };
     }
+    await supabaseAdmin
+      .from('invitaciones')
+      .update({ qr_escaneado_at: new Date().toISOString() })
+      .eq('id', inv.id);
     return { success: true, comercianteNombre: `${inv.comerciante_nombre} (Invitación)` };
   }
 
@@ -133,6 +133,7 @@ export type InvitacionAsistenciaItem = {
   comerciante_nombre: string;
   tipo_evento: string;
   qr_generado_at: string;
+  qr_escaneado_at: string | null;
 };
 
 export async function getInvitacionesAsistenciaAction(): Promise<InvitacionAsistenciaItem[]> {
@@ -141,7 +142,7 @@ export async function getInvitacionesAsistenciaAction(): Promise<InvitacionAsist
 
   const { data, error } = await supabaseAdmin
     .from('invitaciones')
-    .select('id, comerciante_nombre, tipo_evento, qr_generado_at')
+    .select('id, comerciante_nombre, tipo_evento, qr_generado_at, qr_escaneado_at')
     .eq('estado', 'aceptada')
     .not('qr_generado_at', 'is', null)
     .order('qr_generado_at', { ascending: false })

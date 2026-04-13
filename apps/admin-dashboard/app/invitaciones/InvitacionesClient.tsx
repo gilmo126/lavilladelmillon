@@ -195,19 +195,28 @@ function InvitacionDrawer({ invId, onClose, onUpdated }: { invId: string; onClos
                 <div className="w-1 h-4 bg-admin-gold rounded-full" />
                 <h4 className="text-xs font-black text-white uppercase tracking-wider">QR de Asistencia</h4>
               </div>
-              <div className="flex justify-center">
-                <div className="bg-white p-2 rounded-xl">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={qrImageUrl} alt="QR asistencia" width={150} height={150} className="rounded-lg" />
+              {detail.qr_escaneado_at ? (
+                <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4 space-y-2">
+                  <p className="text-green-400 font-black text-sm">✅ QR Escaneado</p>
+                  <p className="text-slate-400 text-xs">Ingresó el {new Date(detail.qr_escaneado_at).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })} a las {new Date(detail.qr_escaneado_at).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}</p>
                 </div>
-              </div>
-              {detail.qr_generado_at && (
-                <p className="text-slate-400 text-xs">Aceptada el {new Date(detail.qr_generado_at).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+              ) : (
+                <>
+                  <div className="flex justify-center">
+                    <div className="bg-white p-2 rounded-xl">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={qrImageUrl} alt="QR asistencia" width={150} height={150} className="rounded-lg" />
+                    </div>
+                  </div>
+                  {detail.qr_generado_at && (
+                    <p className="text-slate-400 text-xs">Aceptada el {new Date(detail.qr_generado_at).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+                  )}
+                  <a href={qrImageUrl} download={`qr-invitacion-${detail.comerciante_nombre}.png`} target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-admin-gold hover:bg-yellow-500 text-slate-900 font-bold rounded-xl text-xs uppercase tracking-widest transition-all">
+                    Descargar QR
+                  </a>
+                </>
               )}
-              <a href={qrImageUrl} download={`qr-invitacion-${detail.comerciante_nombre}.png`} target="_blank" rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-admin-gold hover:bg-yellow-500 text-slate-900 font-bold rounded-xl text-xs uppercase tracking-widest transition-all">
-                Descargar QR
-              </a>
             </section>
           ) : (
             <section className="bg-slate-950 border border-white/5 rounded-2xl p-5 text-center">

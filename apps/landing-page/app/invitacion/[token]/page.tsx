@@ -30,13 +30,28 @@ export default async function InvitacionPage({
 
   const { data: inv, error } = await supabaseAdmin
     .from('invitaciones')
-    .select('id, comerciante_nombre, tipo_evento, estado, token_qr')
+    .select('id, comerciante_nombre, tipo_evento, estado, token_qr, campana_id')
     .eq('token', token)
     .single();
 
   if (error || !inv) {
     return <PaginaEstado emoji="🔒" titulo="Invitación no encontrada" mensaje="Este link no existe o ha sido eliminado." />;
   }
+
+  // Cargar contenido dinámico del evento
+  const { data: config } = await supabaseAdmin
+    .from('configuracion_campana')
+    .select('evento_logo_url, evento_titulo, evento_subtitulo, evento_mensaje, evento_auspiciantes')
+    .eq('id', inv.campana_id)
+    .single();
+
+  const eventoData = {
+    logoUrl: config?.evento_logo_url || null,
+    titulo: config?.evento_titulo || '¡Bienvenidos a La Villa del Millón!',
+    subtitulo: config?.evento_subtitulo || 'El escenario donde tu esfuerzo encuentra su recompensa.',
+    mensaje: config?.evento_mensaje || '',
+    auspiciantes: config?.evento_auspiciantes || ['KIA', 'YAMAHA', 'ODONTO PROTECT'],
+  };
 
   if (inv.estado === 'aceptada') {
     const qrDataUrl = `${ADMIN_URL}/validar-qr-inv/${inv.token_qr}`;
@@ -77,6 +92,7 @@ export default async function InvitacionPage({
           comercianteNombre={inv.comerciante_nombre}
           tipoEvento={inv.tipo_evento}
           tokenQr={inv.token_qr}
+          evento={eventoData}
         />
       </div>
     </main>

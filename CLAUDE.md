@@ -381,6 +381,13 @@ Se muestra formateado como `PACK-001`, `PACK-002`, etc.
 - Si ya aceptada: muestra QR existente
 - Si rechazada: mensaje de agradecimiento
 
+**Editor de contenido de landing de evento (Nivel 1):**
+- Columnas en `configuracion_campana`: `evento_logo_url`, `evento_titulo`, `evento_subtitulo`, `evento_mensaje`, `evento_auspiciantes text[]`
+- Editable desde Configuración (Llaves Maestras) — sección "Contenido Landing Evento"
+- Logo uploadeable, título, subtítulo, mensaje de bienvenida (textarea), auspiciantes dinámicos
+- Los nombres de auspiciantes se resaltan automáticamente en dorado en el mensaje
+- La landing `/invitacion/[token]` lee estos campos de la BD en vez de tener texto hardcodeado
+
 **Tipos de evento parametrizables:**
 - Columna `tipos_evento text[]` en `configuracion_campana`
 - Editable desde Configuración (Llaves Maestras) — sección "Tipos de Evento"

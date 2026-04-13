@@ -3,16 +3,36 @@
 import { useState } from 'react';
 import { aceptarInvitacionAction, rechazarInvitacionAction } from './actions';
 
+type EventoData = {
+  logoUrl: string | null;
+  titulo: string;
+  subtitulo: string;
+  mensaje: string;
+  auspiciantes: string[];
+};
+
 type Props = {
   token: string;
   comercianteNombre: string;
   tipoEvento: string;
   tokenQr: string;
+  evento: EventoData;
 };
 
 const ADMIN_URL = 'https://lavilladelmillon-admin.guillaumer-orion.workers.dev';
 
-export default function InvitacionClient({ token, comercianteNombre, tipoEvento, tokenQr }: Props) {
+function resaltarAuspiciantes(texto: string, auspiciantes: string[]) {
+  if (!texto || auspiciantes.length === 0) return texto;
+  let result = texto;
+  for (const a of auspiciantes) {
+    if (a.trim()) {
+      result = result.replace(new RegExp(a.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), `**${a}**`);
+    }
+  }
+  return result;
+}
+
+export default function InvitacionClient({ token, comercianteNombre, tipoEvento, tokenQr, evento }: Props) {
   const [status, setStatus] = useState<'idle' | 'loading' | 'aceptada' | 'rechazada' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -84,12 +104,17 @@ export default function InvitacionClient({ token, comercianteNombre, tipoEvento,
     <div className="space-y-6">
       {/* Header */}
       <div className="bg-gradient-to-b from-marca-gold/10 to-transparent rounded-3xl p-8 text-center space-y-4 border border-marca-gold/20">
+        {evento.logoUrl && (
+          <div className="flex justify-center mb-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={evento.logoUrl} alt="Logo evento" className="h-20 w-auto object-contain" />
+          </div>
+        )}
         <h2 className="text-2xl font-black text-white leading-tight">
-          ¡Bienvenidos a<br />
-          <span className="text-marca-gold">La Villa del Millón!</span>
+          {evento.titulo.split('\n').map((line, i) => <span key={i}>{line}<br /></span>)}
         </h2>
         <p className="text-marca-gold/80 text-sm font-bold italic">
-          El escenario donde tu esfuerzo encuentra su recompensa.
+          {evento.subtitulo}
         </p>
       </div>
 
@@ -100,62 +125,31 @@ export default function InvitacionClient({ token, comercianteNombre, tipoEvento,
         <p className="text-[10px] text-marca-gold font-bold uppercase tracking-widest mt-2">{tipoEvento}</p>
       </div>
 
-      {/* Mensaje completo */}
-      <div className="bg-slate-900/50 border border-white/5 rounded-3xl p-6 space-y-5">
-        <p className="text-slate-300 text-sm leading-relaxed">
-          Gracias por aceptar esta invitación. Tu presencia hoy no es coincidencia; estás aquí porque eres parte del motor que impulsa nuestra región. En <strong className="text-white">La Villa del Millón</strong>, nuestro objetivo principal es reconocer y potenciar el valor de ustedes, los microempresarios, brindándoles un espacio donde el crecimiento y la celebración van de la mano.
-        </p>
-
-        <p className="text-slate-300 text-sm leading-relaxed">
-          Sabemos que el camino del emprendimiento requiere aliados fuertes. Por eso, nos enorgullece contar con el respaldo de <strong className="text-marca-gold font-black">Kia</strong>, <strong className="text-marca-gold font-black">Yamaha</strong> y la Clínica Odontológica <strong className="text-marca-gold font-black">Odonto Protect</strong>. Gracias a su visión y apoyo, hoy podemos ofrecerles una jornada cargada de:
-        </p>
-
-        <div className="space-y-3 pl-2">
-          <div className="flex items-start gap-3">
-            <span className="text-marca-gold text-lg mt-0.5">💰</span>
-            <div>
-              <p className="text-white font-black text-sm">Beneficios Económicos</p>
-              <p className="text-slate-400 text-xs">Herramientas y oportunidades diseñadas exclusivamente para fortalecer sus negocios.</p>
-            </div>
-          </div>
-          <div className="flex items-start gap-3">
-            <span className="text-marca-gold text-lg mt-0.5">🎁</span>
-            <div>
-              <p className="text-white font-black text-sm">Grandes Rifas y Regalos</p>
-              <p className="text-slate-400 text-xs">Premios de nuestras marcas aliadas para premiar su constancia.</p>
-            </div>
-          </div>
-          <div className="flex items-start gap-3">
-            <span className="text-marca-gold text-lg mt-0.5">✨</span>
-            <div>
-              <p className="text-white font-black text-sm">Experiencias de Bienestar</p>
-              <p className="text-slate-400 text-xs">Pensadas para que tú y tu negocio sigan brillando.</p>
-            </div>
-          </div>
+      {/* Mensaje dinámico */}
+      {evento.mensaje && (
+        <div className="bg-slate-900/50 border border-white/5 rounded-3xl p-6 space-y-4">
+          {resaltarAuspiciantes(evento.mensaje, evento.auspiciantes).split('\n').filter(Boolean).map((parrafo, i) => (
+            <p key={i} className="text-slate-300 text-sm leading-relaxed">
+              {parrafo.split(/\*\*(.*?)\*\*/g).map((part, j) =>
+                j % 2 === 1
+                  ? <strong key={j} className="text-marca-gold font-black">{part}</strong>
+                  : part
+              )}
+            </p>
+          ))}
         </div>
-
-        <div className="bg-marca-gold/5 border border-marca-gold/20 rounded-2xl p-5 text-center space-y-3">
-          <p className="text-marca-gold font-black text-sm uppercase tracking-wider">¡Es tu momento de participar!</p>
-          <p className="text-slate-300 text-xs leading-relaxed">
-            Queremos que aproveches cada oportunidad. No dejes pasar ninguna actividad, acércate a los stands de nuestros auspiciantes y asegúrate de estar presente en cada sorteo.
-          </p>
-        </div>
-
-        <p className="text-slate-300 text-sm leading-relaxed">
-          <strong className="text-white">Microempresario:</strong> Tu visión nos inspira. Junto a <strong className="text-marca-gold font-black">Kia</strong>, <strong className="text-marca-gold font-black">Yamaha</strong> y <strong className="text-marca-gold font-black">Odonto Protect</strong>, estamos aquí para impulsarte a llegar más lejos. ¡Participa, disfruta y conquista los beneficios que hemos preparado para ti!
-        </p>
-
-        <p className="text-slate-400 text-sm text-center italic">
-          Nuevamente, gracias por acompañarnos. ¡Que comience el éxito en La Villa del Millón!
-        </p>
-      </div>
+      )}
 
       {/* Auspiciantes */}
-      <div className="flex flex-wrap justify-center gap-3">
-        <span className="bg-marca-gold/10 border border-marca-gold/30 px-5 py-2.5 rounded-full text-sm font-black text-marca-gold uppercase tracking-wider">KIA</span>
-        <span className="bg-marca-gold/10 border border-marca-gold/30 px-5 py-2.5 rounded-full text-sm font-black text-marca-gold uppercase tracking-wider">YAMAHA</span>
-        <span className="bg-marca-gold/10 border border-marca-gold/30 px-5 py-2.5 rounded-full text-sm font-black text-marca-gold uppercase tracking-wider">ODONTO PROTECT</span>
-      </div>
+      {evento.auspiciantes.length > 0 && (
+        <div className="flex flex-wrap justify-center gap-3">
+          {evento.auspiciantes.filter(Boolean).map((a) => (
+            <span key={a} className="bg-marca-gold/10 border border-marca-gold/30 px-5 py-2.5 rounded-full text-sm font-black text-marca-gold uppercase tracking-wider">
+              {a}
+            </span>
+          ))}
+        </div>
+      )}
 
       {status === 'error' && (
         <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 text-center text-red-400 text-sm font-bold">

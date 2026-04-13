@@ -20,6 +20,12 @@ export default function ConfiguracionManager() {
   const [formDiasValidezQr, setFormDiasValidezQr] = useState(8);
   const [formDiasValidezPagina, setFormDiasValidezPagina] = useState(30);
   const [formTiposEvento, setFormTiposEvento] = useState<string[]>([]);
+  const [formEventoLogoUrl, setFormEventoLogoUrl] = useState<string | null>(null);
+  const [formEventoTitulo, setFormEventoTitulo] = useState('');
+  const [formEventoSubtitulo, setFormEventoSubtitulo] = useState('');
+  const [formEventoMensaje, setFormEventoMensaje] = useState('');
+  const [formEventoAuspiciantes, setFormEventoAuspiciantes] = useState<string[]>([]);
+  const [uploadingEvento, setUploadingEvento] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -36,6 +42,11 @@ export default function ConfiguracionManager() {
         setFormDiasValidezQr(data.dias_validez_qr ?? 8);
         setFormDiasValidezPagina(data.dias_validez_pagina_comerciante ?? 30);
         setFormTiposEvento(data.tipos_evento ?? ['Lanzamiento', 'Capacitación', 'Feria Comercial', 'Premiación', 'Networking']);
+        setFormEventoLogoUrl(data.evento_logo_url || null);
+        setFormEventoTitulo(data.evento_titulo || '¡Bienvenidos a La Villa del Millón!');
+        setFormEventoSubtitulo(data.evento_subtitulo || 'El escenario donde tu esfuerzo encuentra su recompensa.');
+        setFormEventoMensaje(data.evento_mensaje || '');
+        setFormEventoAuspiciantes(data.evento_auspiciantes || ['KIA', 'YAMAHA', 'ODONTO PROTECT']);
       }
     } catch (e) {
       console.error(e);
@@ -92,6 +103,11 @@ export default function ConfiguracionManager() {
         dias_validez_qr: formDiasValidezQr,
         dias_validez_pagina_comerciante: formDiasValidezPagina,
         tipos_evento: formTiposEvento,
+        evento_logo_url: formEventoLogoUrl,
+        evento_titulo: formEventoTitulo,
+        evento_subtitulo: formEventoSubtitulo,
+        evento_mensaje: formEventoMensaje,
+        evento_auspiciantes: formEventoAuspiciantes,
       });
       alert('Configuración guardada exitosamente.');
       loadData();
@@ -263,8 +279,76 @@ export default function ConfiguracionManager() {
                  </div>
                </section>
 
+               <section className="space-y-6">
+                 <h3 className="text-xl font-bold text-white border-l-4 border-marca-gold pl-4">Contenido Landing Evento</h3>
+
+                 <div className="space-y-4">
+                   <div>
+                     <label className="block text-sm text-slate-400 mb-1">Logo del Evento</label>
+                     <div className="flex items-center gap-4 p-4 bg-slate-900/50 rounded-xl border border-admin-border">
+                       <div className="w-16 h-16 rounded-lg border border-admin-border flex items-center justify-center bg-admin-dark overflow-hidden">
+                         {formEventoLogoUrl ? (
+                           <img src={formEventoLogoUrl} alt="Logo evento" className="w-full h-full object-contain p-1" />
+                         ) : (
+                           <span className="text-xl">🎪</span>
+                         )}
+                       </div>
+                       <input type="file" accept="image/*" onChange={async (e) => {
+                         if (!e.target.files?.[0]) return;
+                         setUploadingEvento(true);
+                         const fd = new FormData();
+                         fd.append('file', e.target.files[0]);
+                         const resp = await uploadPublicImagenAction(fd, 'eventos');
+                         if (resp.success) setFormEventoLogoUrl(resp.url || null);
+                         setUploadingEvento(false);
+                       }} className="text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-admin-gold/10 file:text-admin-gold hover:file:bg-admin-gold/20 cursor-pointer" />
+                       {uploadingEvento && <span className="text-xs text-admin-gold animate-pulse">Subiendo...</span>}
+                     </div>
+                   </div>
+
+                   <div>
+                     <label className="block text-sm text-slate-400 mb-1">Título Principal</label>
+                     <input value={formEventoTitulo} onChange={e => setFormEventoTitulo(e.target.value)}
+                       className="w-full bg-slate-900 border border-admin-border rounded-md px-4 py-3 text-white focus:border-admin-gold outline-none" />
+                   </div>
+
+                   <div>
+                     <label className="block text-sm text-slate-400 mb-1">Subtítulo</label>
+                     <input value={formEventoSubtitulo} onChange={e => setFormEventoSubtitulo(e.target.value)}
+                       className="w-full bg-slate-900 border border-admin-border rounded-md px-4 py-3 text-white focus:border-admin-gold outline-none" />
+                   </div>
+
+                   <div>
+                     <label className="block text-sm text-slate-400 mb-1">Mensaje de Bienvenida (texto completo)</label>
+                     <textarea rows={8} value={formEventoMensaje} onChange={e => setFormEventoMensaje(e.target.value)}
+                       placeholder="Escribe aquí el mensaje completo que verá el comerciante al abrir la invitación..."
+                       className="w-full bg-slate-900 border border-admin-border rounded-md px-4 py-3 text-white focus:border-admin-gold outline-none text-sm leading-relaxed" />
+                     <p className="text-[10px] text-slate-600 mt-1">Los nombres de auspiciantes se resaltarán automáticamente en dorado.</p>
+                   </div>
+
+                   <div>
+                     <label className="block text-sm text-slate-400 mb-2">Auspiciantes (se resaltan en dorado)</label>
+                     <div className="space-y-2">
+                       {formEventoAuspiciantes.map((a, idx) => (
+                         <div key={idx} className="flex items-center gap-2">
+                           <input value={a} onChange={(e) => {
+                             const updated = [...formEventoAuspiciantes];
+                             updated[idx] = e.target.value;
+                             setFormEventoAuspiciantes(updated);
+                           }} className="flex-1 bg-slate-900 border border-admin-border rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-admin-gold" />
+                           <button type="button" onClick={() => setFormEventoAuspiciantes(formEventoAuspiciantes.filter((_, i) => i !== idx))}
+                             className="text-red-400 hover:text-red-300 text-sm font-bold px-2">✕</button>
+                         </div>
+                       ))}
+                       <button type="button" onClick={() => setFormEventoAuspiciantes([...formEventoAuspiciantes, ''])}
+                         className="text-admin-gold hover:text-yellow-300 text-xs font-bold uppercase tracking-widest">+ Agregar auspiciante</button>
+                     </div>
+                   </div>
+                 </div>
+               </section>
+
                <div className="pt-6 border-t border-admin-border flex justify-end">
-                  <button type="submit" disabled={saving || uploading} className="bg-admin-gold text-admin-dark font-bold px-10 py-4 rounded-xl shadow-[0_0_20px_rgba(245,158,11,0.4)] hover:shadow-[0_0_30px_rgba(245,158,11,0.6)] hover:scale-105 transition-all disabled:opacity-50">
+                  <button type="submit" disabled={saving || uploading || uploadingEvento} className="bg-admin-gold text-admin-dark font-bold px-10 py-4 rounded-xl shadow-[0_0_20px_rgba(245,158,11,0.4)] hover:shadow-[0_0_30px_rgba(245,158,11,0.6)] hover:scale-105 transition-all disabled:opacity-50">
                     {saving ? 'Guardando Cambios...' : 'Guardar Configuración Maestra'}
                   </button>
                </div>

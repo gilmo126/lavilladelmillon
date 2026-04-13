@@ -22,21 +22,16 @@ export type AsistenciaItem = {
   distribuidor: { nombre: string } | null;
 };
 
-export async function getAsistenciaAction(fecha?: string): Promise<AsistenciaItem[]> {
+export async function getAsistenciaAction(): Promise<AsistenciaItem[]> {
   const rol = await verificarRolScannerAction();
   if (!rol) return [];
-
-  const dia = fecha || new Date().toISOString().split('T')[0];
-  const inicio = `${dia}T00:00:00.000Z`;
-  const fin = `${dia}T23:59:59.999Z`;
 
   const { data, error } = await supabaseAdmin
     .from('packs')
     .select('id, numero_pack, comerciante_nombre, comerciante_tel, comerciante_whatsapp, qr_usado_at, distribuidor:perfiles!distribuidor_id(nombre)')
     .not('qr_usado_at', 'is', null)
-    .gte('qr_usado_at', inicio)
-    .lte('qr_usado_at', fin)
-    .order('qr_usado_at', { ascending: false });
+    .order('qr_usado_at', { ascending: false })
+    .limit(200);
 
   if (error) return [];
   return (data || []).map((p: any) => ({
@@ -129,4 +124,29 @@ export async function buscarPacksPorCedulaAction(cedula: string): Promise<PackCe
 
   if (error) return [];
   return (data || []) as PackCedulaItem[];
+}
+
+// ── ASISTENCIA DE INVITACIONES A EVENTOS ────────────────────────────
+
+export type InvitacionAsistenciaItem = {
+  id: string;
+  comerciante_nombre: string;
+  tipo_evento: string;
+  qr_generado_at: string;
+};
+
+export async function getInvitacionesAsistenciaAction(): Promise<InvitacionAsistenciaItem[]> {
+  const rol = await verificarRolScannerAction();
+  if (!rol) return [];
+
+  const { data, error } = await supabaseAdmin
+    .from('invitaciones')
+    .select('id, comerciante_nombre, tipo_evento, qr_generado_at')
+    .eq('estado', 'aceptada')
+    .not('qr_generado_at', 'is', null)
+    .order('qr_generado_at', { ascending: false })
+    .limit(200);
+
+  if (error) return [];
+  return (data || []) as InvitacionAsistenciaItem[];
 }

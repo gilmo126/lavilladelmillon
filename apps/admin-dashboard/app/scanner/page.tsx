@@ -4,7 +4,7 @@ import { createClient } from '../../utils/supabase/server';
 import { supabaseAdmin } from '../../lib/supabaseAdmin';
 import { redirect } from 'next/navigation';
 import ScannerClient from './ScannerClient';
-import { getAsistenciaAction } from './actions';
+import { getAsistenciaAction, getInvitacionesAsistenciaAction } from './actions';
 
 export const metadata = {
   title: 'Scanner QR | Panel Asistente',
@@ -25,7 +25,10 @@ export default async function ScannerPage() {
     redirect('/');
   }
 
-  const asistenciaHoy = await getAsistenciaAction();
+  const [asistencia, invitaciones] = await Promise.all([
+    getAsistenciaAction(),
+    getInvitacionesAsistenciaAction(),
+  ]);
 
   return (
     <div className="p-8 pb-20 h-full overflow-y-auto flex flex-col items-center">
@@ -35,15 +38,15 @@ export default async function ScannerPage() {
         </div>
         <h1 className="text-2xl font-black text-white tracking-tight">Scanner de QR</h1>
         <p className="text-[10px] font-bold text-admin-gold uppercase tracking-widest mt-2">
-          Validación de beneficios
+          Validación de beneficios e invitaciones
         </p>
         <p className="text-slate-400 text-sm mt-3">
-          {profile.nombre} — Escanea o ingresa el código del QR del comerciante
+          {profile.nombre} — Escanea o ingresa el código del QR
         </p>
       </header>
 
       <div className="w-full max-w-md">
-        <ScannerClient initialAsistencia={asistenciaHoy} />
+        <ScannerClient initialAsistencia={asistencia} initialInvitaciones={invitaciones} />
       </div>
     </div>
   );

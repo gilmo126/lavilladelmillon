@@ -162,7 +162,7 @@ function InvitacionDrawer({ invId, onClose, onUpdated }: { invId: string; onClos
               </div>
               <div>
                 <p className="text-[10px] text-slate-600 uppercase font-bold">Creada</p>
-                <p className="text-slate-300">{new Date(detail.created_at).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                <p className="text-slate-300">{new Date(detail.created_at).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })} {new Date(detail.created_at).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}</p>
               </div>
             </div>
           </section>
@@ -357,7 +357,8 @@ export default function InvitacionesClient({
                         <td className="p-4 text-sm text-slate-400 font-bold uppercase">{inv.distribuidor?.nombre || '—'}</td>
                       )}
                       <td className="p-4 text-xs text-slate-400">
-                        {new Date(inv.created_at).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })}
+                        {new Date(inv.created_at).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })}{' '}
+                        <span className="text-slate-600">{new Date(inv.created_at).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}</span>
                       </td>
                       <td className="p-4">
                         <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-black border uppercase ${estadoBadge(inv.estado)}`}>

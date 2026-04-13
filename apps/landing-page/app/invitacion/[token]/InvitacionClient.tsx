@@ -82,27 +82,79 @@ export default function InvitacionClient({ token, comercianteNombre, tipoEvento,
 
   return (
     <div className="space-y-6">
-      {/* Mensaje de bienvenida */}
-      <div className="bg-gradient-to-b from-marca-gold/10 to-transparent rounded-3xl p-8 text-center space-y-6 border border-marca-gold/20">
+      {/* Header */}
+      <div className="bg-gradient-to-b from-marca-gold/10 to-transparent rounded-3xl p-8 text-center space-y-4 border border-marca-gold/20">
         <h2 className="text-2xl font-black text-white leading-tight">
-          ¡Bienvenido(a) a<br />
+          ¡Bienvenidos a<br />
           <span className="text-marca-gold">La Villa del Millón!</span>
         </h2>
-        <p className="text-slate-300 text-sm leading-relaxed max-w-md mx-auto">
+        <p className="text-marca-gold/80 text-sm font-bold italic">
           El escenario donde tu esfuerzo encuentra su recompensa.
-          Has sido invitado(a) al evento <strong className="text-marca-gold">{tipoEvento}</strong>.
         </p>
-        <div className="flex flex-wrap justify-center gap-4 pt-4">
-          <span className="bg-slate-800 border border-white/10 px-4 py-2 rounded-full text-xs font-black text-white uppercase tracking-wider">KIA</span>
-          <span className="bg-slate-800 border border-white/10 px-4 py-2 rounded-full text-xs font-black text-white uppercase tracking-wider">YAMAHA</span>
-          <span className="bg-slate-800 border border-white/10 px-4 py-2 rounded-full text-xs font-black text-white uppercase tracking-wider">ODONTO PROTECT</span>
-        </div>
       </div>
 
-      {/* Personalización */}
-      <div className="bg-slate-800/50 border border-white/5 rounded-2xl p-6 text-center">
-        <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-2">Invitado(a)</p>
+      {/* Invitado */}
+      <div className="bg-slate-800/50 border border-marca-gold/20 rounded-2xl p-6 text-center">
+        <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-2">Invitado(a) especial</p>
         <p className="text-xl font-black text-white">{comercianteNombre}</p>
+        <p className="text-[10px] text-marca-gold font-bold uppercase tracking-widest mt-2">{tipoEvento}</p>
+      </div>
+
+      {/* Mensaje completo */}
+      <div className="bg-slate-900/50 border border-white/5 rounded-3xl p-6 space-y-5">
+        <p className="text-slate-300 text-sm leading-relaxed">
+          Gracias por aceptar esta invitación. Tu presencia hoy no es coincidencia; estás aquí porque eres parte del motor que impulsa nuestra región. En <strong className="text-white">La Villa del Millón</strong>, nuestro objetivo principal es reconocer y potenciar el valor de ustedes, los microempresarios, brindándoles un espacio donde el crecimiento y la celebración van de la mano.
+        </p>
+
+        <p className="text-slate-300 text-sm leading-relaxed">
+          Sabemos que el camino del emprendimiento requiere aliados fuertes. Por eso, nos enorgullece contar con el respaldo de <strong className="text-marca-gold font-black">Kia</strong>, <strong className="text-marca-gold font-black">Yamaha</strong> y la Clínica Odontológica <strong className="text-marca-gold font-black">Odonto Protect</strong>. Gracias a su visión y apoyo, hoy podemos ofrecerles una jornada cargada de:
+        </p>
+
+        <div className="space-y-3 pl-2">
+          <div className="flex items-start gap-3">
+            <span className="text-marca-gold text-lg mt-0.5">💰</span>
+            <div>
+              <p className="text-white font-black text-sm">Beneficios Económicos</p>
+              <p className="text-slate-400 text-xs">Herramientas y oportunidades diseñadas exclusivamente para fortalecer sus negocios.</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <span className="text-marca-gold text-lg mt-0.5">🎁</span>
+            <div>
+              <p className="text-white font-black text-sm">Grandes Rifas y Regalos</p>
+              <p className="text-slate-400 text-xs">Premios de nuestras marcas aliadas para premiar su constancia.</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <span className="text-marca-gold text-lg mt-0.5">✨</span>
+            <div>
+              <p className="text-white font-black text-sm">Experiencias de Bienestar</p>
+              <p className="text-slate-400 text-xs">Pensadas para que tú y tu negocio sigan brillando.</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-marca-gold/5 border border-marca-gold/20 rounded-2xl p-5 text-center space-y-3">
+          <p className="text-marca-gold font-black text-sm uppercase tracking-wider">¡Es tu momento de participar!</p>
+          <p className="text-slate-300 text-xs leading-relaxed">
+            Queremos que aproveches cada oportunidad. No dejes pasar ninguna actividad, acércate a los stands de nuestros auspiciantes y asegúrate de estar presente en cada sorteo.
+          </p>
+        </div>
+
+        <p className="text-slate-300 text-sm leading-relaxed">
+          <strong className="text-white">Microempresario:</strong> Tu visión nos inspira. Junto a <strong className="text-marca-gold font-black">Kia</strong>, <strong className="text-marca-gold font-black">Yamaha</strong> y <strong className="text-marca-gold font-black">Odonto Protect</strong>, estamos aquí para impulsarte a llegar más lejos. ¡Participa, disfruta y conquista los beneficios que hemos preparado para ti!
+        </p>
+
+        <p className="text-slate-400 text-sm text-center italic">
+          Nuevamente, gracias por acompañarnos. ¡Que comience el éxito en La Villa del Millón!
+        </p>
+      </div>
+
+      {/* Auspiciantes */}
+      <div className="flex flex-wrap justify-center gap-3">
+        <span className="bg-marca-gold/10 border border-marca-gold/30 px-5 py-2.5 rounded-full text-sm font-black text-marca-gold uppercase tracking-wider">KIA</span>
+        <span className="bg-marca-gold/10 border border-marca-gold/30 px-5 py-2.5 rounded-full text-sm font-black text-marca-gold uppercase tracking-wider">YAMAHA</span>
+        <span className="bg-marca-gold/10 border border-marca-gold/30 px-5 py-2.5 rounded-full text-sm font-black text-marca-gold uppercase tracking-wider">ODONTO PROTECT</span>
       </div>
 
       {status === 'error' && (
@@ -111,8 +163,9 @@ export default function InvitacionClient({ token, comercianteNombre, tipoEvento,
         </div>
       )}
 
-      {/* Botones */}
-      <div className="space-y-3">
+      {/* Botones de decisión */}
+      <div className="space-y-3 pt-2">
+        <p className="text-center text-marca-gold font-black text-sm uppercase tracking-widest">¡La Villa del Millón te espera!</p>
         <button
           onClick={handleAceptar}
           disabled={status === 'loading'}

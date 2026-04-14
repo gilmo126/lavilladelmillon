@@ -47,8 +47,8 @@ export async function venderPackAction(formData: FormData): Promise<VenderPackRe
   const comercianteWa       = (formData.get('comerciante_whatsapp') as string)?.trim() || null;
   const tipoPago            = formData.get('tipo_pago') as 'inmediato' | 'pendiente';
 
-  if (!comercianteNombre || !comercianteIdent || !comercianteTel) {
-    return { success: false, error: 'Nombre, identificación y teléfono del comerciante son obligatorios.' };
+  if (!comercianteNombre || !comercianteIdent || !comercianteWa) {
+    return { success: false, error: 'Nombre, identificación y WhatsApp del comerciante son obligatorios.' };
   }
   if (!['inmediato', 'pendiente'].includes(tipoPago)) {
     return { success: false, error: 'Tipo de pago inválido.' };

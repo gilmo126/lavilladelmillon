@@ -328,18 +328,18 @@ export default function VenderPackForm({ diasVencimientoPago }: Props) {
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Teléfono *</label>
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">WhatsApp *</label>
             <input
-              name="comerciante_tel"
+              name="comerciante_whatsapp"
               required
               placeholder="3001234567"
               className="w-full bg-slate-950 border border-slate-700/50 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-admin-blue transition-all"
             />
           </div>
           <div>
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">WhatsApp</label>
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Teléfono <span className="text-slate-600 normal-case">(opcional)</span></label>
             <input
-              name="comerciante_whatsapp"
+              name="comerciante_tel"
               placeholder="3001234567"
               className="w-full bg-slate-950 border border-slate-700/50 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-admin-blue transition-all"
             />

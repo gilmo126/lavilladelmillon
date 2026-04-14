@@ -113,13 +113,13 @@ function ComercianteDrawer({
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-[10px] text-slate-500 uppercase font-bold block mb-1">Teléfono</label>
-                <input value={tel} onChange={(e) => setTel(e.target.value)}
+                <label className="text-[10px] text-slate-500 uppercase font-bold block mb-1">WhatsApp *</label>
+                <input value={wa} onChange={(e) => setWa(e.target.value)}
                   className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-admin-blue" />
               </div>
               <div>
-                <label className="text-[10px] text-slate-500 uppercase font-bold block mb-1">WhatsApp</label>
-                <input value={wa} onChange={(e) => setWa(e.target.value)}
+                <label className="text-[10px] text-slate-500 uppercase font-bold block mb-1">Teléfono <span className="text-slate-600 normal-case">(opcional)</span></label>
+                <input value={tel} onChange={(e) => setTel(e.target.value)}
                   className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-admin-blue" />
               </div>
             </div>

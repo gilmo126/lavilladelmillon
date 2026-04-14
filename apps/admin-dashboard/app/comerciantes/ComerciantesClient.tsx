@@ -166,16 +166,20 @@ function ComercianteDrawer({
   );
 }
 
+const ITEMS_PER_PAGE = 10;
+
 export default function ComerciantesClient({ initialData }: { initialData: ComercianteItem[] }) {
   const [data, setData] = useState<ComercianteItem[]>(initialData);
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<ComercianteItem | null>(null);
   const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(1);
 
   async function reload() {
     setLoading(true);
     const res = await getComerciantesAction();
     setData(res);
+    setPage(1);
     setLoading(false);
   }
 
@@ -184,19 +188,53 @@ export default function ComerciantesClient({ initialData }: { initialData: Comer
     c.comerciante_identificacion.includes(search)
   );
 
+  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+  const paged = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+
+  // Reset page when search changes
+  useEffect(() => { setPage(1); }, [search]);
+
+  function handleExportCSV() {
+    if (filtered.length === 0) return;
+    const headers = ['Nombre', 'Tipo Doc', 'Identificación', 'Teléfono', 'WhatsApp', 'Email', 'Distribuidor', 'Packs', 'Fecha Registro'];
+    const rows = filtered.map((c) => [
+      c.comerciante_nombre,
+      c.comerciante_tipo_id,
+      c.comerciante_identificacion,
+      c.comerciante_tel || '',
+      c.comerciante_whatsapp || '',
+      c.comerciante_email || '',
+      c.distribuidor_nombre || '',
+      String(c.total_packs),
+      c.fecha_primer_pack ? new Date(c.fecha_primer_pack).toLocaleDateString('es-CO') : '',
+    ]);
+    const csv = [headers, ...rows].map((r) => r.map((c) => `"${c}"`).join(',')).join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'comerciantes.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div className="space-y-6">
       {selected && (
         <ComercianteDrawer comerciante={selected} onClose={() => setSelected(null)} onUpdated={() => { reload(); setSelected(null); }} />
       )}
 
-      {/* Search */}
-      <div className="flex gap-4 items-end bg-admin-card p-6 rounded-2xl border border-admin-border">
-        <div className="flex-1">
+      {/* Search + Export */}
+      <div className="flex flex-wrap gap-4 items-end bg-admin-card p-6 rounded-2xl border border-admin-border">
+        <div className="flex-1 min-w-[200px]">
           <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Buscar Comerciante</label>
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Nombre o identificación..."
             className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white outline-none focus:border-admin-blue transition-colors text-sm" />
         </div>
+        <button onClick={handleExportCSV} disabled={filtered.length === 0}
+          className="px-5 py-2.5 bg-admin-gold hover:bg-yellow-500 text-slate-900 rounded-xl font-bold text-sm transition-all disabled:opacity-40 disabled:grayscale">
+          Exportar CSV
+        </button>
         <div className="text-right">
           <p className="text-xs text-slate-500 uppercase font-bold">Total</p>
           <p className="text-2xl font-black text-white">{filtered.length}</p>
@@ -218,10 +256,10 @@ export default function ComerciantesClient({ initialData }: { initialData: Comer
               </tr>
             </thead>
             <tbody className="divide-y divide-admin-border">
-              {filtered.length === 0 ? (
+              {paged.length === 0 ? (
                 <tr><td colSpan={6} className="text-center py-20 text-slate-500 italic">Sin comerciantes registrados.</td></tr>
               ) : (
-                filtered.map((c) => (
+                paged.map((c) => (
                   <tr key={c.comerciante_identificacion} className="hover:bg-slate-800/30 transition-colors cursor-pointer" onClick={() => setSelected(c)}>
                     <td className="p-4">
                       <p className="font-bold text-white text-sm">{c.comerciante_nombre}</p>
@@ -242,6 +280,21 @@ export default function ComerciantesClient({ initialData }: { initialData: Comer
             </tbody>
           </table>
         </div>
+
+        {/* Paginación */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between p-4 border-t border-admin-border">
+            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+              Página {page} de {totalPages} · {filtered.length} comerciantes
+            </span>
+            <div className="flex gap-2">
+              <button disabled={page <= 1} onClick={() => setPage(p => p - 1)}
+                className="px-3 py-1.5 bg-slate-800 text-white text-xs font-bold rounded-lg disabled:opacity-30 hover:bg-slate-700">← Anterior</button>
+              <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}
+                className="px-3 py-1.5 bg-slate-800 text-white text-xs font-bold rounded-lg disabled:opacity-30 hover:bg-slate-700">Siguiente →</button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

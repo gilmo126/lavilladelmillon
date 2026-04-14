@@ -17,6 +17,7 @@ export async function sendMail(to: string, subject: string, html: string) {
     port: 465,
     secure: true,
     auth: { user, pass },
+    tls: { rejectUnauthorized: false },
   });
 
   try {

@@ -4,13 +4,14 @@ on:
   push:
     branches:
       - main
+      - dev
     paths:
       - 'apps/landing-page/**'
       - '.github/workflows/deploy-landing.yml'
 
 jobs:
   deploy:
-    name: Build & Deploy
+    name: Build & Deploy (${{ github.ref_name }})
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -35,6 +36,8 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_LANDING_URL: ${{ github.ref == 'refs/heads/main' && 'https://lavilladelmillon.com' || 'https://landing-page.guillaumer-orion.workers.dev' }}
+          NEXT_PUBLIC_ADMIN_URL: ${{ github.ref == 'refs/heads/main' && 'https://admin.lavilladelmillon.com' || 'https://lavilladelmillon-admin.guillaumer-orion.workers.dev' }}
 
       - name: Set Cloudflare secrets
         run: |

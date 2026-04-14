@@ -1,8 +1,8 @@
 'use server';
 
-import { Resend } from 'resend';
 import { createClient } from '../../utils/supabase/server';
 import { supabaseAdmin } from '../../lib/supabaseAdmin';
+import { sendMail } from '../../lib/mailer';
 
 const LANDING_URL = 'https://landing-page.guillaumer-orion.workers.dev';
 
@@ -366,9 +366,6 @@ export async function enviarEmailPackAction(data: {
   const { data: { user } } = await supabaseAuth.auth.getUser();
   if (!user) return { success: false, error: 'Sesión no válida.' };
 
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) return { success: false, error: 'RESEND_API_KEY no configurada.' };
-
   const packUrl = `${LANDING_URL}/pack/${data.tokenPagina}`;
   const numerosHtml = data.numeros
     .map((n) => {
@@ -423,15 +420,10 @@ export async function enviarEmailPackAction(data: {
 </body>
 </html>`.trim();
 
-  const resend = new Resend(apiKey);
-
-  const { error } = await resend.emails.send({
-    from: 'La Villa del Millón <onboarding@resend.dev>',
-    to: data.comercianteEmail,
-    subject: 'Tus 25 números — La Villa del Millón',
-    html,
-  });
-
-  if (error) return { success: false, error: error.message };
-  return { success: true };
+  try {
+    await sendMail(data.comercianteEmail, 'Tus 25 números — La Villa del Millón', html);
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Error al enviar email' };
+  }
 }

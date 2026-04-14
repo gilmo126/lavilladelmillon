@@ -1,7 +1,7 @@
 'use server';
 
-import { Resend } from 'resend';
 import { supabaseAdmin } from '../../../lib/supabaseAdmin';
+import { sendMail } from '../../../lib/mailer';
 
 const ADMIN_URL = 'https://lavilladelmillon-admin.guillaumer-orion.workers.dev';
 
@@ -34,14 +34,7 @@ export async function aceptarInvitacionAction(token: string): Promise<AccionResu
   // Email con QR al comerciante
   if (inv.comerciante_email) {
     try {
-      const apiKey = process.env.RESEND_API_KEY;
-      if (apiKey) {
-        const resend = new Resend(apiKey);
-        await resend.emails.send({
-          from: 'La Villa del Millón <onboarding@resend.dev>',
-          to: inv.comerciante_email,
-          subject: `Tu QR de asistencia — ${inv.tipo_evento}`,
-          html: `
+      await sendMail(inv.comerciante_email, `Tu QR de asistencia — ${inv.tipo_evento}`, `
 <!DOCTYPE html><html><head><meta charset="utf-8"></head>
 <body style="margin:0;padding:0;background:#0a0e1a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
 <div style="max-width:520px;margin:0 auto;padding:32px 20px;">
@@ -60,32 +53,16 @@ export async function aceptarInvitacionAction(token: string): Promise<AccionResu
     <img src="${qrImageUrl}" alt="QR de asistencia" width="180" height="180" style="border-radius:8px;background:#fff;padding:8px;" />
   </div>
   <p style="color:#475569;font-size:11px;text-align:center;margin:0;">La Villa del Millón · Palmira 2026</p>
-</div></body></html>`.trim(),
-        });
-      }
+</div></body></html>`.trim());
     } catch { /* best-effort */ }
   }
 
   // Notificar al distribuidor
   if (inv.distribuidor_id) {
     try {
-      const { data: dist } = await supabaseAdmin
-        .from('perfiles')
-        .select('nombre')
-        .eq('id', inv.distribuidor_id)
-        .single();
-
-      // Notificación por email al distribuidor (si tiene auth email)
       const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(inv.distribuidor_id);
       if (authUser?.user?.email) {
-        const apiKey = process.env.RESEND_API_KEY;
-        if (apiKey) {
-          const resend = new Resend(apiKey);
-          await resend.emails.send({
-            from: 'La Villa del Millón <onboarding@resend.dev>',
-            to: authUser.user.email,
-            subject: `${inv.comerciante_nombre} aceptó la invitación`,
-            html: `
+        await sendMail(authUser.user.email, `${inv.comerciante_nombre} aceptó la invitación`, `
 <!DOCTYPE html><html><head><meta charset="utf-8"></head>
 <body style="margin:0;padding:0;background:#0a0e1a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
 <div style="max-width:520px;margin:0 auto;padding:32px 20px;">
@@ -97,9 +74,7 @@ export async function aceptarInvitacionAction(token: string): Promise<AccionResu
     <p style="color:#e2e8f0;font-size:14px;margin:0 0 8px;"><strong>${inv.comerciante_nombre}</strong> confirmó su asistencia al evento <strong style="color:#facc15;">${inv.tipo_evento}</strong>.</p>
     <p style="color:#94a3b8;font-size:12px;margin:0;">Fecha: ${new Date().toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
   </div>
-</div></body></html>`.trim(),
-          });
-        }
+</div></body></html>`.trim());
       }
     } catch { /* best-effort */ }
   }

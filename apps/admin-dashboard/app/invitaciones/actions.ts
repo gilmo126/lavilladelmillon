@@ -1,8 +1,8 @@
 'use server';
 
-import { Resend } from 'resend';
 import { createClient } from '../../utils/supabase/server';
 import { supabaseAdmin } from '../../lib/supabaseAdmin';
+import { sendMail } from '../../lib/mailer';
 
 const LANDING_URL = 'https://landing-page.guillaumer-orion.workers.dev';
 
@@ -74,15 +74,8 @@ export async function crearInvitacionAction(formData: FormData): Promise<CrearIn
   // Enviar email si hay correo
   if (email) {
     try {
-      const apiKey = process.env.RESEND_API_KEY;
-      if (apiKey) {
-        const resend = new Resend(apiKey);
-        const invUrl = `${LANDING_URL}/invitacion/${inv.token}`;
-        await resend.emails.send({
-          from: 'La Villa del Millón <onboarding@resend.dev>',
-          to: email,
-          subject: `Invitación a ${tipoEvento} — La Villa del Millón`,
-          html: `
+      const invUrl = `${LANDING_URL}/invitacion/${inv.token}`;
+      await sendMail(email, `Invitación a ${tipoEvento} — La Villa del Millón`, `
 <!DOCTYPE html><html><head><meta charset="utf-8"></head>
 <body style="margin:0;padding:0;background:#0a0e1a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
 <div style="max-width:520px;margin:0 auto;padding:32px 20px;">
@@ -101,9 +94,7 @@ export async function crearInvitacionAction(formData: FormData): Promise<CrearIn
     Confirmar Asistencia
   </a>
   <p style="color:#475569;font-size:11px;text-align:center;margin:0;">La Villa del Millón · Palmira 2026</p>
-</div></body></html>`.trim(),
-        });
-      }
+</div></body></html>`.trim());
     } catch { /* best-effort */ }
   }
 
@@ -155,15 +146,8 @@ export async function reenviarInvitacionAction(invitacionId: string): Promise<{ 
 
   if (inv.comerciante_email) {
     try {
-      const apiKey = process.env.RESEND_API_KEY;
-      if (apiKey) {
-        const resend = new Resend(apiKey);
-        const invUrl = `${LANDING_URL}/invitacion/${inv.token}`;
-        await resend.emails.send({
-          from: 'La Villa del Millón <onboarding@resend.dev>',
-          to: inv.comerciante_email,
-          subject: `Recordatorio: Invitación a ${inv.tipo_evento} — La Villa del Millón`,
-          html: `
+      const invUrl = `${LANDING_URL}/invitacion/${inv.token}`;
+      await sendMail(inv.comerciante_email, `Recordatorio: Invitación a ${inv.tipo_evento} — La Villa del Millón`, `
 <!DOCTYPE html><html><head><meta charset="utf-8"></head>
 <body style="margin:0;padding:0;background:#0a0e1a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
 <div style="max-width:520px;margin:0 auto;padding:32px 20px;">
@@ -175,9 +159,7 @@ export async function reenviarInvitacionAction(invitacionId: string): Promise<{ 
     <p style="color:#94a3b8;font-size:14px;">Recordatorio: estás invitado(a) al evento <strong style="color:#facc15;">${inv.tipo_evento}</strong>.</p>
   </div>
   <a href="${invUrl}" target="_blank" style="display:block;background:#facc15;color:#0a0e1a;text-align:center;padding:16px;border-radius:12px;font-weight:900;font-size:14px;text-transform:uppercase;text-decoration:none;margin-bottom:24px;">Confirmar Asistencia</a>
-</div></body></html>`.trim(),
-        });
-      }
+</div></body></html>`.trim());
     } catch { /* best-effort */ }
   }
 

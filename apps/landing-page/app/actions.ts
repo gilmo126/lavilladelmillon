@@ -1,7 +1,7 @@
 'use server';
 
-import { Resend } from 'resend';
 import { supabaseAdmin } from '../lib/supabaseAdmin';
+import { sendMail } from '../lib/mailer';
 
 // ── TIPOS ───────────────────────────────────────────────────────────
 
@@ -179,14 +179,7 @@ export async function registrarBoletaAction(data: {
   // Enviar email de confirmación si hay email
   if (email) {
     try {
-      const apiKey = process.env.RESEND_API_KEY;
-      if (apiKey) {
-        const resend = new Resend(apiKey);
-        await resend.emails.send({
-          from: 'La Villa del Millón <onboarding@resend.dev>',
-          to: email,
-          subject: `Confirmación #${numStr} — La Villa del Millón`,
-          html: `
+      await sendMail(email, `Confirmación #${numStr} — La Villa del Millón`, `
 <!DOCTYPE html>
 <html><head><meta charset="utf-8"></head>
 <body style="margin:0;padding:0;background:#0a0e1a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
@@ -196,40 +189,22 @@ export async function registrarBoletaAction(data: {
       <p style="color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:2px;margin:0;">Confirmación de registro</p>
     </div>
     <div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:24px;margin-bottom:24px;">
-      <p style="color:#e2e8f0;font-size:15px;margin:0 0 12px;">
-        Hola <strong style="color:#fff;">${nombre}</strong>,
-      </p>
+      <p style="color:#e2e8f0;font-size:15px;margin:0 0 12px;">Hola <strong style="color:#fff;">${nombre}</strong>,</p>
       <p style="color:#94a3b8;font-size:14px;line-height:1.6;margin:0;">
         Tu número <strong style="color:#facc15;font-size:18px;">${numStr}</strong> está registrado y participando.
       </p>
     </div>
     <div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:24px;margin-bottom:24px;">
       <table style="width:100%;border-collapse:collapse;" cellpadding="0" cellspacing="0">
-        <tr>
-          <td style="padding:8px 0;color:#64748b;font-size:12px;font-weight:700;text-transform:uppercase;">Premio</td>
-          <td style="padding:8px 0;color:#fff;font-size:14px;font-weight:700;text-align:right;">${premio.nombre_premio}</td>
-        </tr>
-        <tr>
-          <td style="padding:8px 0;color:#64748b;font-size:12px;font-weight:700;text-transform:uppercase;border-top:1px solid #334155;">Fecha sorteo</td>
-          <td style="padding:8px 0;color:#facc15;font-size:14px;font-weight:700;text-align:right;border-top:1px solid #334155;">${fechaSorteoStr}</td>
-        </tr>
-        <tr>
-          <td style="padding:8px 0;color:#64748b;font-size:12px;font-weight:700;text-transform:uppercase;border-top:1px solid #334155;">Cédula</td>
-          <td style="padding:8px 0;color:#94a3b8;font-size:14px;text-align:right;border-top:1px solid #334155;">${identificacion}</td>
-        </tr>
+        <tr><td style="padding:8px 0;color:#64748b;font-size:12px;font-weight:700;text-transform:uppercase;">Premio</td><td style="padding:8px 0;color:#fff;font-size:14px;font-weight:700;text-align:right;">${premio.nombre_premio}</td></tr>
+        <tr><td style="padding:8px 0;color:#64748b;font-size:12px;font-weight:700;text-transform:uppercase;border-top:1px solid #334155;">Fecha sorteo</td><td style="padding:8px 0;color:#facc15;font-size:14px;font-weight:700;text-align:right;border-top:1px solid #334155;">${fechaSorteoStr}</td></tr>
+        <tr><td style="padding:8px 0;color:#64748b;font-size:12px;font-weight:700;text-transform:uppercase;border-top:1px solid #334155;">Cédula</td><td style="padding:8px 0;color:#94a3b8;font-size:14px;text-align:right;border-top:1px solid #334155;">${identificacion}</td></tr>
       </table>
     </div>
-    <p style="color:#475569;font-size:11px;text-align:center;margin:0;">
-      La Villa del Millón · Palmira 2026
-    </p>
+    <p style="color:#475569;font-size:11px;text-align:center;margin:0;">La Villa del Millón · Palmira 2026</p>
   </div>
-</body>
-</html>`.trim(),
-        });
-      }
-    } catch {
-      // Email is best-effort, don't fail the registration
-    }
+</body></html>`.trim());
+    } catch { /* best-effort */ }
   }
 
   return {

@@ -161,6 +161,27 @@ Si una RPC hace `columna::TEXT` sobre un enum, falla con:
 
 ---
 
+## EMAIL — Nodemailer con SMTP Titan
+
+**Proveedor:** Titan Email (GoDaddy) via SMTP
+**Host:** `smtp.titan.email` | **Puerto:** 465 (SSL)
+**From:** `"La Villa del Millón" <noreply@lavilladelmillon.com>`
+**Helper:** `lib/mailer.ts` en ambas apps — función `sendMail(to, subject, html)`
+
+**Variables de entorno (runtime secrets en Cloudflare):**
+- `SMTP_USER` — usuario SMTP
+- `SMTP_PASS` — contraseña SMTP
+
+**Reemplazó:** Resend API (eliminado). Todos los emails ahora usan Nodemailer.
+
+**Archivos que envían email:**
+- `admin-dashboard/app/activar/actions.ts` — email pack al comerciante
+- `admin-dashboard/app/invitaciones/actions.ts` — invitación + recordatorio
+- `landing-page/app/actions.ts` — confirmación registro participante
+- `landing-page/app/invitacion/[token]/actions.ts` — QR aceptación + notificación distribuidor
+
+---
+
 ## REDISEÑO V2 — EN PROGRESO
 
 **Rama activa:** `feature/rediseno-packs-v2`

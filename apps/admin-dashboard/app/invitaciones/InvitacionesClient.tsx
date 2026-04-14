@@ -264,6 +264,7 @@ export default function InvitacionesClient({
   const [loading, setLoading] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
   const [formMsg, setFormMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [formResult, setFormResult] = useState<Extract<Awaited<ReturnType<typeof crearInvitacionAction>>, { success: true }> | null>(null);
   const [reenviando, setReenviando] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -285,7 +286,8 @@ export default function InvitacionesClient({
     setFormMsg(null);
     const res = await crearInvitacionAction(formData);
     if (res.success) {
-      setFormMsg({ type: 'success', text: `Invitación enviada a ${res.comercianteNombre}` });
+      setFormMsg({ type: 'success', text: res.comercianteEmail ? `✅ Invitación creada y email enviado a ${res.comercianteNombre}` : `✅ Invitación creada para ${res.comercianteNombre}` });
+      setFormResult(res);
       (document.getElementById('invForm') as HTMLFormElement)?.reset();
       const updated = await getInvitacionesAction(tab, isDist ? userId : undefined);
       setData(updated);
@@ -376,7 +378,7 @@ export default function InvitacionesClient({
                       </td>
                       <td className="p-4 text-right space-x-2">
                         <a
-                          href={`https://wa.me/?text=${encodeURIComponent(`Hola ${inv.comerciante_nombre}, estás invitado(a) a ${inv.tipo_evento} de La Villa del Millón. Confirma aquí: ${LANDING_URL}/invitacion/${inv.token}`)}`}
+                          href={`https://wa.me/${inv.comerciante_whatsapp || inv.comerciante_tel || ''}?text=${encodeURIComponent(`Hola ${inv.comerciante_nombre}, estás invitado(a) a ${inv.tipo_evento} de La Villa del Millón. Confirma aquí: ${LANDING_URL}/invitacion/${inv.token}`)}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-green-400 hover:text-green-300 text-xs font-bold"
@@ -411,8 +413,19 @@ export default function InvitacionesClient({
           </div>
 
           {formMsg && (
-            <div className={`p-3 rounded-lg mb-4 text-sm font-bold ${formMsg.type === 'error' ? 'bg-red-500/10 text-red-400' : 'bg-green-500/10 text-green-400'}`}>
-              {formMsg.text}
+            <div className={`rounded-lg mb-4 ${formMsg.type === 'error' ? 'bg-red-500/10 p-3' : 'bg-green-500/10 p-3 space-y-3'}`}>
+              <p className={`text-sm font-bold ${formMsg.type === 'error' ? 'text-red-400' : 'text-green-400'}`}>{formMsg.text}</p>
+              {formMsg.type === 'success' && formResult && (
+                <a
+                  href={`https://wa.me/${formResult.comercianteWhatsapp || ''}?text=${encodeURIComponent(`Hola ${formResult.comercianteNombre}, estás invitado(a) a ${formResult.tipoEvento} de La Villa del Millón. Confirma tu asistencia aquí: ${LANDING_URL}/invitacion/${formResult.token}`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => { setFormMsg(null); setFormResult(null); }}
+                  className="flex items-center justify-center gap-2 w-full py-3 bg-green-600 hover:bg-green-500 text-white font-black rounded-xl transition-all text-xs uppercase tracking-widest active:scale-95"
+                >
+                  📲 Enviar por WhatsApp
+                </a>
+              )}
             </div>
           )}
 

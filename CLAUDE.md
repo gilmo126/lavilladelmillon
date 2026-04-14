@@ -414,6 +414,12 @@ Se muestra formateado como `PACK-001`, `PACK-002`, etc.
 
 **Scanner:** `validarQrInlineAction` busca en packs Y en invitaciones. QRs de invitación también se validan.
 
+**Envío inmediato post-creación:**
+- Al crear invitación: email se envía automáticamente si tiene correo
+- Mensaje de éxito muestra botón "📲 Enviar por WhatsApp" directamente (sin abrir drawer)
+- WhatsApp usa `wa.me/{numero}?text=...` con número del comerciante como destinatario
+- En la tabla: botón WhatsApp por fila también usa número directo del comerciante
+
 **Drawer de detalle:** Click en fila → drawer lateral con:
 - Datos comerciante editables (nombre, dirección, teléfono, WhatsApp, email) en todos los estados
 - `actualizarInvitacionAction` para guardar cambios

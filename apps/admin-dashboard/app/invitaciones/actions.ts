@@ -22,7 +22,7 @@ export type InvitacionItem = {
 };
 
 export type CrearInvitacionResult =
-  | { success: true; token: string; comercianteNombre: string }
+  | { success: true; token: string; comercianteNombre: string; comercianteWhatsapp: string | null; comercianteEmail: string | null; tipoEvento: string }
   | { success: false; error: string };
 
 // ── CREAR INVITACIÓN ────────────────────────────────────────────────
@@ -107,7 +107,7 @@ export async function crearInvitacionAction(formData: FormData): Promise<CrearIn
     } catch { /* best-effort */ }
   }
 
-  return { success: true, token: inv.token, comercianteNombre: nombre };
+  return { success: true, token: inv.token, comercianteNombre: nombre, comercianteWhatsapp: whatsapp, comercianteEmail: email, tipoEvento };
 }
 
 // ── LISTAR INVITACIONES ─────────────────────────────────────────────

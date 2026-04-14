@@ -222,11 +222,14 @@ export default function VenderPackForm({ diasVencimientoPago }: Props) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <a
               href={`https://wa.me/?text=${encodeURIComponent(
-                `Hola ${result.comercianteNombre}, aquí están tus ${resultados.length > 1 ? resultados.length + ' packs' : 'pack'} de La Villa del Millón.\n\n` +
+                `Hola ${result.comercianteNombre}, aquí están tus números de La Villa del Millón.\n\n` +
                 (resultados.length > 1 ? resultados : [result])
-                  .filter((r) => r.tokenPagina)
-                  .map((r) => `PACK-${String(r.numeroPack).padStart(3, '0')}: ${LANDING_URL}/pack/${r.tokenPagina}`)
-                  .join('\n')
+                  .filter((r) => r.tokenPagina && r.numeros)
+                  .map((r) => {
+                    const nums = (r.numeros || []).map((n) => String(n).padStart(6, '0')).join(' · ');
+                    return `📦 PACK-${String(r.numeroPack).padStart(3, '0')}:\n${nums}\n🔗 ${LANDING_URL}/pack/${r.tokenPagina}`;
+                  })
+                  .join('\n\n')
               )}`}
               target="_blank"
               rel="noopener noreferrer"
@@ -239,24 +242,21 @@ export default function VenderPackForm({ diasVencimientoPago }: Props) {
                 onClick={async () => {
                   setEmailStatus('sending');
                   setEmailError(null);
+                  // Consolidar todos los números en un solo email
                   const packs = resultados.length > 1 ? resultados : [result];
-                  for (const r of packs) {
-                    if (!r.numeros || !r.tokenPagina) continue;
-                    const res = await enviarEmailPackAction({
-                      comercianteNombre: r.comercianteNombre,
-                      comercianteEmail: result.comercianteEmail!,
-                      numeros: r.numeros,
-                      tokenPagina: r.tokenPagina,
-                      tokenQr: r.tokenQr,
-                      qrValidoHasta: r.qrValidoHasta,
-                    });
-                    if (!res.success) {
-                      setEmailStatus('error');
-                      setEmailError(res.error || 'Error al enviar email');
-                      return;
-                    }
-                  }
-                  setEmailStatus('sent');
+                  const todosNumeros = packs.flatMap((r) => r.numeros || []);
+                  const primerPack = packs.find((r) => r.tokenPagina);
+                  if (!primerPack) return;
+                  const res = await enviarEmailPackAction({
+                    comercianteNombre: result.comercianteNombre,
+                    comercianteEmail: result.comercianteEmail!,
+                    numeros: todosNumeros,
+                    tokenPagina: primerPack.tokenPagina!,
+                    tokenQr: primerPack.tokenQr,
+                    qrValidoHasta: primerPack.qrValidoHasta,
+                  });
+                  setEmailStatus(res.success ? 'sent' : 'error');
+                  if (!res.success) setEmailError(res.error || 'Error al enviar email');
                 }}
                 disabled={emailStatus === 'sending' || emailStatus === 'sent'}
                 className={`flex items-center justify-center gap-3 py-4 font-black rounded-2xl transition-all text-sm uppercase tracking-widest active:scale-[0.99] ${
@@ -266,7 +266,7 @@ export default function VenderPackForm({ diasVencimientoPago }: Props) {
                   : 'bg-admin-blue hover:bg-blue-600 text-white border border-transparent'
                 }`}
               >
-                {emailStatus === 'sending' ? 'Enviando...' : emailStatus === 'sent' ? '✓ Emails Enviados' : `✉️ Enviar ${resultados.length > 1 ? resultados.length + ' Emails' : 'Email'}`}
+                {emailStatus === 'sending' ? 'Enviando...' : emailStatus === 'sent' ? '✓ Email Enviado' : '✉️ Enviar Email'}
               </button>
             ) : null}
           </div>

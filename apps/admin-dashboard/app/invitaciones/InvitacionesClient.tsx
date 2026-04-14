@@ -412,57 +412,70 @@ export default function InvitacionesClient({
             <h2 className="text-lg font-bold text-white">Nueva Invitación</h2>
           </div>
 
-          {formMsg && (
-            <div className={`rounded-lg mb-4 ${formMsg.type === 'error' ? 'bg-red-500/10 p-3' : 'bg-green-500/10 p-3 space-y-3'}`}>
-              <p className={`text-sm font-bold ${formMsg.type === 'error' ? 'text-red-400' : 'text-green-400'}`}>{formMsg.text}</p>
-              {formMsg.type === 'success' && formResult && (
+          {formResult ? (
+            <div className="space-y-4">
+              <div className="bg-green-500/10 p-4 rounded-xl space-y-3">
+                <p className="text-green-400 text-sm font-bold">{formMsg?.text}</p>
                 <a
                   href={`https://wa.me/${formResult.comercianteWhatsapp || ''}?text=${encodeURIComponent(`Hola ${formResult.comercianteNombre}, estás invitado(a) a ${formResult.tipoEvento} de La Villa del Millón. Confirma tu asistencia aquí: ${LANDING_URL}/invitacion/${formResult.token}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  onClick={() => { setFormMsg(null); setFormResult(null); }}
                   className="flex items-center justify-center gap-2 w-full py-3 bg-green-600 hover:bg-green-500 text-white font-black rounded-xl transition-all text-xs uppercase tracking-widest active:scale-95"
                 >
                   📲 Enviar por WhatsApp
                 </a>
+              </div>
+              <button
+                onClick={() => { setFormMsg(null); setFormResult(null); }}
+                className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition-all text-sm uppercase tracking-widest border border-white/5"
+              >
+                Nueva Invitación
+              </button>
+            </div>
+          ) : (
+            <>
+              {formMsg && formMsg.type === 'error' && (
+                <div className="bg-red-500/10 p-3 rounded-lg mb-4">
+                  <p className="text-red-400 text-sm font-bold">{formMsg.text}</p>
+                </div>
               )}
-            </div>
-          )}
 
-          <form id="invForm" action={handleCrear} className="space-y-4">
-            <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Tipo de Evento *</label>
-              <select name="tipo_evento" required defaultValue="" className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-admin-gold appearance-none">
-                <option value="" disabled>-- Selecciona --</option>
-                {tiposEvento.map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Nombre Comerciante *</label>
-              <input name="comerciante_nombre" required placeholder="Ej: Tienda El Progreso" className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-admin-blue" />
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Dirección</label>
-              <input name="comerciante_direccion" placeholder="Cra 10 #20-30" className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-admin-blue" />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Teléfono</label>
-                <input name="comerciante_tel" placeholder="3001234567" className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-admin-blue" />
-              </div>
-              <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">WhatsApp</label>
-                <input name="comerciante_whatsapp" placeholder="3001234567" className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-admin-blue" />
-              </div>
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Email</label>
-              <input name="comerciante_email" type="email" placeholder="comercio@ejemplo.com" className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-admin-blue" />
-            </div>
-            <button type="submit" disabled={formLoading} className="w-full py-3 bg-admin-gold hover:bg-yellow-500 disabled:opacity-40 text-slate-900 font-black rounded-xl transition-all text-sm uppercase tracking-widest">
-              {formLoading ? 'Enviando...' : 'Enviar Invitación'}
-            </button>
-          </form>
+              <form id="invForm" action={handleCrear} className="space-y-4">
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Tipo de Evento *</label>
+                  <select name="tipo_evento" required defaultValue="" className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-admin-gold appearance-none">
+                    <option value="" disabled>-- Selecciona --</option>
+                    {tiposEvento.map((t) => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Nombre Comerciante *</label>
+                  <input name="comerciante_nombre" required placeholder="Ej: Tienda El Progreso" className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-admin-blue" />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Dirección</label>
+                  <input name="comerciante_direccion" placeholder="Cra 10 #20-30" className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-admin-blue" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Teléfono</label>
+                    <input name="comerciante_tel" placeholder="3001234567" className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-admin-blue" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">WhatsApp</label>
+                    <input name="comerciante_whatsapp" placeholder="3001234567" className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-admin-blue" />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Email</label>
+                  <input name="comerciante_email" type="email" placeholder="comercio@ejemplo.com" className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-admin-blue" />
+                </div>
+                <button type="submit" disabled={formLoading} className="w-full py-3 bg-admin-gold hover:bg-yellow-500 disabled:opacity-40 text-slate-900 font-black rounded-xl transition-all text-sm uppercase tracking-widest">
+                  {formLoading ? 'Enviando...' : 'Enviar Invitación'}
+                </button>
+              </form>
+            </>
+          )}
         </div>
       </div>
     </div>

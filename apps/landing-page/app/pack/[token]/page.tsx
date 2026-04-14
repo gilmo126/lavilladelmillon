@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin } from '../../../lib/supabaseAdmin';
 import PackPageClient from './PackPageClient';
 
 export type NumeroDetalle = {
@@ -88,6 +89,34 @@ export default async function PackPage({
         mensaje="El plazo para distribuir estos números ha vencido. Consulta con tu distribuidor."
       />
     );
+  }
+
+  // Buscar TODOS los packs del mismo comerciante para mostrar todos sus números
+  const { data: packRecord } = await supabaseAdmin
+    .from('packs')
+    .select('comerciante_identificacion')
+    .eq('token_pagina', token)
+    .single();
+
+  if (packRecord?.comerciante_identificacion) {
+    const { data: allPacks } = await supabaseAdmin
+      .from('packs')
+      .select('id')
+      .eq('comerciante_identificacion', packRecord.comerciante_identificacion)
+      .eq('estado_pago', 'pagado');
+
+    if (allPacks && allPacks.length > 1) {
+      const allPackIds = allPacks.map((p: any) => p.id);
+      const { data: allBoletas } = await supabaseAdmin
+        .from('boletas')
+        .select('id_boleta, estado')
+        .in('pack_id', allPackIds)
+        .order('id_boleta', { ascending: true });
+
+      if (allBoletas && allBoletas.length > pack.numeros.length) {
+        pack.numeros = allBoletas.map((b: any) => ({ numero: b.id_boleta, estado: b.estado }));
+      }
+    }
   }
 
   return <PackPageClient pack={pack} />;

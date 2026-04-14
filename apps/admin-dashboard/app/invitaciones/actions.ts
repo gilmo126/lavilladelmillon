@@ -4,7 +4,7 @@ import { createClient } from '../../utils/supabase/server';
 import { supabaseAdmin } from '../../lib/supabaseAdmin';
 import { sendMail } from '../../lib/mailer';
 
-const LANDING_URL = 'https://landing-page.guillaumer-orion.workers.dev';
+const LANDING_URL = process.env.NEXT_PUBLIC_LANDING_URL || 'https://landing-page.guillaumer-orion.workers.dev';
 
 // ── TIPOS ───────────────────────────────────────────────────────────
 

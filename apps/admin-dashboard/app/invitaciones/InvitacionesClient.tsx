@@ -7,8 +7,8 @@ import {
   type InvitacionItem, type InvitacionDetail,
 } from './actions';
 
-const LANDING_URL = 'https://landing-page.guillaumer-orion.workers.dev';
-const ADMIN_URL = 'https://lavilladelmillon-admin.guillaumer-orion.workers.dev';
+const LANDING_URL = process.env.NEXT_PUBLIC_LANDING_URL || 'https://landing-page.guillaumer-orion.workers.dev';
+const ADMIN_URL = process.env.NEXT_PUBLIC_ADMIN_URL || 'https://lavilladelmillon-admin.guillaumer-orion.workers.dev';
 
 function estadoBadge(estado: string) {
   switch (estado) {

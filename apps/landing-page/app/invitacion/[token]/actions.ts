@@ -3,7 +3,7 @@
 import { supabaseAdmin } from '../../../lib/supabaseAdmin';
 import { sendMail } from '../../../lib/mailer';
 
-const ADMIN_URL = 'https://lavilladelmillon-admin.guillaumer-orion.workers.dev';
+const ADMIN_URL = process.env.NEXT_PUBLIC_ADMIN_URL || 'https://lavilladelmillon-admin.guillaumer-orion.workers.dev';
 
 export type AccionResult = { success: boolean; error?: string };
 

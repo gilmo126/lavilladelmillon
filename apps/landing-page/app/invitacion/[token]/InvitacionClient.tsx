@@ -19,7 +19,7 @@ type Props = {
   evento: EventoData;
 };
 
-const ADMIN_URL = 'https://lavilladelmillon-admin.guillaumer-orion.workers.dev';
+const ADMIN_URL = process.env.NEXT_PUBLIC_ADMIN_URL || 'https://lavilladelmillon-admin.guillaumer-orion.workers.dev';
 
 function resaltarAuspiciantes(texto: string, auspiciantes: string[]) {
   if (!texto || auspiciantes.length === 0) return texto;

@@ -4,7 +4,7 @@ import { createClient } from '../../utils/supabase/server';
 import { supabaseAdmin } from '../../lib/supabaseAdmin';
 import { sendMail } from '../../lib/mailer';
 
-const LANDING_URL = 'https://landing-page.guillaumer-orion.workers.dev';
+const LANDING_URL = process.env.NEXT_PUBLIC_LANDING_URL || 'https://landing-page.guillaumer-orion.workers.dev';
 
 export type VenderPackResult =
   | { success: false; error: string }
@@ -410,7 +410,7 @@ export async function enviarEmailPackAction(data: {
     </a>${data.tokenQr ? `
     <div style="background:#1e293b;border:1px solid #facc15;border-radius:16px;padding:24px;margin-bottom:24px;text-align:center;">
       <p style="color:#facc15;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin:0 0 16px;">QR de Beneficio Recreativo</p>
-      <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`https://lavilladelmillon-admin.guillaumer-orion.workers.dev/validar-qr/${data.tokenQr}`)}" alt="QR de beneficio" width="180" height="180" style="border-radius:8px;background:#fff;padding:8px;" />
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`${process.env.NEXT_PUBLIC_ADMIN_URL || 'https://lavilladelmillon-admin.guillaumer-orion.workers.dev'}/validar-qr/${data.tokenQr}`)}" alt="QR de beneficio" width="180" height="180" style="border-radius:8px;background:#fff;padding:8px;" />
       <p style="color:#94a3b8;font-size:12px;margin:16px 0 0;">Presenta este QR en el evento recreativo.${data.qrValidoHasta ? ` Válido hasta el ${new Date(data.qrValidoHasta).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })}.` : ''}</p>
     </div>` : ''}
     <p style="color:#475569;font-size:11px;text-align:center;margin:0;">

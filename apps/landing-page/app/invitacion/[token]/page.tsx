@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 import { supabaseAdmin } from '../../../lib/supabaseAdmin';
 import InvitacionClient from './InvitacionClient';
 
-const ADMIN_URL = 'https://lavilladelmillon-admin.guillaumer-orion.workers.dev';
+const ADMIN_URL = process.env.NEXT_PUBLIC_ADMIN_URL || 'https://lavilladelmillon-admin.guillaumer-orion.workers.dev';
 
 function PaginaEstado({ emoji, titulo, mensaje }: { emoji: string; titulo: string; mensaje: string }) {
   return (

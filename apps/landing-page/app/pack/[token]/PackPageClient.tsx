@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import type { PackData, NumeroDetalle } from './page';
 
-const LANDING_URL = 'https://landing-page.guillaumer-orion.workers.dev';
+const LANDING_URL = process.env.NEXT_PUBLIC_LANDING_URL || 'https://landing-page.guillaumer-orion.workers.dev';
 
 function NumeroCard({
   detalle,
@@ -61,7 +61,7 @@ export default function PackPageClient({ pack }: { pack: PackData }) {
 
   const totalRegistrados = pack.numeros.filter((n) => n.estado >= 2).length;
 
-  const ADMIN_URL = 'https://lavilladelmillon-admin.guillaumer-orion.workers.dev';
+  const ADMIN_URL = process.env.NEXT_PUBLIC_ADMIN_URL || 'https://lavilladelmillon-admin.guillaumer-orion.workers.dev';
   const tieneQr = pack.tipo_pago === 'inmediato' && pack.token_qr && !pack.qr_usado_at;
   const qrDataUrl = pack.token_qr ? `${ADMIN_URL}/validar-qr/${pack.token_qr}` : '';
   const qrImageUrl = qrDataUrl ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrDataUrl)}` : '';

@@ -420,6 +420,7 @@ export default function InvitacionesClient({
                   href={`https://wa.me/${formResult.comercianteWhatsapp || ''}?text=${encodeURIComponent(`Hola ${formResult.comercianteNombre}, estás invitado(a) a ${formResult.tipoEvento} de La Villa del Millón. Confirma tu asistencia aquí: ${LANDING_URL}/invitacion/${formResult.token}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={() => { setTimeout(() => { setFormMsg(null); setFormResult(null); }, 500); }}
                   className="flex items-center justify-center gap-2 w-full py-3 bg-green-600 hover:bg-green-500 text-white font-black rounded-xl transition-all text-xs uppercase tracking-widest active:scale-95"
                 >
                   📲 Enviar por WhatsApp

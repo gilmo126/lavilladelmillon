@@ -48,9 +48,15 @@ export async function crearInvitacionAction(formData: FormData): Promise<CrearIn
 
   const { data: config } = await supabaseAdmin
     .from('configuracion_campana')
-    .select('id')
+    .select('id, evento_titulo, evento_subtitulo, evento_mensaje, evento_auspiciantes, evento_logo_url')
     .eq('activa', true)
     .single();
+
+  const eventoTitulo = config?.evento_titulo || '¡Bienvenidos a La Villa del Millón!';
+  const eventoSubtitulo = config?.evento_subtitulo || 'El escenario donde tu esfuerzo encuentra su recompensa.';
+  const eventoMensaje = config?.evento_mensaje || '';
+  const eventoAuspiciantes: string[] = config?.evento_auspiciantes || ['KIA', 'YAMAHA', 'ODONTO PROTECT'];
+  const eventoLogoUrl = config?.evento_logo_url || null;
 
   const { data: inv, error: insertErr } = await supabaseAdmin
     .from('invitaciones')
@@ -71,25 +77,47 @@ export async function crearInvitacionAction(formData: FormData): Promise<CrearIn
     return { success: false, error: insertErr?.message || 'Error al crear invitación.' };
   }
 
-  // Enviar email si hay correo
+  // Enviar email si hay correo — usa contenido dinámico de configuración
   if (email) {
     try {
       const invUrl = `${LANDING_URL}/invitacion/${inv.token}`;
+
+      // Resaltar auspiciantes en el mensaje
+      let mensajeHtml = '';
+      if (eventoMensaje) {
+        let texto = eventoMensaje;
+        for (const a of eventoAuspiciantes) {
+          if (a.trim()) {
+            texto = texto.replace(new RegExp(a.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'),
+              `<strong style="color:#facc15;font-weight:900;">${a}</strong>`);
+          }
+        }
+        mensajeHtml = texto.split('\n').filter(Boolean)
+          .map((p: string) => `<p style="color:#94a3b8;font-size:14px;line-height:1.6;margin:0 0 12px;">${p}</p>`)
+          .join('');
+      }
+
+      const auspiciantesHtml = eventoAuspiciantes.filter(Boolean)
+        .map(a => `<span style="display:inline-block;background:rgba(250,204,21,0.1);border:1px solid rgba(250,204,21,0.3);color:#facc15;font-weight:900;font-size:12px;padding:6px 14px;border-radius:20px;margin:4px;">${a}</span>`)
+        .join(' ');
+
       await sendMail(email, `Invitación a ${tipoEvento} — La Villa del Millón`, `
 <!DOCTYPE html><html><head><meta charset="utf-8"></head>
 <body style="margin:0;padding:0;background:#0a0e1a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-<div style="max-width:520px;margin:0 auto;padding:32px 20px;">
+<div style="max-width:560px;margin:0 auto;padding:32px 20px;">
+  ${eventoLogoUrl ? `<div style="text-align:center;margin-bottom:16px;"><img src="${eventoLogoUrl}" alt="Logo" style="height:60px;width:auto;" /></div>` : ''}
   <div style="text-align:center;margin-bottom:32px;">
-    <h1 style="color:#facc15;font-size:22px;font-weight:900;margin:0 0 4px;">La Villa del Millón</h1>
-    <p style="color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:2px;margin:0;">Invitación a evento</p>
+    <h1 style="color:#facc15;font-size:24px;font-weight:900;margin:0 0 8px;">${eventoTitulo}</h1>
+    <p style="color:rgba(250,204,21,0.7);font-size:14px;font-style:italic;margin:0;">${eventoSubtitulo}</p>
   </div>
   <div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:24px;margin-bottom:24px;">
-    <p style="color:#e2e8f0;font-size:15px;margin:0 0 12px;">Hola <strong style="color:#fff;">${nombre}</strong>,</p>
-    <p style="color:#94a3b8;font-size:14px;line-height:1.6;margin:0;">
+    <p style="color:#e2e8f0;font-size:15px;margin:0 0 16px;">Hola <strong style="color:#fff;">${nombre}</strong>,</p>
+    <p style="color:#94a3b8;font-size:14px;line-height:1.6;margin:0 0 16px;">
       Has sido invitado(a) al evento <strong style="color:#facc15;">${tipoEvento}</strong> de La Villa del Millón.
-      Confirma tu asistencia haciendo click en el botón.
     </p>
+    ${mensajeHtml}
   </div>
+  ${auspiciantesHtml ? `<div style="text-align:center;margin-bottom:24px;">${auspiciantesHtml}</div>` : ''}
   <a href="${invUrl}" target="_blank" style="display:block;background:#facc15;color:#0a0e1a;text-align:center;padding:16px;border-radius:12px;font-weight:900;font-size:14px;text-transform:uppercase;letter-spacing:1px;text-decoration:none;margin-bottom:24px;">
     Confirmar Asistencia
   </a>

@@ -712,7 +712,55 @@ DROP FUNCTION buscar_trazabilidad(text);
 DROP FUNCTION get_pack_publica(text);
 -- + CREATE OR REPLACE FUNCTION get_pack_publica con numeros_detalle + token_qr + numero_pack
 CREATE TABLE invitaciones (...);
+ALTER TABLE perfiles ADD COLUMN debe_cambiar_password boolean DEFAULT false;
 ```
+
+---
+
+## FLUJO DE CREDENCIALES — Distribuidores y Asistentes
+
+### Creación de usuario (`/distribuidores`)
+
+Al crear un distribuidor o asistente desde Gestión de Personal:
+1. Se crea usuario en Auth con `user_metadata: { debe_cambiar_password: true }`
+2. Se inserta en `perfiles` con `debe_cambiar_password = true`
+3. Se envía email de bienvenida con credenciales temporales (email + contraseña + link al panel)
+
+**Archivos:** `app/distribuidores/actions.ts` (`createPersonalAction`)
+
+### Primer login — Cambio forzado de contraseña
+
+1. El login consulta `perfiles.debe_cambiar_password`
+2. Si es `true` → redirect a `/cambiar-password` (en vez de `/` o `/scanner`)
+3. El middleware bloquea acceso a cualquier ruta excepto `/cambiar-password` y `/login` usando `user_metadata.debe_cambiar_password`
+4. En `/cambiar-password`: formulario nueva contraseña + confirmar
+5. Al guardar: actualiza Auth (password + metadata) + `perfiles.debe_cambiar_password = false` → redirect según rol
+
+**Archivos:**
+- `app/login/actions.ts` — redirect condicional post-login
+- `utils/supabase/middleware.ts` — bloqueo de rutas via `user_metadata`
+- `app/cambiar-password/page.tsx` — server component con verificación
+- `app/cambiar-password/CambiarPasswordClient.tsx` — formulario client
+- `app/cambiar-password/actions.ts` — `cambiarPasswordAction`
+
+### Reset de contraseña por admin
+
+1. En drawer de detalle del personal (`/distribuidores` → click en agente → sección "Seguridad")
+2. Admin ingresa nueva contraseña temporal → presiona "Resetear"
+3. Se actualiza Auth (password + `user_metadata.debe_cambiar_password = true`) + `perfiles.debe_cambiar_password = true`
+4. Se envía email de notificación con nueva contraseña temporal
+
+**Archivos:**
+- `app/distribuidores/actions.ts` — `resetPasswordAction`
+- `app/distribuidores/GestionPersonalClient.tsx` — `ResetPasswordSection` en `InventoryDrawer`
+
+### Sincronización dual: user_metadata + perfiles
+
+El flag `debe_cambiar_password` se mantiene en dos lugares:
+- **`user_metadata`** en Auth — leído por el middleware (sin query extra a BD en cada request)
+- **`perfiles.debe_cambiar_password`** en BD — leído por login y por `/cambiar-password` page
+
+Ambos se actualizan juntos en: `createPersonalAction`, `resetPasswordAction`, `cambiarPasswordAction`.
 
 ---
 

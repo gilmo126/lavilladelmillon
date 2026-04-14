@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { updatePerfilAction, deleteDistribuidorAction } from './actions';
+import { updatePerfilAction, deleteDistribuidorAction, resetPasswordAction } from './actions';
 import { getPacksDistribuidorAction } from '../../lib/actions';
 
 type Perfil = {
@@ -109,6 +109,72 @@ function EditModal({ perfil, zonas, onClose }: { perfil: Perfil; zonas: any[]; o
   );
 }
 
+function ResetPasswordSection({ userId }: { userId: string }) {
+  const [newPass, setNewPass] = useState('');
+  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [errorMsg, setErrorMsg] = useState('');
+
+  async function handleReset() {
+    if (!newPass || newPass.length < 6) {
+      setErrorMsg('Mínimo 6 caracteres.');
+      setStatus('error');
+      return;
+    }
+    if (!confirm('¿Resetear la contraseña de este usuario? Se le enviará un email con la nueva contraseña temporal.')) return;
+
+    setStatus('loading');
+    setErrorMsg('');
+    const res = await resetPasswordAction(userId, newPass);
+    if (res.success) {
+      setStatus('success');
+      setNewPass('');
+    } else {
+      setStatus('error');
+      setErrorMsg(res.error || 'Error desconocido');
+    }
+  }
+
+  return (
+    <section>
+      <div className="flex items-center gap-2 mb-6">
+        <div className="w-1 h-3 bg-yellow-500 rounded-full" />
+        <h4 className="text-xs font-bold text-white uppercase tracking-wider">Seguridad</h4>
+      </div>
+      <div className="bg-slate-950 border border-white/5 p-5 rounded-2xl space-y-3">
+        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Nueva Contraseña Temporal</label>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={newPass}
+            onChange={(e) => { setNewPass(e.target.value); setStatus('idle'); }}
+            placeholder="Mínimo 6 caracteres"
+            className="flex-1 bg-slate-900 border border-slate-700/50 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-yellow-500 transition-all"
+          />
+          <button
+            onClick={handleReset}
+            disabled={status === 'loading'}
+            className={`px-4 py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-all whitespace-nowrap ${
+              status === 'success'
+                ? 'bg-green-500/20 border border-green-500/30 text-green-400'
+                : status === 'error'
+                ? 'bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30'
+                : 'bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/20'
+            }`}
+          >
+            {status === 'loading' ? '...' : status === 'success' ? '✓ Enviado' : 'Resetear'}
+          </button>
+        </div>
+        {status === 'success' && (
+          <p className="text-green-400 text-[10px] font-bold">Contraseña reseteada y email enviado al usuario.</p>
+        )}
+        {status === 'error' && errorMsg && (
+          <p className="text-red-400 text-[10px] font-bold">{errorMsg}</p>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function InventoryDrawer({ dist, onClose }: { dist: Perfil; onClose: () => void }) {
   const isAsistente = dist.rol === 'asistente';
   const [loading, setLoading] = useState(!isAsistente);
@@ -176,6 +242,9 @@ function InventoryDrawer({ dist, onClose }: { dist: Perfil; onClose: () => void 
               )}
             </div>
           </section>
+
+          {/* Seguridad — Reset de contraseña */}
+          <ResetPasswordSection userId={dist.id} />
 
           {/* Packs — solo distribuidores */}
           {!isAsistente && (

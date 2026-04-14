@@ -305,6 +305,51 @@ export async function confirmarPagoAction(packId: string, datosActualizados?: {
   };
 }
 
+// ── ACTUALIZAR DATOS COMERCIANTE EN PACK ────────────────────────────
+
+export async function actualizarDatosPackAction(
+  packId: string,
+  datos: {
+    comerciante_nombre?: string;
+    comerciante_tipo_id?: string;
+    comerciante_identificacion?: string;
+    comerciante_tel?: string;
+    comerciante_whatsapp?: string;
+    comerciante_email?: string;
+  }
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { success: false, error: 'Sesión no válida.' };
+
+  const { data: profile } = await supabaseAdmin.from('perfiles').select('rol').eq('id', user.id).single();
+  if (!profile || !['admin', 'distribuidor'].includes(profile.rol)) {
+    return { success: false, error: 'Sin permisos.' };
+  }
+
+  // Distribuidor solo puede editar sus propios packs
+  if (profile.rol === 'distribuidor') {
+    const { data: pack } = await supabaseAdmin.from('packs').select('distribuidor_id').eq('id', packId).single();
+    if (!pack || pack.distribuidor_id !== user.id) {
+      return { success: false, error: 'No puedes editar packs de otro distribuidor.' };
+    }
+  }
+
+  const payload: Record<string, string> = {};
+  if (datos.comerciante_nombre?.trim()) payload.comerciante_nombre = datos.comerciante_nombre.trim();
+  if (datos.comerciante_tipo_id?.trim()) payload.comerciante_tipo_id = datos.comerciante_tipo_id.trim();
+  if (datos.comerciante_identificacion?.trim()) payload.comerciante_identificacion = datos.comerciante_identificacion.trim();
+  if (datos.comerciante_tel !== undefined) payload.comerciante_tel = datos.comerciante_tel?.trim() || '';
+  if (datos.comerciante_whatsapp !== undefined) payload.comerciante_whatsapp = datos.comerciante_whatsapp?.trim() || '';
+  if (datos.comerciante_email !== undefined) payload.comerciante_email = datos.comerciante_email?.trim() || '';
+
+  if (Object.keys(payload).length === 0) return { success: true };
+
+  const { error } = await supabaseAdmin.from('packs').update(payload).eq('id', packId);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
 // ── ENVIAR EMAIL AL COMERCIANTE ─────────────────────────────────────
 
 export type EnviarEmailResult = { success: boolean; error?: string };

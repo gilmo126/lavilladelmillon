@@ -307,6 +307,25 @@ Se muestra formateado como `PACK-001`, `PACK-002`, etc.
 - `buscar_trazabilidad` → `LEFT JOIN public.packs pk ON b.pack_id = pk.id` + retorna `numero_pack`
 - `get_pack_publica` → retorna `numero_pack` en el JSON
 
+### Módulo Comerciantes (`/comerciantes` — solo admin)
+
+**Directorio centralizado** de todos los comerciantes registrados via venta de packs.
+
+**Tabla:** Nombre, Identificación, Teléfono, Distribuidor, # Packs, Fecha registro. Búsqueda por nombre o cédula.
+
+**Drawer de detalle:**
+- Datos editables (nombre, tipo doc, teléfono, WhatsApp, email)
+- Guardar actualiza TODOS los packs del comerciante
+- Eliminar con confirmación — cascada: activaciones → boletas → packs
+
+**Edición desde distribuidor:**
+- Drawer de /ventas tiene datos del comerciante editables en TODOS los estados
+- `actualizarDatosPackAction` verifica que el distribuidor sea dueño del pack
+- Botón "Guardar Cambios" en packs pagados
+
+**Archivos:** `app/comerciantes/{page,ComerciantesClient,actions}.tsx`
+**Sidebar:** "🏪 Comerciantes" en sección PERSONAL (solo admin)
+
 ### Control de duplicados y estado visual por número
 
 **Página del comerciante `/pack/[token]`:**

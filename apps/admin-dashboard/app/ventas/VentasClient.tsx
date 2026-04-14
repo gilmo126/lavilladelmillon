@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { getPackDetail } from '../../lib/actions';
-import { confirmarPagoAction } from '../activar/actions';
+import { confirmarPagoAction, actualizarDatosPackAction } from '../activar/actions';
 
 const LANDING_URL = 'https://landing-page.guillaumer-orion.workers.dev';
 const ADMIN_URL = 'https://lavilladelmillon-admin.guillaumer-orion.workers.dev';
@@ -52,7 +52,7 @@ function PackDetailDrawer({ packId, onClose }: { packId: string; onClose: () => 
     getPackDetail(packId)
       .then((d) => {
         setDetail(d);
-        if (!formInitialized && d.pack.estado_pago === 'pendiente') {
+        if (!formInitialized) {
           setEditNombre(d.pack.comerciante_nombre || '');
           setEditTipoId(d.pack.comerciante_tipo_id || 'CC');
           setEditIdent(d.pack.comerciante_identificacion || '');
@@ -152,15 +152,15 @@ function PackDetailDrawer({ packId, onClose }: { packId: string; onClose: () => 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
 
-          {/* Datos del comerciante — editable si pendiente, solo lectura si pagado */}
+          {/* Datos del comerciante — siempre editable */}
           <section className="bg-slate-950 border border-white/5 rounded-2xl p-5 space-y-3">
             <div className="flex items-center gap-2 mb-2">
               <div className="w-1 h-4 bg-admin-blue rounded-full" />
               <h4 className="text-xs font-black text-white uppercase tracking-wider">
-                Comerciante {p.estado_pago === 'pendiente' && <span className="text-admin-gold ml-1">(editable)</span>}
+                Comerciante <span className="text-admin-gold ml-1">(editable)</span>
               </h4>
             </div>
-            {p.estado_pago === 'pendiente' ? (
+            {true ? (
               <div className="space-y-3">
                 <div>
                   <label className="text-[10px] text-slate-500 uppercase font-bold block mb-1">Nombre *</label>
@@ -201,6 +201,25 @@ function PackDetailDrawer({ packId, onClose }: { packId: string; onClose: () => 
                   <input value={editEmail} onChange={(e) => setEditEmail(e.target.value)} type="email"
                     className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-admin-blue" />
                 </div>
+                {p.estado_pago !== 'pendiente' && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const res = await actualizarDatosPackAction(packId, {
+                        comerciante_nombre: editNombre,
+                        comerciante_tipo_id: editTipoId,
+                        comerciante_identificacion: editIdent,
+                        comerciante_tel: editTel,
+                        comerciante_whatsapp: editWa,
+                        comerciante_email: editEmail,
+                      });
+                      if (res.success) reloadDetail();
+                    }}
+                    className="w-full py-2.5 bg-admin-blue hover:bg-blue-600 text-white font-bold rounded-xl text-xs uppercase tracking-widest transition-all"
+                  >
+                    Guardar Cambios
+                  </button>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-3 text-sm">

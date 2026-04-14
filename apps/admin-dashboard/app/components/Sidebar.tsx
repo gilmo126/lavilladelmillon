@@ -20,6 +20,7 @@ export default function Sidebar({ role, userName, campanaNombre }: { role: strin
     { href: '/asistencia',      label: '📋 Asistencia Evento' },
     { href: '/invitaciones',    label: '🎪 Invitaciones Evento' },
     { sep: true, label: 'PERSONAL' },
+    { href: '/comerciantes',    label: '🏪 Comerciantes' },
     { href: '/distribuidores',  label: '👥 Gestión de Personal' },
     { href: '/zonas',           label: '📍 Territorios y Zonas' },
     { sep: true, label: 'CAMPAÑA' },

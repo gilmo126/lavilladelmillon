@@ -15,6 +15,7 @@ export type VenderPackResult =
       tipoPago: 'inmediato' | 'pendiente';
       comercianteNombre: string;
       comercianteEmail: string | null;
+      comercianteWhatsapp: string | null;
       // Solo presente si pago inmediato
       tokenPagina?: string;
       tokenQr?: string;
@@ -111,6 +112,7 @@ export async function venderPackAction(formData: FormData): Promise<VenderPackRe
       tipoPago: 'inmediato',
       comercianteNombre,
       comercianteEmail,
+      comercianteWhatsapp: comercianteWa,
       tokenPagina: pack?.token_pagina,
       tokenQr: pack?.token_qr,
       qrValidoHasta: pack?.qr_valido_hasta,
@@ -158,6 +160,7 @@ export async function venderPackAction(formData: FormData): Promise<VenderPackRe
     tipoPago: 'pendiente',
     comercianteNombre,
     comercianteEmail,
+    comercianteWhatsapp: comercianteWa,
     fechaVencimientoPago,
   };
 }

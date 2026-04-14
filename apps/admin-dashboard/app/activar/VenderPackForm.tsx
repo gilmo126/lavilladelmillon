@@ -6,6 +6,13 @@ import { venderPackAction, enviarEmailPackAction, type VenderPackResult } from '
 const ADMIN_URL   = process.env.NEXT_PUBLIC_ADMIN_URL || 'https://lavilladelmillon-admin.guillaumer-orion.workers.dev';
 const LANDING_URL = process.env.NEXT_PUBLIC_LANDING_URL || 'https://landing-page.guillaumer-orion.workers.dev';
 
+function formatWhatsAppNumber(num: string | null | undefined): string {
+  if (!num) return '';
+  const digits = num.replace(/\D/g, '');
+  if (digits.startsWith('57')) return digits;
+  return `57${digits}`;
+}
+
 type Props = {
   diasVencimientoPago: number;
 };
@@ -110,7 +117,7 @@ export default function VenderPackForm({ diasVencimientoPago }: Props) {
           </div>
 
           <a
-            href={`https://wa.me/?text=${waPendienteText}`}
+            href={`https://wa.me/${formatWhatsAppNumber(result.comercianteWhatsapp)}?text=${waPendienteText}`}
             target="_blank"
             rel="noopener noreferrer"
             className="w-full flex items-center justify-center gap-3 py-4 bg-green-600 hover:bg-green-500 text-white font-black rounded-2xl transition-all text-sm uppercase tracking-widest active:scale-[0.99]"
@@ -221,7 +228,7 @@ export default function VenderPackForm({ diasVencimientoPago }: Props) {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <a
-              href={`https://wa.me/?text=${encodeURIComponent(
+              href={`https://wa.me/${formatWhatsAppNumber(result.comercianteWhatsapp)}?text=${encodeURIComponent(
                 `Hola ${result.comercianteNombre}, aquí están tus números de La Villa del Millón.\n\n` +
                 (resultados.length > 1 ? resultados : [result])
                   .filter((r) => r.tokenPagina && r.numeros)

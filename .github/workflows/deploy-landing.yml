@@ -39,14 +39,12 @@ jobs:
       - name: Set Cloudflare secrets
         run: |
           echo "$SUPABASE_SERVICE_ROLE_KEY" | npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
-          echo "$SMTP_USER" | npx wrangler secret put SMTP_USER
-          echo "$SMTP_PASS" | npx wrangler secret put SMTP_PASS
+          echo "$RESEND_API_KEY" | npx wrangler secret put RESEND_API_KEY
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          SMTP_USER: ${{ secrets.SMTP_USER }}
-          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
 
       - name: Deploy to Cloudflare Workers
         run: npx wrangler deploy

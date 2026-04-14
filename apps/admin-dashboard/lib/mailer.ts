@@ -1,35 +1,26 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
 export async function sendMail(to: string, subject: string, html: string) {
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-
-  console.log('SMTP_USER:', user ? 'configurado' : 'FALTA');
-  console.log('SMTP_PASS:', pass ? 'configurado' : 'FALTA');
-
-  if (!user || !pass) {
-    console.error('SMTP credentials missing, skipping email');
+  const apiKey = process.env.RESEND_API_KEY;
+  console.log('RESEND_API_KEY:', apiKey ? 'configurado' : 'FALTA');
+  if (!apiKey) {
+    console.error('RESEND_API_KEY missing, skipping email');
     return;
   }
 
-  const transporter = nodemailer.createTransport({
-    host: 'smtp.titan.email',
-    port: 465,
-    secure: true,
-    auth: { user, pass },
-    tls: { rejectUnauthorized: false },
+  const resend = new Resend(apiKey);
+  console.log('Enviando email a:', to, '| Asunto:', subject);
+
+  const { data, error } = await resend.emails.send({
+    from: 'La Villa del Millón <noreply@lavilladelmillon.com>',
+    to,
+    subject,
+    html,
   });
 
-  try {
-    const info = await transporter.sendMail({
-      from: `"La Villa del Millón" <${user}>`,
-      to,
-      subject,
-      html,
-    });
-    console.log('Email enviado:', info.messageId, info.response);
-  } catch (error) {
-    console.error('Error SMTP:', error);
-    throw error;
+  if (error) {
+    console.error('Error Resend:', error);
+    throw new Error(error.message);
   }
+  console.log('Email enviado:', data?.id);
 }

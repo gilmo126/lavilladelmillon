@@ -5,7 +5,7 @@ import { supabaseAdmin } from './supabaseAdmin';
 // ==========================================
 // Módulo: BOLETAS (Estabilización Misión)
 // ==========================================
-export async function getBoletasPaged(page: number, limit: number, query: string, range?: { desde?: number, hasta?: number }, distribuidorId?: string) {
+export async function getBoletasPaged(page: number, limit: number, query: string, range?: { desde?: number, hasta?: number }, distribuidorId?: string, soloRegistrados?: boolean) {
   const from = (page - 1) * limit;
   const to = from + limit - 1;
 
@@ -19,6 +19,10 @@ export async function getBoletasPaged(page: number, limit: number, query: string
 
   if (distribuidorId) {
     queryBuilder = queryBuilder.eq('distribuidor_id', distribuidorId);
+  }
+
+  if (soloRegistrados) {
+    queryBuilder = queryBuilder.eq('estado', 2);
   }
 
   if (range?.desde) queryBuilder = queryBuilder.gte('id_boleta', range.desde);
@@ -91,6 +95,46 @@ export async function getBoletasPaged(page: number, limit: number, query: string
   };
 }
 
+
+export async function exportarParticipantesAction(distribuidorId?: string) {
+  const { data, error } = await supabaseAdmin
+    .from('boletas')
+    .select('id_boleta, nombre_usuario, identificacion_usuario, celular_usuario, email_usuario, premio_seleccionado, fecha_aceptacion_terminos, pack_id')
+    .eq('estado', 2)
+    .not('nombre_usuario', 'is', null)
+    .match(distribuidorId ? { distribuidor_id: distribuidorId } : {})
+    .order('fecha_aceptacion_terminos', { ascending: false })
+    .limit(5000);
+
+  if (error || !data) return [];
+
+  // Lookup packs y premios
+  const packIds = Array.from(new Set(data.map((b: any) => b.pack_id).filter(Boolean)));
+  const premioIds = Array.from(new Set(data.map((b: any) => b.premio_seleccionado).filter(Boolean)));
+
+  let packsMap: Record<string, number> = {};
+  if (packIds.length > 0) {
+    const { data: packs } = await supabaseAdmin.from('packs').select('id, numero_pack').in('id', packIds);
+    packsMap = (packs || []).reduce((acc: any, p: any) => { acc[p.id] = p.numero_pack; return acc; }, {});
+  }
+
+  let premiosMap: Record<string, string> = {};
+  if (premioIds.length > 0) {
+    const { data: premios } = await supabaseAdmin.from('premios').select('id, nombre_premio').in('id', premioIds);
+    premiosMap = (premios || []).reduce((acc: any, p: any) => { acc[p.id] = p.nombre_premio; return acc; }, {});
+  }
+
+  return data.map((b: any) => ({
+    numero: String(b.id_boleta).padStart(6, '0'),
+    nombre: b.nombre_usuario || '',
+    identificacion: b.identificacion_usuario || '',
+    celular: b.celular_usuario || '',
+    email: b.email_usuario || '',
+    premio: premiosMap[b.premio_seleccionado] || '',
+    pack: packsMap[b.pack_id] ? `PACK-${String(packsMap[b.pack_id]).padStart(3, '0')}` : '',
+    fecha_registro: b.fecha_aceptacion_terminos || '',
+  }));
+}
 
 export async function getPacksDistribuidorAction(distId: string) {
   try {

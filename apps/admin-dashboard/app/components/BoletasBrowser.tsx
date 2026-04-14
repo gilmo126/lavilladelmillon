@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { getBoletasPaged } from '../../lib/actions';
+import { getBoletasPaged, exportarParticipantesAction } from '../../lib/actions';
 import { Search as SearchIcon, Eye } from 'lucide-react';
 
 function estadoToString(estado: number) {
@@ -184,6 +184,8 @@ export default function BoletasBrowser({ userProfile }: { userProfile: any }) {
   const [range, setRange] = useState({ desde: '', hasta: '' });
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+  const [soloRegistrados, setSoloRegistrados] = useState(false);
+  const [exportando, setExportando] = useState(false);
   const [selectedBoleta, setSelectedBoleta] = useState<any>(null);
   
   const limit = 10; // Optimización masiva: 10 registros por página
@@ -196,11 +198,12 @@ export default function BoletasBrowser({ userProfile }: { userProfile: any }) {
           hasta: range.hasta ? parseInt(range.hasta) : undefined
       };
       const res = await getBoletasPaged(
-        page, 
-        limit, 
-        query, 
-        rangeParams, 
-        userProfile.rol === 'distribuidor' ? userProfile.id : undefined
+        page,
+        limit,
+        query,
+        rangeParams,
+        userProfile.rol === 'distribuidor' ? userProfile.id : undefined,
+        soloRegistrados
       );
       setData(res.data || []);
       setTotal(res.total);
@@ -210,7 +213,7 @@ export default function BoletasBrowser({ userProfile }: { userProfile: any }) {
     } finally {
       setLoading(false);
     }
-  }, [page, limit, query, range.desde, range.hasta]);
+  }, [page, limit, query, range.desde, range.hasta, soloRegistrados]);
 
   // Efecto 1: Reset a pág 1 cuando cambian los filtros (con Debounce)
   useEffect(() => {
@@ -218,7 +221,7 @@ export default function BoletasBrowser({ userProfile }: { userProfile: any }) {
       setPage(1);
     }, 500);
     return () => clearTimeout(handler);
-  }, [query, range.desde, range.hasta]);
+  }, [query, range.desde, range.hasta, soloRegistrados]);
 
   // Efecto 2: Fetch de datos cuando cambia la página O cuando los filtros (pág 1) se estabilizan
   useEffect(() => {
@@ -280,6 +283,41 @@ export default function BoletasBrowser({ userProfile }: { userProfile: any }) {
             onChange={(e) => setQuery(e.target.value)}
             className="flex-1 lg:flex-none px-4 py-3 bg-slate-900 border border-white/5 rounded-xl text-xs font-bold text-white placeholder-slate-600 outline-none focus:border-admin-blue transition-all min-w-[180px]"
           />
+
+          {/* Filtro Registrados + Exportar */}
+          <button
+            onClick={() => setSoloRegistrados(!soloRegistrados)}
+            className={`px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all border ${
+              soloRegistrados
+                ? 'bg-admin-green/10 border-admin-green text-admin-green'
+                : 'bg-slate-900 border-white/5 text-slate-500 hover:text-white'
+            }`}
+          >
+            {soloRegistrados ? '✅ Participantes' : '👥 Solo Registrados'}
+          </button>
+
+          <button
+            onClick={async () => {
+              setExportando(true);
+              const rows = await exportarParticipantesAction(userProfile.rol === 'distribuidor' ? userProfile.id : undefined);
+              if (rows.length > 0) {
+                const headers = ['Número', 'Nombre', 'Cédula', 'Celular', 'Email', 'Premio', 'Pack', 'Fecha Registro'];
+                const csv = [headers, ...rows.map(r => [r.numero, r.nombre, r.identificacion, r.celular, r.email, r.premio, r.pack, r.fecha_registro ? new Date(r.fecha_registro).toLocaleString('es-CO') : ''])].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+                const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'participantes-sorteo.csv';
+                link.click();
+                URL.revokeObjectURL(url);
+              }
+              setExportando(false);
+            }}
+            disabled={exportando}
+            className="px-4 py-3 bg-admin-gold hover:bg-yellow-500 disabled:opacity-40 text-slate-900 rounded-xl text-xs font-black uppercase tracking-widest transition-all"
+          >
+            {exportando ? '...' : '📥 Exportar'}
+          </button>
         </div>
       </header>
 

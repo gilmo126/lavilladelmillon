@@ -2,8 +2,10 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { cookies } from 'next/headers'
 import { createClient } from '../../utils/supabase/server'
 import { supabaseAdmin } from '../../lib/supabaseAdmin'
+import { SESSION_MARKER_COOKIE } from '../../lib/sessionConfig'
 
 export async function login(formData: FormData) {
   const supabase = await createClient()
@@ -23,6 +25,17 @@ export async function login(formData: FormData) {
   if (error) {
     return { error: error.message }
   }
+
+  // Cookie session-only (sin maxAge/expires) que marca el inicio de la sesión.
+  // Muere al cerrar el navegador → sesión efectivamente no persiste tras reinicio del browser.
+  // El middleware valida su presencia y edad (ver MAX_SESSION_HOURS).
+  const cookieStore = await cookies()
+  cookieStore.set(SESSION_MARKER_COOKIE, String(Date.now()), {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+  })
 
   revalidatePath('/', 'layout')
 
@@ -50,6 +63,8 @@ export async function login(formData: FormData) {
 export async function logout() {
   const supabase = await createClient()
   await supabase.auth.signOut()
+  const cookieStore = await cookies()
+  cookieStore.delete(SESSION_MARKER_COOKIE)
   revalidatePath('/', 'layout')
   redirect('/login')
 }

@@ -1,5 +1,8 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { MAX_SESSION_HOURS, SESSION_MARKER_COOKIE } from '../../lib/sessionConfig'
+
+const MAX_SESSION_MS = MAX_SESSION_HOURS * 60 * 60 * 1000
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({
@@ -65,6 +68,26 @@ export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   const isLoginPage = pathname === '/login'
   const isChangePasswordPage = pathname === '/cambiar-password'
+
+  // Cota dura de sesión: requiere cookie marker (session-only, muere al cerrar navegador)
+  // y valida que la sesión no exceda MAX_SESSION_HOURS.
+  if (user && !isLoginPage) {
+    const marker = request.cookies.get(SESSION_MARKER_COOKIE)?.value
+    const markerMs = marker ? parseInt(marker, 10) : NaN
+    const sessionExpired =
+      !marker ||
+      Number.isNaN(markerMs) ||
+      Date.now() - markerMs > MAX_SESSION_MS
+
+    if (sessionExpired) {
+      try {
+        await supabase.auth.signOut()
+      } catch { /* ignore */ }
+      const redirectResp = NextResponse.redirect(new URL('/login', request.url))
+      redirectResp.cookies.delete(SESSION_MARKER_COOKIE)
+      return redirectResp
+    }
+  }
 
   if (!user && !isLoginPage) {
     return NextResponse.redirect(new URL('/login', request.url))

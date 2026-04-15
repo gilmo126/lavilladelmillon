@@ -717,7 +717,36 @@ ALTER TABLE invitaciones ADD COLUMN jornadas_seleccionadas jsonb DEFAULT NULL;
 ALTER TABLE configuracion_campana ADD COLUMN jornadas_evento jsonb DEFAULT '[...]'::jsonb;
 ALTER TABLE configuracion_campana ADD COLUMN ubicacion_evento text;
 ALTER TABLE configuracion_campana ADD COLUMN ubicacion_maps_url text;
+ALTER TABLE configuracion_campana ADD COLUMN sesion_timeout_minutos int DEFAULT 30;
 ```
+
+---
+
+## AUTO-LOGOUT POR INACTIVIDAD
+
+**Motivación:** Supabase persiste el `refresh_token` en `localStorage` del navegador, que sobrevive al cierre. El refresh token default de Supabase Cloud dura 7 días, así que la sesión "no expira" durante una semana. Seguridad insuficiente cuando un agente deja abierta una laptop.
+
+**Solución de dos capas:**
+
+1. **Idle timeout client-side** (`app/components/IdleLogout.tsx`):
+   - Monitorea eventos `mousedown`, `keydown`, `touchstart`, `scroll`, `click`.
+   - 60s antes del timeout muestra modal con countdown y botón "Seguir activo".
+   - Si no hay interacción, llama `logout()` → `supabase.auth.signOut()` + redirect a `/login`.
+   - Se monta en `app/layout.tsx` solo cuando hay usuario.
+   - Configurable desde `/configuracion`: campo `sesion_timeout_minutos` (default 30, rango 5-240).
+
+2. **Cota dura de sesión server-side** (`lib/sessionConfig.ts` + middleware):
+   - `MAX_SESSION_HOURS = 8` — máximo absoluto sin importar actividad.
+   - Cookie marker `lvm_session_start` se crea en `login()` action **sin maxAge** (session cookie httpOnly) → muere al cerrar el navegador.
+   - El middleware en cada request verifica que exista el marker y que `Date.now() - marker <= MAX_SESSION_MS`. Si falta o venció → `signOut()` + redirect a `/login` + borra cookie.
+   - Resuelve los dos problemas sin plan Pro de Supabase: cerrar navegador mata la sesión (cookie session-only), y aun sin cerrar, la sesión expira absolutamente en 8h.
+
+**Capas defensivas (independientes):**
+| Capa | Dispara en | Fuente |
+|------|-----------|--------|
+| Idle timeout (30 min) | inactividad | cliente |
+| Browser close | cierre navegador | cookie session-only |
+| Absolute max (8h) | edad de la sesión | middleware server-side |
 
 ---
 

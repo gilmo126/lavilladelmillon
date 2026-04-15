@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import Sidebar from './components/Sidebar';
+import IdleLogout from './components/IdleLogout';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -26,8 +27,9 @@ export default async function RootLayout({
   let userName = '';
 
   // Obtener Configuración de Marca (Llaves Maestras)
-  const { data: config } = await supabaseAdmin.from('configuracion_campana').select('nombre_campana').limit(1).single();
+  const { data: config } = await supabaseAdmin.from('configuracion_campana').select('nombre_campana, sesion_timeout_minutos').limit(1).single();
   const campanaNombre = config?.nombre_campana || 'La Villa del Millón';
+  const sesionTimeoutMin = config?.sesion_timeout_minutos ?? 30;
 
   if (user) {
     const { data: profile } = await supabaseAdmin.from('perfiles').select('rol, nombre').eq('id', user.id).single();
@@ -45,6 +47,7 @@ export default async function RootLayout({
         <div className="flex-1 h-screen overflow-y-auto flex flex-col">
           {children}
         </div>
+        {user ? <IdleLogout timeoutMinutes={sesionTimeoutMin} /> : null}
       </body>
     </html>
   );

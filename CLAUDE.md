@@ -713,7 +713,35 @@ DROP FUNCTION get_pack_publica(text);
 -- + CREATE OR REPLACE FUNCTION get_pack_publica con numeros_detalle + token_qr + numero_pack
 CREATE TABLE invitaciones (...);
 ALTER TABLE perfiles ADD COLUMN debe_cambiar_password boolean DEFAULT false;
+ALTER TABLE invitaciones ADD COLUMN jornadas_seleccionadas jsonb DEFAULT NULL;
+ALTER TABLE configuracion_campana ADD COLUMN jornadas_evento jsonb DEFAULT '[...]'::jsonb;
+ALTER TABLE configuracion_campana ADD COLUMN ubicacion_evento text;
+ALTER TABLE configuracion_campana ADD COLUMN ubicacion_maps_url text;
 ```
+
+---
+
+## SELECCIÓN DE JORNADAS EN INVITACIONES
+
+El evento tiene múltiples jornadas. El comerciante, al aceptar la invitación, debe seleccionar al menos una jornada a la que asistirá.
+
+**Configuración (admin):** `configuracion_campana.jornadas_evento` (jsonb, editable desde `/configuracion`) — cada jornada `{id, fecha, hora, label}`. Ubicación en `ubicacion_evento` + `ubicacion_maps_url`.
+
+**Landing `/invitacion/[token]`:**
+- Pantalla normal (pendiente): checkboxes de jornadas + ubicación con link Maps. Al aceptar valida mínimo 1 jornada.
+- Retrofit: invitaciones ya aceptadas sin `jornadas_seleccionadas` (pre-feature) muestran pantalla de confirmación de jornadas sin regenerar QR. Usa `actualizarJornadasAction`.
+- Una vez guardadas las jornadas, NO se permite re-edición desde la landing.
+
+**Admin `/invitaciones`:**
+- Tabla: columna "Jornada(s)" con badges compactos (muestra primera + `+N`).
+- Drawer: sección con lista completa (fecha + hora + label).
+- Email de creación incluye ubicación y nota "Al confirmar podrás elegir jornada(s)".
+- Email de aceptación (al comerciante y distribuidor) incluye las jornadas elegidas y la ubicación.
+
+**Archivos clave:**
+- `admin-dashboard/app/components/ConfiguracionManager.tsx` — editor jornadas/ubicación
+- `admin-dashboard/app/invitaciones/{actions,page,InvitacionesClient}.tsx`
+- `landing-page/app/invitacion/[token]/{actions,page,InvitacionClient}.tsx`
 
 ---
 

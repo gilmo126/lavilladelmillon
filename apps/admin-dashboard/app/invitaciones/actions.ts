@@ -244,6 +244,81 @@ export async function getInvitacionDetailAction(id: string): Promise<InvitacionD
   return data as InvitacionDetail | null;
 }
 
+// ── REPORTE POR DISTRIBUIDOR (solo admin) ───────────────────────────
+
+export type ReporteDistribuidorItem = {
+  distribuidor_id: string;
+  distribuidor: string;
+  total: number;
+  aceptadas: number;
+  pendientes: number;
+  rechazadas: number;
+  conversion: number;
+  jornadas: { id: string; count: number }[];
+};
+
+export async function getReporteInvitacionesAction(): Promise<ReporteDistribuidorItem[]> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data: profile } = await supabaseAdmin.from('perfiles').select('rol').eq('id', user.id).single();
+  if (!profile || profile.rol !== 'admin') return [];
+
+  const { data, error } = await supabaseAdmin
+    .from('invitaciones')
+    .select('distribuidor_id, estado, jornadas_seleccionadas, distribuidor:perfiles!distribuidor_id(nombre)');
+
+  if (error || !data) return [];
+
+  const map = new Map<string, ReporteDistribuidorItem & { _jornadasMap: Map<string, number> }>();
+
+  for (const row of data as any[]) {
+    const dId = row.distribuidor_id;
+    if (!dId) continue;
+    const nombre = Array.isArray(row.distribuidor) ? row.distribuidor[0]?.nombre : row.distribuidor?.nombre;
+
+    if (!map.has(dId)) {
+      map.set(dId, {
+        distribuidor_id: dId,
+        distribuidor: nombre || 'Sin nombre',
+        total: 0,
+        aceptadas: 0,
+        pendientes: 0,
+        rechazadas: 0,
+        conversion: 0,
+        jornadas: [],
+        _jornadasMap: new Map(),
+      });
+    }
+    const entry = map.get(dId)!;
+    entry.total++;
+    if (row.estado === 'aceptada') entry.aceptadas++;
+    else if (row.estado === 'pendiente') entry.pendientes++;
+    else if (row.estado === 'rechazada') entry.rechazadas++;
+
+    if (Array.isArray(row.jornadas_seleccionadas)) {
+      for (const jId of row.jornadas_seleccionadas) {
+        entry._jornadasMap.set(jId, (entry._jornadasMap.get(jId) || 0) + 1);
+      }
+    }
+  }
+
+  const result = Array.from(map.values()).map((e) => ({
+    distribuidor_id: e.distribuidor_id,
+    distribuidor: e.distribuidor,
+    total: e.total,
+    aceptadas: e.aceptadas,
+    pendientes: e.pendientes,
+    rechazadas: e.rechazadas,
+    conversion: e.total > 0 ? (e.aceptadas / e.total) * 100 : 0,
+    jornadas: Array.from(e._jornadasMap.entries()).map(([id, count]) => ({ id, count })),
+  }));
+
+  result.sort((a, b) => b.total - a.total);
+  return result;
+}
+
 // ── ACTUALIZAR DATOS DEL COMERCIANTE ────────────────────────────────
 
 export async function actualizarInvitacionAction(

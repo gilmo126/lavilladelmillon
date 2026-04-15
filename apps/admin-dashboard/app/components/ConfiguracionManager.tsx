@@ -19,6 +19,7 @@ export default function ConfiguracionManager() {
   const [formDiasVencPago, setFormDiasVencPago] = useState(8);
   const [formDiasValidezQr, setFormDiasValidezQr] = useState(8);
   const [formDiasValidezPagina, setFormDiasValidezPagina] = useState(30);
+  const [formSesionTimeoutMin, setFormSesionTimeoutMin] = useState(30);
   const [formTiposEvento, setFormTiposEvento] = useState<string[]>([]);
   const [formEventoLogoUrl, setFormEventoLogoUrl] = useState<string | null>(null);
   const [formEventoTitulo, setFormEventoTitulo] = useState('');
@@ -44,6 +45,7 @@ export default function ConfiguracionManager() {
         setFormDiasVencPago(data.dias_vencimiento_pago ?? 8);
         setFormDiasValidezQr(data.dias_validez_qr ?? 8);
         setFormDiasValidezPagina(data.dias_validez_pagina_comerciante ?? 30);
+        setFormSesionTimeoutMin(data.sesion_timeout_minutos ?? 30);
         setFormTiposEvento(data.tipos_evento ?? ['Lanzamiento', 'Capacitación', 'Feria Comercial', 'Premiación', 'Networking']);
         setFormEventoLogoUrl(data.evento_logo_url || null);
         setFormEventoTitulo(data.evento_titulo || '¡Bienvenidos a La Villa del Millón!');
@@ -108,6 +110,7 @@ export default function ConfiguracionManager() {
         dias_vencimiento_pago: formDiasVencPago,
         dias_validez_qr: formDiasValidezQr,
         dias_validez_pagina_comerciante: formDiasValidezPagina,
+        sesion_timeout_minutos: formSesionTimeoutMin,
         tipos_evento: formTiposEvento,
         evento_logo_url: formEventoLogoUrl,
         evento_titulo: formEventoTitulo,
@@ -251,6 +254,22 @@ export default function ConfiguracionManager() {
                        <span className="text-xs text-slate-500">días</span>
                      </div>
                      <p className="text-[10px] text-slate-600">Tiempo límite para que el comerciante pague un pack pendiente</p>
+                   </div>
+
+                   <div className="bg-slate-900/50 rounded-xl border border-admin-border p-5 space-y-3">
+                     <label className="block text-sm text-slate-400">Timeout de sesión por inactividad</label>
+                     <div className="flex items-center gap-3">
+                       <input
+                         type="number"
+                         min={5}
+                         max={240}
+                         value={formSesionTimeoutMin}
+                         onChange={e => setFormSesionTimeoutMin(parseInt(e.target.value) || 30)}
+                         className="w-20 bg-slate-900 border border-admin-border rounded-lg px-3 py-2 text-white text-center font-mono font-bold focus:border-admin-blue outline-none"
+                       />
+                       <span className="text-xs text-slate-500">minutos</span>
+                     </div>
+                     <p className="text-[10px] text-slate-600">Cierra la sesión automáticamente tras X minutos sin actividad. Aviso 60s antes.</p>
                    </div>
                  </div>
                </section>

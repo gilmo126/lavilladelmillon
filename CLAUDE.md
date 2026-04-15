@@ -717,7 +717,27 @@ ALTER TABLE invitaciones ADD COLUMN jornadas_seleccionadas jsonb DEFAULT NULL;
 ALTER TABLE configuracion_campana ADD COLUMN jornadas_evento jsonb DEFAULT '[...]'::jsonb;
 ALTER TABLE configuracion_campana ADD COLUMN ubicacion_evento text;
 ALTER TABLE configuracion_campana ADD COLUMN ubicacion_maps_url text;
+ALTER TABLE configuracion_campana ADD COLUMN sesion_timeout_minutos int DEFAULT 30;
 ```
+
+---
+
+## AUTO-LOGOUT POR INACTIVIDAD
+
+**Motivación:** Supabase persiste el `refresh_token` en `localStorage` del navegador, que sobrevive al cierre. El refresh token default de Supabase Cloud dura 7 días, así que la sesión "no expira" durante una semana. Seguridad insuficiente cuando un agente deja abierta una laptop.
+
+**Solución de dos capas:**
+
+1. **Idle timeout client-side** (`app/components/IdleLogout.tsx`):
+   - Monitorea eventos `mousedown`, `keydown`, `touchstart`, `scroll`, `click`.
+   - 60s antes del timeout muestra modal con countdown y botón "Seguir activo".
+   - Si no hay interacción, llama `logout()` → `supabase.auth.signOut()` + redirect a `/login`.
+   - Se monta en `app/layout.tsx` solo cuando hay usuario.
+   - Configurable desde `/configuracion`: campo `sesion_timeout_minutos` (default 30, rango 5-240).
+
+2. **Refresh token TTL reducido en Supabase Dashboard** (manual, NO es código):
+   - Authentication → Sessions → reducir de 604800s (7 días) a 28800s (8 horas).
+   - Mitiga robo de tokens: si se filtra uno, expira en 8h.
 
 ---
 

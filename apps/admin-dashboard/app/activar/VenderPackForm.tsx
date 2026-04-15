@@ -6,6 +6,13 @@ import { venderPackAction, enviarEmailPackAction, type VenderPackResult } from '
 const ADMIN_URL   = process.env.NEXT_PUBLIC_ADMIN_URL || 'https://lavilladelmillon-admin.guillaumer-orion.workers.dev';
 const LANDING_URL = process.env.NEXT_PUBLIC_LANDING_URL || 'https://landing-page.guillaumer-orion.workers.dev';
 
+function formatWhatsAppNumber(num: string | null | undefined): string {
+  if (!num) return '';
+  const digits = num.replace(/\D/g, '');
+  if (digits.startsWith('57')) return digits;
+  return `57${digits}`;
+}
+
 type Props = {
   diasVencimientoPago: number;
 };
@@ -110,7 +117,7 @@ export default function VenderPackForm({ diasVencimientoPago }: Props) {
           </div>
 
           <a
-            href={`https://wa.me/?text=${waPendienteText}`}
+            href={`https://wa.me/${formatWhatsAppNumber(result.comercianteWhatsapp)}?text=${waPendienteText}`}
             target="_blank"
             rel="noopener noreferrer"
             className="w-full flex items-center justify-center gap-3 py-4 bg-green-600 hover:bg-green-500 text-white font-black rounded-2xl transition-all text-sm uppercase tracking-widest active:scale-[0.99]"
@@ -172,26 +179,48 @@ export default function VenderPackForm({ diasVencimientoPago }: Props) {
           )
         ))}
 
-        {/* Link del comerciante */}
-        <div className="bg-admin-card border border-admin-border rounded-3xl p-6">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-1 h-5 bg-admin-blue rounded-full" />
-            <h2 className="font-black text-white uppercase tracking-wider text-sm">Link del Comerciante</h2>
-          </div>
-          <div className="flex items-center gap-3 bg-slate-950 border border-white/5 rounded-2xl p-4">
-            <p className="flex-1 text-admin-blue font-mono text-xs truncate">{packUrl}</p>
-            <button
-              onClick={() => handleCopy(packUrl)}
-              className={`px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all flex-shrink-0 ${
-                copied ? 'bg-green-500 text-white' : 'bg-admin-blue hover:bg-blue-600 text-white'
-              }`}
-            >
-              {copied ? '✓ Copiado' : 'Copiar'}
-            </button>
-          </div>
-        </div>
+        {/* Links y QR de todos los packs */}
+        {(resultados.length > 1 ? resultados : [result]).map((r) => {
+          if (!r.tokenPagina) return null;
+          const pUrl = `${LANDING_URL}/pack/${r.tokenPagina}`;
+          const qrUrl = r.tokenQr ? `${ADMIN_URL}/validar-qr/${r.tokenQr}` : '';
+          const qrImg = qrUrl ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrUrl)}` : '';
+          const qrVence = r.qrValidoHasta ? new Date(r.qrValidoHasta).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' }) : null;
 
-        {/* Enviar al Comerciante */}
+          return (
+            <div key={r.packId} className="bg-admin-card border border-admin-border rounded-3xl p-6 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-1 h-5 bg-admin-blue rounded-full" />
+                <h2 className="font-black text-white uppercase tracking-wider text-sm">PACK-{String(r.numeroPack).padStart(3, '0')}</h2>
+              </div>
+
+              {/* Link */}
+              <div className="flex items-center gap-3 bg-slate-950 border border-white/5 rounded-2xl p-4">
+                <p className="flex-1 text-admin-blue font-mono text-xs truncate">{pUrl}</p>
+                <button onClick={() => handleCopy(pUrl)}
+                  className={`px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all flex-shrink-0 ${copied ? 'bg-green-500 text-white' : 'bg-admin-blue hover:bg-blue-600 text-white'}`}>
+                  {copied ? '✓' : 'Copiar'}
+                </button>
+              </div>
+
+              {/* QR */}
+              {qrImg && (
+                <div className="flex items-center gap-4">
+                  <div className="bg-white p-2 rounded-xl">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={qrImg} alt="QR" width={80} height={80} className="rounded-lg" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-admin-gold font-bold uppercase">QR Beneficio Recreativo</p>
+                    {qrVence && <p className="text-[10px] text-slate-500 mt-1">Válido hasta {qrVence}</p>}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {/* Enviar al Comerciante — todos los packs */}
         <div className="bg-admin-card border border-admin-border rounded-3xl p-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-1 h-5 bg-green-500 rounded-full" />
@@ -199,12 +228,15 @@ export default function VenderPackForm({ diasVencimientoPago }: Props) {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <a
-              href={`https://wa.me/?text=${encodeURIComponent(
-                `Hola ${result.comercianteNombre}, aquí está tu pack de 25 números para La Villa del Millón.\n\nAccede a tus números aquí: ${packUrl}` +
-                (result.tokenQr
-                  ? `\n\nTu QR de beneficio recreativo: ${qrImageUrl}` +
-                    (qrValidoHasta ? ` - Válido hasta ${qrValidoHasta}` : '')
-                  : '')
+              href={`https://wa.me/${formatWhatsAppNumber(result.comercianteWhatsapp)}?text=${encodeURIComponent(
+                `Hola ${result.comercianteNombre}, aquí están tus números de La Villa del Millón.\n\n` +
+                (resultados.length > 1 ? resultados : [result])
+                  .filter((r) => r.tokenPagina && r.numeros)
+                  .map((r) => {
+                    const nums = (r.numeros || []).map((n) => String(n).padStart(6, '0')).join(' · ');
+                    return `📦 PACK-${String(r.numeroPack).padStart(3, '0')}:\n${nums}\n🔗 ${LANDING_URL}/pack/${r.tokenPagina}`;
+                  })
+                  .join('\n\n')
               )}`}
               target="_blank"
               rel="noopener noreferrer"
@@ -217,13 +249,18 @@ export default function VenderPackForm({ diasVencimientoPago }: Props) {
                 onClick={async () => {
                   setEmailStatus('sending');
                   setEmailError(null);
+                  // Consolidar todos los números en un solo email
+                  const packs = resultados.length > 1 ? resultados : [result];
+                  const todosNumeros = packs.flatMap((r) => r.numeros || []);
+                  const primerPack = packs.find((r) => r.tokenPagina);
+                  if (!primerPack) return;
                   const res = await enviarEmailPackAction({
                     comercianteNombre: result.comercianteNombre,
                     comercianteEmail: result.comercianteEmail!,
-                    numeros: result.numeros!,
-                    tokenPagina: result.tokenPagina!,
-                    tokenQr: result.tokenQr,
-                    qrValidoHasta: result.qrValidoHasta,
+                    numeros: todosNumeros,
+                    tokenPagina: primerPack.tokenPagina!,
+                    tokenQr: primerPack.tokenQr,
+                    qrValidoHasta: primerPack.qrValidoHasta,
                   });
                   setEmailStatus(res.success ? 'sent' : 'error');
                   if (!res.success) setEmailError(res.error || 'Error al enviar email');
@@ -243,25 +280,6 @@ export default function VenderPackForm({ diasVencimientoPago }: Props) {
           {emailStatus === 'error' && emailError && (
             <p className="text-red-400 text-xs font-bold mt-3">{emailError}</p>
           )}
-        </div>
-
-        {/* QR de beneficio */}
-        <div className="bg-admin-card border border-admin-gold/20 rounded-3xl p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-1 h-5 bg-admin-gold rounded-full" />
-            <h2 className="font-black text-white uppercase tracking-wider text-sm">QR de Beneficio Recreativo</h2>
-            {qrValidoHasta && (
-              <span className="ml-auto text-[10px] font-bold text-admin-gold bg-admin-gold/10 px-2 py-1 rounded-lg">
-                Válido hasta {qrValidoHasta}
-              </span>
-            )}
-          </div>
-          <div className="flex flex-col items-center gap-4">
-            <div className="bg-white p-3 rounded-2xl shadow-xl">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={qrImageUrl} alt="QR de beneficio recreativo" width={180} height={180} className="rounded-lg" />
-            </div>
-          </div>
         </div>
 
         <button

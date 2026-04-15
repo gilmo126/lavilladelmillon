@@ -267,6 +267,8 @@ export default function InvitacionesClient({
   const [formResult, setFormResult] = useState<Extract<Awaited<ReturnType<typeof crearInvitacionAction>>, { success: true }> | null>(null);
   const [reenviando, setReenviando] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
 
   async function reloadList() {
     const res = await getInvitacionesAction(tab, isDist ? userId : undefined);
@@ -276,6 +278,7 @@ export default function InvitacionesClient({
   async function handleTabChange(t: 'todas' | 'aceptada' | 'pendiente') {
     setTab(t);
     setLoading(true);
+    setPage(1);
     const res = await getInvitacionesAction(t, isDist ? userId : undefined);
     setData(res);
     setLoading(false);
@@ -306,6 +309,8 @@ export default function InvitacionesClient({
   }
 
   const filtered = data;
+  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+  const paged = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -357,7 +362,7 @@ export default function InvitacionesClient({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-admin-border">
-                  {filtered.map((inv) => (
+                  {paged.map((inv) => (
                     <tr key={inv.id} className="hover:bg-slate-800/30 transition-colors cursor-pointer" onClick={() => setSelectedId(inv.id)}>
                       <td className="p-4">
                         <p className="font-bold text-white text-sm">{inv.comerciante_nombre}</p>
@@ -399,6 +404,21 @@ export default function InvitacionesClient({
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* Paginación */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between p-4 border-t border-admin-border">
+              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+                Página {page} de {totalPages} · {filtered.length} invitaciones
+              </span>
+              <div className="flex gap-2">
+                <button disabled={page <= 1} onClick={() => setPage(p => p - 1)}
+                  className="px-3 py-1.5 bg-slate-800 text-white text-xs font-bold rounded-lg disabled:opacity-30 hover:bg-slate-700">← Anterior</button>
+                <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}
+                  className="px-3 py-1.5 bg-slate-800 text-white text-xs font-bold rounded-lg disabled:opacity-30 hover:bg-slate-700">Siguiente →</button>
+              </div>
             </div>
           )}
         </div>

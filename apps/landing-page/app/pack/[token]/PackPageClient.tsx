@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import type { PackData, NumeroDetalle } from './page';
 
 const LANDING_URL = process.env.NEXT_PUBLIC_LANDING_URL || 'https://landing-page.guillaumer-orion.workers.dev';
@@ -52,8 +51,6 @@ function NumeroCard({
 }
 
 export default function PackPageClient({ pack }: { pack: PackData }) {
-  const [copied, setCopied] = useState(false);
-
   const fechaVencimiento = new Date(pack.fecha_vencimiento).toLocaleDateString(
     'es-CO',
     { day: '2-digit', month: 'long', year: 'numeric' }
@@ -68,20 +65,6 @@ export default function PackPageClient({ pack }: { pack: PackData }) {
   const qrValidoHastaStr = pack.qr_valido_hasta
     ? new Date(pack.qr_valido_hasta).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })
     : null;
-
-  function handleCopyAll() {
-    const disponibles = pack.numeros.filter((n) => n.estado < 2);
-    const lista = disponibles
-      .map((n) => String(n.numero).padStart(6, '0'))
-      .join(' · ');
-    const texto =
-      `🎟️ Mis números de ${pack.nombre_campana}:\n\n${lista}\n\n` +
-      `Registrá tus datos en: ${LANDING_URL}`;
-    navigator.clipboard.writeText(texto).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
-    });
-  }
 
   return (
     <main className="min-h-screen bg-marca-darker text-white">
@@ -99,13 +82,8 @@ export default function PackPageClient({ pack }: { pack: PackData }) {
           )}
           <div className="flex flex-wrap items-center gap-2 mt-3">
             <span className="text-[10px] font-bold text-slate-400 bg-slate-800 px-3 py-1 rounded-full border border-slate-700">
-              {pack.numeros.length} números
+              {totalRegistrados} de {pack.numeros.length} registrados
             </span>
-            {totalRegistrados > 0 && (
-              <span className="text-[10px] font-bold text-green-400 bg-green-500/10 border border-green-500/20 px-3 py-1 rounded-full">
-                ✅ {totalRegistrados} registrados
-              </span>
-            )}
             <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-full">
               ⏳ Vence {fechaVencimiento}
             </span>
@@ -154,18 +132,6 @@ export default function PackPageClient({ pack }: { pack: PackData }) {
             </p>
           </div>
         )}
-
-        {/* Copiar todos (solo disponibles) */}
-        <button
-          onClick={handleCopyAll}
-          className={`w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all border ${
-            copied
-              ? 'bg-green-500/20 border-green-500 text-green-400'
-              : 'bg-slate-800 border-slate-700 text-slate-300 hover:border-marca-gold/40 hover:text-white'
-          }`}
-        >
-          {copied ? '✓ ¡Copiado!' : '📋 Copiar números disponibles'}
-        </button>
 
         {/* Grid de números */}
         <div>

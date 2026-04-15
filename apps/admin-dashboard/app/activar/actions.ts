@@ -15,6 +15,7 @@ export type VenderPackResult =
       tipoPago: 'inmediato' | 'pendiente';
       comercianteNombre: string;
       comercianteEmail: string | null;
+      comercianteWhatsapp: string | null;
       // Solo presente si pago inmediato
       tokenPagina?: string;
       tokenQr?: string;
@@ -111,6 +112,7 @@ export async function venderPackAction(formData: FormData): Promise<VenderPackRe
       tipoPago: 'inmediato',
       comercianteNombre,
       comercianteEmail,
+      comercianteWhatsapp: comercianteWa,
       tokenPagina: pack?.token_pagina,
       tokenQr: pack?.token_qr,
       qrValidoHasta: pack?.qr_valido_hasta,
@@ -158,6 +160,7 @@ export async function venderPackAction(formData: FormData): Promise<VenderPackRe
     tipoPago: 'pendiente',
     comercianteNombre,
     comercianteEmail,
+    comercianteWhatsapp: comercianteWa,
     fechaVencimientoPago,
   };
 }
@@ -395,12 +398,12 @@ export async function enviarEmailPackAction(data: {
         Hola <strong style="color:#fff;">${data.comercianteNombre}</strong>,
       </p>
       <p style="color:#94a3b8;font-size:14px;line-height:1.6;margin:0;">
-        Aquí están tus <strong style="color:#fff;">25 números</strong> para participar en el sorteo.
+        Aquí están tus <strong style="color:#fff;">${data.numeros.length} números</strong> para participar en el sorteo.
         Comparte cada número con tus clientes para que registren sus datos.
       </p>
     </div>
     <div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:24px;margin-bottom:24px;">
-      <p style="color:#facc15;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin:0 0 16px;">Tus 25 números</p>
+      <p style="color:#facc15;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin:0 0 16px;">Tus ${data.numeros.length} números</p>
       <table style="width:100%;border-collapse:separate;border-spacing:6px;" cellpadding="0" cellspacing="0">
         ${numerosHtml}
       </table>
@@ -421,7 +424,7 @@ export async function enviarEmailPackAction(data: {
 </html>`.trim();
 
   try {
-    await sendMail(data.comercianteEmail, 'Tus 25 números — La Villa del Millón', html);
+    await sendMail(data.comercianteEmail, `Tus ${data.numeros.length} números — La Villa del Millón`, html);
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message || 'Error al enviar email' };

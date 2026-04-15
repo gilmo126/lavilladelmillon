@@ -4,10 +4,10 @@
 
 Monorepo con dos aplicaciones Next.js desplegadas en Cloudflare Workers:
 
-| App | Directorio | URL de producción |
-|-----|-----------|-------------------|
-| Admin Dashboard | `apps/admin-dashboard` | https://lavilladelmillon-admin.guillaumer-orion.workers.dev |
-| Landing Page | `apps/landing-page` | https://landing-page.guillaumer-orion.workers.dev |
+| App | Directorio | URL Producción | URL Dev |
+|-----|-----------|---------------|---------|
+| Admin Dashboard | `apps/admin-dashboard` | https://admin.lavilladelmillon.com | https://lavilladelmillon-admin.guillaumer-orion.workers.dev |
+| Landing Page | `apps/landing-page` | https://lavilladelmillon.com | https://landing-page.guillaumer-orion.workers.dev |
 
 ---
 
@@ -22,10 +22,22 @@ Monorepo con dos aplicaciones Next.js desplegadas en Cloudflare Workers:
 
 ## DEPLOY
 
-### Pipeline automático (GitHub Actions)
+### Pipeline automático (GitHub Actions) — Dev/Prod por rama
 
-- Push a `main` con cambios en `apps/admin-dashboard/` → deploy automático del admin
-- Push a `main` con cambios en `apps/landing-page/` → deploy automático de la landing
+| Rama | Trigger | URLs inyectadas |
+|------|---------|----------------|
+| `main` | Push con cambios en la app | `lavilladelmillon.com` / `admin.lavilladelmillon.com` |
+| `dev` | Push con cambios en la app | `*.guillaumer-orion.workers.dev` |
+
+Las URLs se inyectan en build-time con condicional por rama en el workflow:
+```yaml
+NEXT_PUBLIC_LANDING_URL: ${{ github.ref == 'refs/heads/main' && 'https://lavilladelmillon.com' || 'https://landing-page.guillaumer-orion.workers.dev' }}
+NEXT_PUBLIC_ADMIN_URL: ${{ github.ref == 'refs/heads/main' && 'https://admin.lavilladelmillon.com' || 'https://lavilladelmillon-admin.guillaumer-orion.workers.dev' }}
+```
+
+**Flujo de trabajo:** Desarrollar en `dev` → probar → merge a `main` → producción.
+
+No requieren GitHub Secrets — están hardcodeadas en los workflows por rama.
 
 ### Comandos locales
 
@@ -667,16 +679,88 @@ Todo el resto de tablas requiere sesión activa de Supabase Auth.
 - Headers de seguridad (CSP, CORS) en Cloudflare Workers
 - Validación de formato colombiano para cédula (5-11 dígitos) y celular (10 dígitos)
 
+- [2026-04-13] URLs hardcodeadas de workers.dev → Reemplazadas por `NEXT_PUBLIC_LANDING_URL` y `NEXT_PUBLIC_ADMIN_URL` configurables → 11 archivos en ambas apps
+- [2026-04-13] CI/CD solo main → Workflows actualizados para `main` (prod) y `dev` con URLs condicionales por rama → `.github/workflows/deploy-*.yml`
+- [2026-04-13] Nodemailer + SMTP Titan falló (AUTH PLAIN rechazado, certificado auto-firmado) → Revertido a Resend SDK → `lib/mailer.ts` en ambas apps
+- [2026-04-13] Email invitación tenía template simple → Actualizado para usar contenido dinámico de configuracion_campana (titulo, subtitulo, mensaje, auspiciantes, logo) → `app/invitaciones/actions.ts`
+- [2026-04-13] Formulario invitación permitía doble envío → Formulario se oculta tras éxito, muestra botón WhatsApp + "Nueva Invitación" → `InvitacionesClient.tsx`
+- [2026-04-13] WhatsApp no reseteaba formulario → Al click en WhatsApp, formulario se resetea después de 500ms → `InvitacionesClient.tsx`
+- [2026-04-13] Teléfono obligatorio, WhatsApp opcional → Invertido: WhatsApp obligatorio, Teléfono opcional en todos los formularios → 5 archivos
+- [2026-04-13] Explorador boletas sin filtro de participantes → Agregado filtro "Solo Registrados" + botón "Exportar Participantes" CSV → `BoletasBrowser.tsx`, `lib/actions.ts`
+- [2026-04-13] Módulo Comerciantes sin paginación ni exportar → Agregado paginación 10 items + exportar CSV → `ComerciantesClient.tsx`
+- [2026-04-13] QR invitaciones se podía usar múltiples veces → Nueva columna `qr_escaneado_at`, validación de uso único, estado visual en listas → `scanner/actions.ts`, `InvitacionesClient.tsx`
+- [2026-04-13] Scanner sin lista de invitaciones → Dos listas separadas: Evento Recreativo (verde) + Invitaciones (purple), paginadas de 10 → `ScannerClient.tsx`
+- [2026-04-13] Asistencia admin filtraba por fecha → Removido filtro, muestra todos paginados de 10 → `AsistenciaClient.tsx`
+
 **Migraciones BD aplicadas manualmente:**
 ```sql
 ALTER TYPE rol_usuario ADD VALUE 'asistente';
 ALTER TABLE packs ADD COLUMN comerciante_tipo_id text DEFAULT 'CC';
 ALTER TABLE packs ADD COLUMN comerciante_identificacion text;
 ALTER TABLE packs ADD COLUMN qr_usado_at timestamptz DEFAULT NULL;
+ALTER TABLE packs ADD COLUMN numero_pack serial;
 ALTER TABLE boletas ADD COLUMN email_usuario text;
+ALTER TABLE invitaciones ADD COLUMN qr_escaneado_at timestamptz;
+ALTER TABLE configuracion_campana ADD COLUMN tipos_evento text[] DEFAULT ARRAY['Lanzamiento','Capacitación','Feria Comercial','Premiación','Networking'];
+ALTER TABLE configuracion_campana ADD COLUMN evento_logo_url text;
+ALTER TABLE configuracion_campana ADD COLUMN evento_titulo text;
+ALTER TABLE configuracion_campana ADD COLUMN evento_subtitulo text;
+ALTER TABLE configuracion_campana ADD COLUMN evento_mensaje text;
+ALTER TABLE configuracion_campana ADD COLUMN evento_auspiciantes text[];
 DROP FUNCTION buscar_trazabilidad(text);
--- + CREATE OR REPLACE FUNCTION buscar_trazabilidad con estados V2
+-- + CREATE OR REPLACE FUNCTION buscar_trazabilidad con estados V2 + numero_pack
+DROP FUNCTION get_pack_publica(text);
+-- + CREATE OR REPLACE FUNCTION get_pack_publica con numeros_detalle + token_qr + numero_pack
+CREATE TABLE invitaciones (...);
+ALTER TABLE perfiles ADD COLUMN debe_cambiar_password boolean DEFAULT false;
 ```
+
+---
+
+## FLUJO DE CREDENCIALES — Distribuidores y Asistentes
+
+### Creación de usuario (`/distribuidores`)
+
+Al crear un distribuidor o asistente desde Gestión de Personal:
+1. Se crea usuario en Auth con `user_metadata: { debe_cambiar_password: true }`
+2. Se inserta en `perfiles` con `debe_cambiar_password = true`
+3. Se envía email de bienvenida con credenciales temporales (email + contraseña + link al panel)
+
+**Archivos:** `app/distribuidores/actions.ts` (`createPersonalAction`)
+
+### Primer login — Cambio forzado de contraseña
+
+1. El login consulta `perfiles.debe_cambiar_password`
+2. Si es `true` → redirect a `/cambiar-password` (en vez de `/` o `/scanner`)
+3. El middleware bloquea acceso a cualquier ruta excepto `/cambiar-password` y `/login` usando `user_metadata.debe_cambiar_password`
+4. En `/cambiar-password`: formulario nueva contraseña + confirmar
+5. Al guardar: actualiza Auth (password + metadata) + `perfiles.debe_cambiar_password = false` → redirect según rol
+
+**Archivos:**
+- `app/login/actions.ts` — redirect condicional post-login
+- `utils/supabase/middleware.ts` — bloqueo de rutas via `user_metadata`
+- `app/cambiar-password/page.tsx` — server component con verificación
+- `app/cambiar-password/CambiarPasswordClient.tsx` — formulario client
+- `app/cambiar-password/actions.ts` — `cambiarPasswordAction`
+
+### Reset de contraseña por admin
+
+1. En drawer de detalle del personal (`/distribuidores` → click en agente → sección "Seguridad")
+2. Admin ingresa nueva contraseña temporal → presiona "Resetear"
+3. Se actualiza Auth (password + `user_metadata.debe_cambiar_password = true`) + `perfiles.debe_cambiar_password = true`
+4. Se envía email de notificación con nueva contraseña temporal
+
+**Archivos:**
+- `app/distribuidores/actions.ts` — `resetPasswordAction`
+- `app/distribuidores/GestionPersonalClient.tsx` — `ResetPasswordSection` en `InventoryDrawer`
+
+### Sincronización dual: user_metadata + perfiles
+
+El flag `debe_cambiar_password` se mantiene en dos lugares:
+- **`user_metadata`** en Auth — leído por el middleware (sin query extra a BD en cada request)
+- **`perfiles.debe_cambiar_password`** en BD — leído por login y por `/cambiar-password` page
+
+Ambos se actualizan juntos en: `createPersonalAction`, `resetPasswordAction`, `cambiarPasswordAction`.
 
 ---
 

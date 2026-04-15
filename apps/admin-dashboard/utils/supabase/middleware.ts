@@ -62,14 +62,25 @@ export async function updateSession(request: NextRequest) {
     // If getUser() fails (network, missing env vars, etc.), treat as unauthenticated
   }
 
-  const isLoginPage = request.nextUrl.pathname === '/login'
+  const pathname = request.nextUrl.pathname
+  const isLoginPage = pathname === '/login'
+  const isChangePasswordPage = pathname === '/cambiar-password'
 
   if (!user && !isLoginPage) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
   if (user && isLoginPage) {
+    // Si debe cambiar contraseña, redirigir allí en vez de /
+    if (user.user_metadata?.debe_cambiar_password) {
+      return NextResponse.redirect(new URL('/cambiar-password', request.url))
+    }
     return NextResponse.redirect(new URL('/', request.url))
+  }
+
+  // Bloquear acceso a cualquier ruta si debe cambiar contraseña
+  if (user && user.user_metadata?.debe_cambiar_password && !isChangePasswordPage && !isLoginPage) {
+    return NextResponse.redirect(new URL('/cambiar-password', request.url))
   }
 
   return response

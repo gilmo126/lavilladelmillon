@@ -19,6 +19,7 @@ export default function Sidebar({ role, userName, campanaNombre }: { role: strin
     { href: '/sorteos',         label: '📅 Gestión de Sorteos' },
     { href: '/asistencia',      label: '📋 Asistencia Evento' },
     { href: '/invitaciones',    label: '🎪 Invitaciones Evento' },
+    { href: '/invitaciones/reporte', label: '📊 Reporte Invitaciones' },
     { sep: true, label: 'PERSONAL' },
     { href: '/comerciantes',    label: '🏪 Comerciantes' },
     { href: '/distribuidores',  label: '👥 Gestión de Personal' },

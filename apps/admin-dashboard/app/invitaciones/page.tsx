@@ -59,7 +59,6 @@ export default async function InvitacionesPage() {
         tiposEvento={tiposEvento}
         jornadasEvento={jornadasEvento}
         isDist={isDist}
-        isAdmin={profile.rol === 'admin'}
         userId={user.id}
       />
     </div>

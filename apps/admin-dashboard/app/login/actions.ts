@@ -26,13 +26,18 @@ export async function login(formData: FormData) {
 
   revalidatePath('/', 'layout')
 
-  // Redirigir según rol
+  // Redirigir según estado y rol
   if (authData.user) {
     const { data: profile } = await supabaseAdmin
       .from('perfiles')
-      .select('rol')
+      .select('rol, debe_cambiar_password')
       .eq('id', authData.user.id)
       .single();
+
+    // Forzar cambio de contraseña en primer login
+    if (profile?.debe_cambiar_password) {
+      redirect('/cambiar-password')
+    }
 
     if (profile?.rol === 'asistente') {
       redirect('/scanner')

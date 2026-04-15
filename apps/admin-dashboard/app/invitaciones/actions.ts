@@ -18,6 +18,7 @@ export type InvitacionItem = {
   token: string;
   estado: string;
   created_at: string;
+  jornadas_seleccionadas: string[] | null;
   distribuidor: { nombre: string } | null;
 };
 
@@ -48,7 +49,7 @@ export async function crearInvitacionAction(formData: FormData): Promise<CrearIn
 
   const { data: config } = await supabaseAdmin
     .from('configuracion_campana')
-    .select('id, evento_titulo, evento_subtitulo, evento_mensaje, evento_auspiciantes, evento_logo_url')
+    .select('id, evento_titulo, evento_subtitulo, evento_mensaje, evento_auspiciantes, evento_logo_url, ubicacion_evento, ubicacion_maps_url')
     .eq('activa', true)
     .single();
 
@@ -57,6 +58,8 @@ export async function crearInvitacionAction(formData: FormData): Promise<CrearIn
   const eventoMensaje = config?.evento_mensaje || '';
   const eventoAuspiciantes: string[] = config?.evento_auspiciantes || ['KIA', 'YAMAHA', 'ODONTO PROTECT'];
   const eventoLogoUrl = config?.evento_logo_url || null;
+  const ubicacionEvento = config?.ubicacion_evento || null;
+  const ubicacionMapsUrl = config?.ubicacion_maps_url || null;
 
   const { data: inv, error: insertErr } = await supabaseAdmin
     .from('invitaciones')
@@ -118,6 +121,13 @@ export async function crearInvitacionAction(formData: FormData): Promise<CrearIn
     ${mensajeHtml}
   </div>
   ${auspiciantesHtml ? `<div style="text-align:center;margin-bottom:24px;">${auspiciantesHtml}</div>` : ''}
+  ${ubicacionEvento ? `
+  <div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:20px;margin-bottom:16px;">
+    <p style="color:#64748b;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin:0 0 8px;">📍 Ubicación</p>
+    <p style="color:#fff;font-size:14px;font-weight:700;margin:0 0 6px;">${ubicacionEvento}</p>
+    ${ubicacionMapsUrl ? `<a href="${ubicacionMapsUrl}" style="color:#facc15;font-size:12px;font-weight:700;text-decoration:none;">Ver en Google Maps →</a>` : ''}
+  </div>` : ''}
+  <p style="color:#94a3b8;font-size:13px;line-height:1.6;margin:0 0 16px;text-align:center;">Al confirmar podrás elegir a cuál jornada asistirás.</p>
   <a href="${invUrl}" target="_blank" style="display:block;background:#facc15;color:#0a0e1a;text-align:center;padding:16px;border-radius:12px;font-weight:900;font-size:14px;text-transform:uppercase;letter-spacing:1px;text-decoration:none;margin-bottom:24px;">
     Confirmar Asistencia
   </a>
@@ -138,7 +148,7 @@ export async function getInvitacionesAction(estado?: string, distribuidorId?: st
 
   let query = supabaseAdmin
     .from('invitaciones')
-    .select('id, tipo_evento, comerciante_nombre, comerciante_tel, comerciante_whatsapp, comerciante_email, token, estado, created_at, distribuidor:perfiles!distribuidor_id(nombre)')
+    .select('id, tipo_evento, comerciante_nombre, comerciante_tel, comerciante_whatsapp, comerciante_email, token, estado, created_at, jornadas_seleccionadas, distribuidor:perfiles!distribuidor_id(nombre)')
     .order('created_at', { ascending: false });
 
   if (distribuidorId) {
@@ -216,6 +226,7 @@ export type InvitacionDetail = {
   estado: string;
   qr_generado_at: string | null;
   qr_escaneado_at: string | null;
+  jornadas_seleccionadas: string[] | null;
   created_at: string;
 };
 
@@ -226,7 +237,7 @@ export async function getInvitacionDetailAction(id: string): Promise<InvitacionD
 
   const { data } = await supabaseAdmin
     .from('invitaciones')
-    .select('id, tipo_evento, comerciante_nombre, comerciante_direccion, comerciante_tel, comerciante_whatsapp, comerciante_email, token, token_qr, estado, qr_generado_at, qr_escaneado_at, created_at')
+    .select('id, tipo_evento, comerciante_nombre, comerciante_direccion, comerciante_tel, comerciante_whatsapp, comerciante_email, token, token_qr, estado, qr_generado_at, qr_escaneado_at, jornadas_seleccionadas, created_at')
     .eq('id', id)
     .single();
 

@@ -20,11 +20,12 @@ export default async function InvitacionesPage() {
 
   const { data: config } = await supabaseAdmin
     .from('configuracion_campana')
-    .select('tipos_evento')
+    .select('tipos_evento, jornadas_evento')
     .eq('activa', true)
     .single();
 
   const tiposEvento = config?.tipos_evento || ['Lanzamiento', 'Capacitación', 'Feria Comercial', 'Premiación', 'Networking'];
+  const jornadasEvento = Array.isArray(config?.jornadas_evento) ? config!.jornadas_evento : [];
   const initialData = await getInvitacionesAction('todas', isDist ? user.id : undefined);
 
   return (
@@ -49,6 +50,7 @@ export default async function InvitacionesPage() {
       <InvitacionesClient
         initialData={initialData}
         tiposEvento={tiposEvento}
+        jornadasEvento={jornadasEvento}
         isDist={isDist}
         userId={user.id}
       />

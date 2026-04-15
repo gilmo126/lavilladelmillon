@@ -735,9 +735,18 @@ ALTER TABLE configuracion_campana ADD COLUMN sesion_timeout_minutos int DEFAULT 
    - Se monta en `app/layout.tsx` solo cuando hay usuario.
    - Configurable desde `/configuracion`: campo `sesion_timeout_minutos` (default 30, rango 5-240).
 
-2. **Refresh token TTL reducido en Supabase Dashboard** (manual, NO es código):
-   - Authentication → Sessions → reducir de 604800s (7 días) a 28800s (8 horas).
-   - Mitiga robo de tokens: si se filtra uno, expira en 8h.
+2. **Cota dura de sesión server-side** (`lib/sessionConfig.ts` + middleware):
+   - `MAX_SESSION_HOURS = 8` — máximo absoluto sin importar actividad.
+   - Cookie marker `lvm_session_start` se crea en `login()` action **sin maxAge** (session cookie httpOnly) → muere al cerrar el navegador.
+   - El middleware en cada request verifica que exista el marker y que `Date.now() - marker <= MAX_SESSION_MS`. Si falta o venció → `signOut()` + redirect a `/login` + borra cookie.
+   - Resuelve los dos problemas sin plan Pro de Supabase: cerrar navegador mata la sesión (cookie session-only), y aun sin cerrar, la sesión expira absolutamente en 8h.
+
+**Capas defensivas (independientes):**
+| Capa | Dispara en | Fuente |
+|------|-----------|--------|
+| Idle timeout (30 min) | inactividad | cliente |
+| Browser close | cierre navegador | cookie session-only |
+| Absolute max (8h) | edad de la sesión | middleware server-side |
 
 ---
 

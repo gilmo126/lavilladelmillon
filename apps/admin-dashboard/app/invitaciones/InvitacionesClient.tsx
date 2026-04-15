@@ -18,7 +18,49 @@ function estadoBadge(estado: string) {
   }
 }
 
-function InvitacionDrawer({ invId, onClose, onUpdated }: { invId: string; onClose: () => void; onUpdated: () => void }) {
+type JornadaConfig = { id: string; fecha: string; hora: string; label: string };
+
+function JornadasBadges({ ids, jornadas, compact = false }: { ids: string[] | null; jornadas: JornadaConfig[]; compact?: boolean }) {
+  if (!ids || ids.length === 0) {
+    return compact
+      ? <span className="text-[10px] text-slate-600">—</span>
+      : <p className="text-slate-500 text-xs italic">Sin jornadas seleccionadas</p>;
+  }
+  const seleccionadas = jornadas.filter(j => ids.includes(j.id));
+  if (seleccionadas.length === 0) {
+    return compact
+      ? <span className="text-[10px] text-slate-600">({ids.length})</span>
+      : <p className="text-slate-500 text-xs italic">Jornadas no encontradas en configuración</p>;
+  }
+  if (compact) {
+    const first = seleccionadas[0];
+    const rest = seleccionadas.length - 1;
+    return (
+      <div className="flex flex-wrap gap-1">
+        <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 uppercase tracking-wider">
+          {first.label}
+        </span>
+        {rest > 0 && (
+          <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-black bg-slate-800 text-slate-400 border border-white/5">
+            +{rest}
+          </span>
+        )}
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-2">
+      {seleccionadas.map(j => (
+        <div key={j.id} className="bg-emerald-500/5 border border-emerald-500/20 rounded-lg px-3 py-2">
+          <p className="text-white text-xs font-bold">{j.label}</p>
+          <p className="text-emerald-300 text-[10px]">{j.fecha} — {j.hora}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function InvitacionDrawer({ invId, jornadasEvento, onClose, onUpdated }: { invId: string; jornadasEvento: JornadaConfig[]; onClose: () => void; onUpdated: () => void }) {
   const [loading, setLoading] = useState(true);
   const [detail, setDetail] = useState<InvitacionDetail | null>(null);
   const [saving, setSaving] = useState(false);
@@ -167,6 +209,15 @@ function InvitacionDrawer({ invId, onClose, onUpdated }: { invId: string; onClos
             </div>
           </section>
 
+          {/* Jornadas seleccionadas */}
+          <section className="bg-slate-950 border border-white/5 rounded-2xl p-5 space-y-3">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-1 h-4 bg-emerald-500 rounded-full" />
+              <h4 className="text-xs font-black text-white uppercase tracking-wider">Jornadas Seleccionadas</h4>
+            </div>
+            <JornadasBadges ids={detail.jornadas_seleccionadas} jornadas={jornadasEvento} />
+          </section>
+
           {/* Link */}
           <section className="bg-slate-950 border border-white/5 rounded-2xl p-5">
             <div className="flex items-center gap-2 mb-3">
@@ -251,11 +302,13 @@ function InvitacionDrawer({ invId, onClose, onUpdated }: { invId: string; onClos
 export default function InvitacionesClient({
   initialData,
   tiposEvento,
+  jornadasEvento,
   isDist,
   userId,
 }: {
   initialData: InvitacionItem[];
   tiposEvento: string[];
+  jornadasEvento: JornadaConfig[];
   isDist: boolean;
   userId: string;
 }) {
@@ -315,7 +368,7 @@ export default function InvitacionesClient({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
       {selectedId && (
-        <InvitacionDrawer invId={selectedId} onClose={() => setSelectedId(null)} onUpdated={reloadList} />
+        <InvitacionDrawer invId={selectedId} jornadasEvento={jornadasEvento} onClose={() => setSelectedId(null)} onUpdated={reloadList} />
       )}
       {/* Lista */}
       <div className="lg:col-span-2 space-y-4">
@@ -356,6 +409,7 @@ export default function InvitacionesClient({
                     <th className="p-4 font-bold">Comerciante</th>
                     <th className="p-4 font-bold">Evento</th>
                     {!isDist && <th className="p-4 font-bold">Distribuidor</th>}
+                    <th className="p-4 font-bold">Jornada(s)</th>
                     <th className="p-4 font-bold">Fecha</th>
                     <th className="p-4 font-bold">Estado</th>
                     <th className="p-4 font-bold text-right">Acciones</th>
@@ -372,6 +426,9 @@ export default function InvitacionesClient({
                       {!isDist && (
                         <td className="p-4 text-sm text-slate-400 font-bold uppercase">{inv.distribuidor?.nombre || '—'}</td>
                       )}
+                      <td className="p-4">
+                        <JornadasBadges ids={inv.jornadas_seleccionadas} jornadas={jornadasEvento} compact />
+                      </td>
                       <td className="p-4 text-xs text-slate-400">
                         {new Date(inv.created_at).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })}{' '}
                         <span className="text-slate-600">{new Date(inv.created_at).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}</span>

@@ -14,7 +14,7 @@ function renderJornadasHtml(ids: string[], jornadas: JornadaConfig[]) {
   if (seleccionadas.length === 0) return '';
   return `
   <div style="background:#1e293b;border:1px solid #facc15;border-radius:16px;padding:20px;margin-bottom:24px;">
-    <p style="color:#facc15;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin:0 0 12px;">Jornada(s) confirmada(s)</p>
+    <p style="color:#facc15;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin:0 0 12px;">Jornada confirmada</p>
     ${seleccionadas.map((j) => `
       <div style="background:rgba(250,204,21,0.08);border:1px solid rgba(250,204,21,0.3);border-radius:10px;padding:10px 14px;margin-bottom:8px;">
         <p style="color:#fff;font-size:14px;font-weight:700;margin:0 0 2px;">${j.label}</p>
@@ -35,8 +35,8 @@ function renderUbicacionHtml(nombre: string | null, mapsUrl: string | null) {
 }
 
 export async function aceptarInvitacionAction(token: string, jornadas: string[]): Promise<AccionResult> {
-  if (!Array.isArray(jornadas) || jornadas.length === 0) {
-    return { success: false, error: 'Debes seleccionar al menos una jornada.' };
+  if (!Array.isArray(jornadas) || jornadas.length !== 1) {
+    return { success: false, error: 'Debes seleccionar exactamente una jornada.' };
   }
 
   const { data: inv, error: fetchErr } = await supabaseAdmin
@@ -134,8 +134,8 @@ export async function aceptarInvitacionAction(token: string, jornadas: string[])
 }
 
 export async function actualizarJornadasAction(token: string, jornadas: string[]): Promise<AccionResult> {
-  if (!Array.isArray(jornadas) || jornadas.length === 0) {
-    return { success: false, error: 'Debes seleccionar al menos una jornada.' };
+  if (!Array.isArray(jornadas) || jornadas.length !== 1) {
+    return { success: false, error: 'Debes seleccionar exactamente una jornada.' };
   }
 
   const { data: inv, error: fetchErr } = await supabaseAdmin

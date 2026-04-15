@@ -127,7 +127,7 @@ export async function crearInvitacionAction(formData: FormData): Promise<CrearIn
     <p style="color:#fff;font-size:14px;font-weight:700;margin:0 0 6px;">${ubicacionEvento}</p>
     ${ubicacionMapsUrl ? `<a href="${ubicacionMapsUrl}" style="color:#facc15;font-size:12px;font-weight:700;text-decoration:none;">Ver en Google Maps →</a>` : ''}
   </div>` : ''}
-  <p style="color:#94a3b8;font-size:13px;line-height:1.6;margin:0 0 16px;text-align:center;">Al confirmar podrás elegir a cuál(es) jornada(s) asistirás.</p>
+  <p style="color:#94a3b8;font-size:13px;line-height:1.6;margin:0 0 16px;text-align:center;">Al confirmar podrás elegir a cuál jornada asistirás.</p>
   <a href="${invUrl}" target="_blank" style="display:block;background:#facc15;color:#0a0e1a;text-align:center;padding:16px;border-radius:12px;font-weight:900;font-size:14px;text-transform:uppercase;letter-spacing:1px;text-decoration:none;margin-bottom:24px;">
     Confirmar Asistencia
   </a>

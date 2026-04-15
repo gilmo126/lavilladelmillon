@@ -24,27 +24,22 @@ function JornadasBadges({ ids, jornadas, compact = false }: { ids: string[] | nu
   if (!ids || ids.length === 0) {
     return compact
       ? <span className="text-[10px] text-slate-600">—</span>
-      : <p className="text-slate-500 text-xs italic">Sin jornadas seleccionadas</p>;
+      : <p className="text-slate-500 text-xs italic">Sin jornada seleccionada</p>;
   }
   const seleccionadas = jornadas.filter(j => ids.includes(j.id));
   if (seleccionadas.length === 0) {
     return compact
-      ? <span className="text-[10px] text-slate-600">({ids.length})</span>
-      : <p className="text-slate-500 text-xs italic">Jornadas no encontradas en configuración</p>;
+      ? <span className="text-[10px] text-slate-600">—</span>
+      : <p className="text-slate-500 text-xs italic">Jornada no encontrada en configuración</p>;
   }
   if (compact) {
-    const first = seleccionadas[0];
-    const rest = seleccionadas.length - 1;
     return (
       <div className="flex flex-wrap gap-1">
-        <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 uppercase tracking-wider">
-          {first.label}
-        </span>
-        {rest > 0 && (
-          <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-black bg-slate-800 text-slate-400 border border-white/5">
-            +{rest}
+        {seleccionadas.map(j => (
+          <span key={j.id} className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 uppercase tracking-wider">
+            {j.label}
           </span>
-        )}
+        ))}
       </div>
     );
   }
@@ -213,7 +208,7 @@ function InvitacionDrawer({ invId, jornadasEvento, onClose, onUpdated }: { invId
           <section className="bg-slate-950 border border-white/5 rounded-2xl p-5 space-y-3">
             <div className="flex items-center gap-2 mb-2">
               <div className="w-1 h-4 bg-emerald-500 rounded-full" />
-              <h4 className="text-xs font-black text-white uppercase tracking-wider">Jornadas Seleccionadas</h4>
+              <h4 className="text-xs font-black text-white uppercase tracking-wider">Jornada Seleccionada</h4>
             </div>
             <JornadasBadges ids={detail.jornadas_seleccionadas} jornadas={jornadasEvento} />
           </section>
@@ -409,7 +404,7 @@ export default function InvitacionesClient({
                     <th className="p-4 font-bold">Comerciante</th>
                     <th className="p-4 font-bold">Evento</th>
                     {!isDist && <th className="p-4 font-bold">Distribuidor</th>}
-                    <th className="p-4 font-bold">Jornada(s)</th>
+                    <th className="p-4 font-bold">Jornada</th>
                     <th className="p-4 font-bold">Fecha</th>
                     <th className="p-4 font-bold">Estado</th>
                     <th className="p-4 font-bold text-right">Acciones</th>

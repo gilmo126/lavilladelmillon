@@ -54,3 +54,6 @@ tmp-test/
 
 # Claude Code
 .claude/
+
+# TypeScript build cache
+*.tsbuildinfo

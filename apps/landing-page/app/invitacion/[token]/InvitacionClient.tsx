@@ -73,7 +73,7 @@ function JornadasSeleccionadasBadges({
   if (seleccionadas.length === 0) return null;
   return (
     <div className="bg-slate-800/50 border border-marca-gold/20 rounded-2xl p-5 space-y-3">
-      <p className="text-[10px] text-marca-gold uppercase tracking-widest font-black">Jornada(s) confirmada(s)</p>
+      <p className="text-[10px] text-marca-gold uppercase tracking-widest font-black">Jornada confirmada</p>
       <div className="space-y-2">
         {seleccionadas.map((j) => (
           <div key={j.id} className="bg-marca-gold/10 border border-marca-gold/30 rounded-xl px-4 py-3">
@@ -108,15 +108,13 @@ export default function InvitacionClient({
   const qrDataUrl = `${ADMIN_URL}/validar-qr-inv/${tokenQr}`;
   const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrDataUrl)}`;
 
-  function toggleJornada(id: string) {
-    setJornadasMarcadas((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
+  function seleccionarJornada(id: string) {
+    setJornadasMarcadas([id]);
   }
 
   async function handleAceptar() {
-    if (jornadasMarcadas.length === 0) {
-      setErrorMsg('Debes seleccionar al menos una jornada a la que asistirás.');
+    if (jornadasMarcadas.length !== 1) {
+      setErrorMsg('Debes seleccionar una jornada a la que asistirás.');
       setStatus('error');
       return;
     }
@@ -133,8 +131,8 @@ export default function InvitacionClient({
   }
 
   async function handleConfirmarRetrofit() {
-    if (jornadasMarcadas.length === 0) {
-      setErrorMsg('Debes seleccionar al menos una jornada.');
+    if (jornadasMarcadas.length !== 1) {
+      setErrorMsg('Debes seleccionar una jornada.');
       setStatus('error');
       return;
     }
@@ -207,16 +205,16 @@ export default function InvitacionClient({
       <div className="space-y-6">
         <div className="bg-gradient-to-b from-marca-gold/10 to-transparent rounded-3xl p-6 text-center space-y-3 border border-marca-gold/20">
           <div className="text-3xl">📅</div>
-          <h2 className="text-lg font-black text-white">Confirma tus jornadas</h2>
+          <h2 className="text-lg font-black text-white">Confirma tu jornada</h2>
           <p className="text-slate-400 text-sm leading-relaxed">
-            Ya confirmaste tu asistencia, {comercianteNombre}. Ahora selecciona a qué jornada(s) asistirás.
+            Ya confirmaste tu asistencia, {comercianteNombre}. Ahora selecciona a cuál jornada asistirás.
           </p>
         </div>
 
         <LocationCard ubicacion={evento.ubicacion} mapsUrl={evento.ubicacionMapsUrl} />
 
         <div className="space-y-3">
-          <p className="text-[10px] text-marca-gold uppercase tracking-widest font-black">Selecciona jornada(s)</p>
+          <p className="text-[10px] text-marca-gold uppercase tracking-widest font-black">Selecciona la jornada</p>
           {evento.jornadas.length === 0 ? (
             <p className="text-slate-500 text-sm text-center py-4">Jornadas aún no configuradas.</p>
           ) : (
@@ -232,9 +230,10 @@ export default function InvitacionClient({
                   }`}
                 >
                   <input
-                    type="checkbox"
+                    type="radio"
+                    name="jornada"
                     checked={checked}
-                    onChange={() => toggleJornada(j.id)}
+                    onChange={() => seleccionarJornada(j.id)}
                     className="mt-1 w-5 h-5 accent-marca-gold"
                   />
                   <div className="flex-1">
@@ -323,6 +322,7 @@ export default function InvitacionClient({
       {evento.jornadas.length > 0 && (
         <div className="space-y-3">
           <p className="text-[10px] text-marca-gold uppercase tracking-widest font-black">¿A cuál jornada asistirás?</p>
+          <p className="text-[10px] text-slate-500 -mt-1">Elige solo una jornada.</p>
           {evento.jornadas.map((j) => {
             const checked = jornadasMarcadas.includes(j.id);
             return (
@@ -335,9 +335,10 @@ export default function InvitacionClient({
                 }`}
               >
                 <input
-                  type="checkbox"
+                  type="radio"
+                  name="jornada"
                   checked={checked}
-                  onChange={() => toggleJornada(j.id)}
+                  onChange={() => seleccionarJornada(j.id)}
                   className="mt-1 w-5 h-5 accent-marca-gold"
                 />
                 <div className="flex-1">
@@ -347,7 +348,6 @@ export default function InvitacionClient({
               </label>
             );
           })}
-          <p className="text-[10px] text-slate-500">Puedes seleccionar una o varias jornadas.</p>
         </div>
       )}
 

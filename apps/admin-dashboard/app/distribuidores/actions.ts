@@ -206,12 +206,13 @@ export async function resetPasswordAction(targetId: string, newPassword: string)
 
     const adminAuthClient = createAdminClient();
 
-    // 1. Actualizar contraseña en Auth + marcar debe_cambiar_password en metadata
+    // 1. Obtener usuario actual de Auth
     const { data: authUser, error: authGetError } = await adminAuthClient.auth.admin.getUserById(targetId);
     if (authGetError || !authUser?.user) {
-      return { success: false, error: 'No se pudo obtener el usuario de Auth.' };
+      return { success: false, error: `No se pudo obtener el usuario de Auth: ${authGetError?.message || 'usuario no encontrado'}` };
     }
 
+    // 2. Actualizar contraseña en Auth + marcar debe_cambiar_password en metadata
     const { error: authError } = await adminAuthClient.auth.admin.updateUserById(targetId, {
       password: newPassword,
       user_metadata: { ...authUser.user.user_metadata, debe_cambiar_password: true },
@@ -221,7 +222,7 @@ export async function resetPasswordAction(targetId: string, newPassword: string)
       return { success: false, error: `Error al resetear contraseña: ${authError.message}` };
     }
 
-    // 2. Marcar debe_cambiar_password = true en perfiles
+    // 3. Marcar debe_cambiar_password = true en perfiles
     await supabaseAdmin.from('perfiles').update({ debe_cambiar_password: true }).eq('id', targetId);
 
     // 3. Enviar email de notificación

@@ -26,6 +26,9 @@ export default function ConfiguracionManager() {
   const [formEventoMensaje, setFormEventoMensaje] = useState('');
   const [formEventoAuspiciantes, setFormEventoAuspiciantes] = useState<string[]>([]);
   const [uploadingEvento, setUploadingEvento] = useState(false);
+  const [formJornadas, setFormJornadas] = useState<Array<{ id: string; fecha: string; hora: string; label: string }>>([]);
+  const [formUbicacionEvento, setFormUbicacionEvento] = useState('');
+  const [formUbicacionMapsUrl, setFormUbicacionMapsUrl] = useState('');
 
   const loadData = async () => {
     setLoading(true);
@@ -47,6 +50,9 @@ export default function ConfiguracionManager() {
         setFormEventoSubtitulo(data.evento_subtitulo || 'El escenario donde tu esfuerzo encuentra su recompensa.');
         setFormEventoMensaje(data.evento_mensaje || '');
         setFormEventoAuspiciantes(data.evento_auspiciantes || ['KIA', 'YAMAHA', 'ODONTO PROTECT']);
+        setFormJornadas(data.jornadas_evento || []);
+        setFormUbicacionEvento(data.ubicacion_evento || '');
+        setFormUbicacionMapsUrl(data.ubicacion_maps_url || '');
       }
     } catch (e) {
       console.error(e);
@@ -108,6 +114,9 @@ export default function ConfiguracionManager() {
         evento_subtitulo: formEventoSubtitulo,
         evento_mensaje: formEventoMensaje,
         evento_auspiciantes: formEventoAuspiciantes,
+        jornadas_evento: formJornadas,
+        ubicacion_evento: formUbicacionEvento,
+        ubicacion_maps_url: formUbicacionMapsUrl,
       });
       alert('Configuración guardada exitosamente.');
       loadData();
@@ -343,6 +352,97 @@ export default function ConfiguracionManager() {
                        <button type="button" onClick={() => setFormEventoAuspiciantes([...formEventoAuspiciantes, ''])}
                          className="text-admin-gold hover:text-yellow-300 text-xs font-bold uppercase tracking-widest">+ Agregar auspiciante</button>
                      </div>
+                   </div>
+                 </div>
+               </section>
+
+               <section className="space-y-6">
+                 <h3 className="text-xl font-bold text-white border-l-4 border-emerald-500 pl-4">Jornadas y Ubicación del Evento</h3>
+
+                 <div>
+                   <label className="block text-sm text-slate-400 mb-2">Jornadas del evento (el comerciante elige a cuáles asistir)</label>
+                   <div className="space-y-3">
+                     {formJornadas.map((j, idx) => (
+                       <div key={idx} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_1.5fr_auto] gap-2 items-center bg-slate-900/50 border border-admin-border rounded-lg p-3">
+                         <input
+                           placeholder="id (ej: sabado_manana)"
+                           value={j.id}
+                           onChange={e => {
+                             const updated = [...formJornadas];
+                             updated[idx] = { ...updated[idx], id: e.target.value };
+                             setFormJornadas(updated);
+                           }}
+                           className="bg-slate-900 border border-admin-border rounded px-2 py-2 text-white text-xs font-mono outline-none focus:border-emerald-500"
+                         />
+                         <input
+                           placeholder="Fecha"
+                           value={j.fecha}
+                           onChange={e => {
+                             const updated = [...formJornadas];
+                             updated[idx] = { ...updated[idx], fecha: e.target.value };
+                             setFormJornadas(updated);
+                           }}
+                           className="bg-slate-900 border border-admin-border rounded px-2 py-2 text-white text-xs outline-none focus:border-emerald-500"
+                         />
+                         <input
+                           placeholder="Hora"
+                           value={j.hora}
+                           onChange={e => {
+                             const updated = [...formJornadas];
+                             updated[idx] = { ...updated[idx], hora: e.target.value };
+                             setFormJornadas(updated);
+                           }}
+                           className="bg-slate-900 border border-admin-border rounded px-2 py-2 text-white text-xs outline-none focus:border-emerald-500"
+                         />
+                         <input
+                           placeholder="Label visible"
+                           value={j.label}
+                           onChange={e => {
+                             const updated = [...formJornadas];
+                             updated[idx] = { ...updated[idx], label: e.target.value };
+                             setFormJornadas(updated);
+                           }}
+                           className="bg-slate-900 border border-admin-border rounded px-2 py-2 text-white text-xs outline-none focus:border-emerald-500"
+                         />
+                         <button
+                           type="button"
+                           onClick={() => setFormJornadas(formJornadas.filter((_, i) => i !== idx))}
+                           className="text-red-400 hover:text-red-300 text-sm font-bold px-2"
+                         >
+                           ✕
+                         </button>
+                       </div>
+                     ))}
+                     <button
+                       type="button"
+                       onClick={() => setFormJornadas([...formJornadas, { id: '', fecha: '', hora: '', label: '' }])}
+                       className="text-emerald-400 hover:text-emerald-300 text-xs font-bold uppercase tracking-widest"
+                     >
+                       + Agregar jornada
+                     </button>
+                   </div>
+                   <p className="text-[10px] text-slate-600 mt-2">El <code>id</code> debe ser único (slug en minúsculas, sin espacios). El <code>label</code> se muestra al comerciante.</p>
+                 </div>
+
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                   <div>
+                     <label className="block text-sm text-slate-400 mb-1">Nombre de la ubicación</label>
+                     <input
+                       value={formUbicacionEvento}
+                       onChange={e => setFormUbicacionEvento(e.target.value)}
+                       placeholder="Ej: Finca El Samán De Mi Familia V180C"
+                       className="w-full bg-slate-900 border border-admin-border rounded-md px-4 py-3 text-white focus:border-emerald-500 outline-none"
+                     />
+                   </div>
+                   <div>
+                     <label className="block text-sm text-slate-400 mb-1">URL de Google Maps</label>
+                     <input
+                       type="url"
+                       value={formUbicacionMapsUrl}
+                       onChange={e => setFormUbicacionMapsUrl(e.target.value)}
+                       placeholder="https://share.google/..."
+                       className="w-full bg-slate-900 border border-admin-border rounded-md px-4 py-3 text-white focus:border-emerald-500 outline-none font-mono text-xs"
+                     />
                    </div>
                  </div>
                </section>

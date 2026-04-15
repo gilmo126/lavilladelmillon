@@ -299,12 +299,14 @@ export default function InvitacionesClient({
   tiposEvento,
   jornadasEvento,
   isDist,
+  isAdmin,
   userId,
 }: {
   initialData: InvitacionItem[];
   tiposEvento: string[];
   jornadasEvento: JornadaConfig[];
   isDist: boolean;
+  isAdmin: boolean;
   userId: string;
 }) {
   const [tab, setTab] = useState<'todas' | 'aceptada' | 'pendiente'>('todas');
@@ -321,7 +323,7 @@ export default function InvitacionesClient({
   const [reporteLoading, setReporteLoading] = useState(false);
 
   async function reloadReporte() {
-    if (isDist) return;
+    if (!isAdmin) return;
     setReporteLoading(true);
     const res = await getReporteInvitacionesAction();
     setReporte(res);
@@ -329,7 +331,7 @@ export default function InvitacionesClient({
   }
 
   useEffect(() => {
-    if (!isDist) reloadReporte();
+    if (isAdmin) reloadReporte();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -401,7 +403,7 @@ export default function InvitacionesClient({
         <InvitacionDrawer invId={selectedId} jornadasEvento={jornadasEvento} onClose={() => setSelectedId(null)} onUpdated={reloadList} />
       )}
 
-      {!isDist && (
+      {isAdmin && (
         <section className="bg-admin-card rounded-2xl border border-admin-border overflow-hidden">
           <div className="flex items-center justify-between gap-4 p-5 border-b border-admin-border">
             <div className="flex items-center gap-3">

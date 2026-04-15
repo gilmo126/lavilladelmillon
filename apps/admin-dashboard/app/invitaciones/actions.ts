@@ -139,32 +139,43 @@ export async function crearInvitacionAction(formData: FormData): Promise<CrearIn
   return { success: true, token: inv.token, comercianteNombre: nombre, comercianteWhatsapp: whatsapp, comercianteEmail: email, tipoEvento };
 }
 
-// ── LISTAR INVITACIONES ─────────────────────────────────────────────
+// ── LISTAR INVITACIONES (paginado server-side) ──────────────────────
 
-export async function getInvitacionesAction(estado?: string, distribuidorId?: string): Promise<InvitacionItem[]> {
+export type InvitacionesPage = { items: InvitacionItem[]; total: number };
+
+export async function getInvitacionesAction(
+  params: { estado?: string; distribuidorId?: string; page?: number; pageSize?: number } = {}
+): Promise<InvitacionesPage> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return [];
+  if (!user) return { items: [], total: 0 };
+
+  const page = Math.max(1, params.page || 1);
+  const pageSize = Math.max(1, Math.min(100, params.pageSize || 10));
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
 
   let query = supabaseAdmin
     .from('invitaciones')
-    .select('id, tipo_evento, comerciante_nombre, comerciante_tel, comerciante_whatsapp, comerciante_email, token, estado, created_at, jornadas_seleccionadas, distribuidor:perfiles!distribuidor_id(nombre)')
+    .select('id, tipo_evento, comerciante_nombre, comerciante_tel, comerciante_whatsapp, comerciante_email, token, estado, created_at, jornadas_seleccionadas, distribuidor:perfiles!distribuidor_id(nombre)', { count: 'exact' })
     .order('created_at', { ascending: false });
 
-  if (distribuidorId) {
-    query = query.eq('distribuidor_id', distribuidorId);
+  if (params.distribuidorId) {
+    query = query.eq('distribuidor_id', params.distribuidorId);
   }
-  if (estado && estado !== 'todas') {
-    query = query.eq('estado', estado);
+  if (params.estado && params.estado !== 'todas') {
+    query = query.eq('estado', params.estado);
   }
 
-  const { data, error } = await query.limit(100);
-  if (error) return [];
+  const { data, error, count } = await query.range(from, to);
+  if (error) return { items: [], total: 0 };
 
-  return (data || []).map((i: any) => ({
+  const items = (data || []).map((i: any) => ({
     ...i,
     distribuidor: Array.isArray(i.distribuidor) ? i.distribuidor[0] || null : i.distribuidor,
   })) as InvitacionItem[];
+
+  return { items, total: count || 0 };
 }
 
 // ── REENVIAR INVITACIÓN ─────────────────────────────────────────────

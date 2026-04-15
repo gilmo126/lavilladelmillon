@@ -295,14 +295,18 @@ function InvitacionDrawer({ invId, jornadasEvento, onClose, onUpdated }: { invId
 }
 
 export default function InvitacionesClient({
-  initialData,
+  initialItems,
+  initialTotal,
+  pageSize,
   tiposEvento,
   jornadasEvento,
   isDist,
   isAdmin,
   userId,
 }: {
-  initialData: InvitacionItem[];
+  initialItems: InvitacionItem[];
+  initialTotal: number;
+  pageSize: number;
   tiposEvento: string[];
   jornadasEvento: JornadaConfig[];
   isDist: boolean;
@@ -310,7 +314,8 @@ export default function InvitacionesClient({
   userId: string;
 }) {
   const [tab, setTab] = useState<'todas' | 'aceptada' | 'pendiente'>('todas');
-  const [data, setData] = useState<InvitacionItem[]>(initialData);
+  const [data, setData] = useState<InvitacionItem[]>(initialItems);
+  const [total, setTotal] = useState<number>(initialTotal);
   const [loading, setLoading] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
   const [formMsg, setFormMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -318,7 +323,7 @@ export default function InvitacionesClient({
   const [reenviando, setReenviando] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  const ITEMS_PER_PAGE = 10;
+  const ITEMS_PER_PAGE = pageSize;
   const [reporte, setReporte] = useState<ReporteDistribuidorItem[]>([]);
   const [reporteLoading, setReporteLoading] = useState(false);
 
@@ -354,17 +359,37 @@ export default function InvitacionesClient({
     URL.revokeObjectURL(url);
   }
 
+  async function fetchPage(t: 'todas' | 'aceptada' | 'pendiente', p: number) {
+    return getInvitacionesAction({
+      estado: t,
+      distribuidorId: isDist ? userId : undefined,
+      page: p,
+      pageSize: ITEMS_PER_PAGE,
+    });
+  }
+
   async function reloadList() {
-    const res = await getInvitacionesAction(tab, isDist ? userId : undefined);
-    setData(res);
+    const res = await fetchPage(tab, page);
+    setData(res.items);
+    setTotal(res.total);
   }
 
   async function handleTabChange(t: 'todas' | 'aceptada' | 'pendiente') {
     setTab(t);
-    setLoading(true);
     setPage(1);
-    const res = await getInvitacionesAction(t, isDist ? userId : undefined);
-    setData(res);
+    setLoading(true);
+    const res = await fetchPage(t, 1);
+    setData(res.items);
+    setTotal(res.total);
+    setLoading(false);
+  }
+
+  async function handlePageChange(newPage: number) {
+    setPage(newPage);
+    setLoading(true);
+    const res = await fetchPage(tab, newPage);
+    setData(res.items);
+    setTotal(res.total);
     setLoading(false);
   }
 
@@ -376,8 +401,10 @@ export default function InvitacionesClient({
       setFormMsg({ type: 'success', text: res.comercianteEmail ? `✅ Invitación creada y email enviado a ${res.comercianteNombre}` : `✅ Invitación creada para ${res.comercianteNombre}` });
       setFormResult(res);
       (document.getElementById('invForm') as HTMLFormElement)?.reset();
-      const updated = await getInvitacionesAction(tab, isDist ? userId : undefined);
-      setData(updated);
+      setPage(1);
+      const updated = await fetchPage(tab, 1);
+      setData(updated.items);
+      setTotal(updated.total);
       reloadReporte();
     } else {
       setFormMsg({ type: 'error', text: res.error });
@@ -388,14 +415,14 @@ export default function InvitacionesClient({
   async function handleReenviar(id: string) {
     setReenviando(id);
     await reenviarInvitacionAction(id);
-    const updated = await getInvitacionesAction(tab, isDist ? userId : undefined);
-    setData(updated);
+    const updated = await fetchPage(tab, page);
+    setData(updated.items);
+    setTotal(updated.total);
     setReenviando(null);
   }
 
-  const filtered = data;
-  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
-  const paged = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+  const totalPages = Math.max(1, Math.ceil(total / ITEMS_PER_PAGE));
+  const paged = data;
 
   return (
     <div className="space-y-8">
@@ -506,7 +533,7 @@ export default function InvitacionesClient({
             <div className="p-12 text-center">
               <div className="w-8 h-8 border-4 border-admin-gold/20 border-t-admin-gold rounded-full animate-spin mx-auto" />
             </div>
-          ) : filtered.length === 0 ? (
+          ) : total === 0 ? (
             <div className="p-12 text-center text-slate-500 text-sm">Sin invitaciones en esta categoría.</div>
           ) : (
             <div className="overflow-x-auto">
@@ -572,15 +599,15 @@ export default function InvitacionesClient({
           )}
 
           {/* Paginación */}
-          {totalPages > 1 && (
+          {total > 0 && (
             <div className="flex items-center justify-between p-4 border-t border-admin-border">
               <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
-                Página {page} de {totalPages} · {filtered.length} invitaciones
+                Página {page} de {totalPages} · {total} invitaciones
               </span>
               <div className="flex gap-2">
-                <button disabled={page <= 1} onClick={() => setPage(p => p - 1)}
+                <button disabled={page <= 1 || loading} onClick={() => handlePageChange(page - 1)}
                   className="px-3 py-1.5 bg-slate-800 text-white text-xs font-bold rounded-lg disabled:opacity-30 hover:bg-slate-700">← Anterior</button>
-                <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}
+                <button disabled={page >= totalPages || loading} onClick={() => handlePageChange(page + 1)}
                   className="px-3 py-1.5 bg-slate-800 text-white text-xs font-bold rounded-lg disabled:opacity-30 hover:bg-slate-700">Siguiente →</button>
               </div>
             </div>

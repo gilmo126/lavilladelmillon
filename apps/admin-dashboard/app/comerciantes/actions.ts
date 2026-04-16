@@ -88,6 +88,8 @@ export async function actualizarComercianteAction(
   identificacion: string,
   datos: {
     comerciante_nombre?: string;
+    comerciante_nombre_comercial?: string;
+    comerciante_ciudad?: string;
     comerciante_tipo_id?: string;
     comerciante_tel?: string;
     comerciante_whatsapp?: string;
@@ -103,6 +105,8 @@ export async function actualizarComercianteAction(
 
   const payload: Record<string, string> = {};
   if (datos.comerciante_nombre?.trim()) payload.comerciante_nombre = datos.comerciante_nombre.trim();
+  if (datos.comerciante_nombre_comercial !== undefined) payload.comerciante_nombre_comercial = datos.comerciante_nombre_comercial?.trim() || '';
+  if (datos.comerciante_ciudad !== undefined) payload.comerciante_ciudad = datos.comerciante_ciudad?.trim() || '';
   if (datos.comerciante_tipo_id?.trim()) payload.comerciante_tipo_id = datos.comerciante_tipo_id.trim();
   if (datos.comerciante_tel !== undefined) payload.comerciante_tel = datos.comerciante_tel?.trim() || '';
   if (datos.comerciante_whatsapp !== undefined) payload.comerciante_whatsapp = datos.comerciante_whatsapp?.trim() || '';

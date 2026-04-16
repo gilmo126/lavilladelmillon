@@ -171,7 +171,8 @@ export default function ScannerClient({
                         <div className="flex items-start justify-between">
                           <div>
                             <p className="text-white font-bold text-sm">{p.comerciante_nombre}</p>
-                            <p className="text-[10px] text-slate-500 mt-0.5">{p.fecha_venta ? new Date(p.fecha_venta).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' }) : '—'}</p>
+                            {p.comerciante_nombre_comercial && <p className="text-[10px] text-admin-gold font-bold mt-0.5">{p.comerciante_nombre_comercial}</p>}
+                            <p className="text-[10px] text-slate-500 mt-0.5">{[p.comerciante_ciudad, p.fecha_venta ? new Date(p.fecha_venta).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' }) : null].filter(Boolean).join(' · ')}</p>
                           </div>
                           <QrEstado pack={p} />
                         </div>

@@ -24,10 +24,12 @@ export default function AsistenciaClient({ initialData }: { initialData: Asisten
   function handleExportCSV() {
     if (data.length === 0) return;
 
-    const headers = ['Pack', 'Comerciante', 'Teléfono', 'WhatsApp', 'Hora Llegada', 'Distribuidor'];
+    const headers = ['Pack', 'Comerciante', 'Nombre Comercial', 'Ciudad', 'Teléfono', 'WhatsApp', 'Hora Llegada', 'Distribuidor'];
     const rows = data.map((a) => [
       a.numero_pack ? `PACK-${String(a.numero_pack).padStart(3, '0')}` : '',
       a.comerciante_nombre,
+      a.comerciante_nombre_comercial || '',
+      a.comerciante_ciudad || '',
       a.comerciante_tel || '',
       a.comerciante_whatsapp || '',
       new Date(a.qr_usado_at).toLocaleString('es-CO'),
@@ -102,6 +104,8 @@ export default function AsistenciaClient({ initialData }: { initialData: Asisten
                     </td>
                     <td className="p-4">
                       <p className="font-bold text-white text-sm">{a.comerciante_nombre}</p>
+                      {a.comerciante_nombre_comercial && <p className="text-[10px] text-admin-gold font-bold mt-0.5">{a.comerciante_nombre_comercial}</p>}
+                      {a.comerciante_ciudad && <p className="text-[10px] text-slate-500 mt-0.5">{a.comerciante_ciudad}</p>}
                     </td>
                     <td className="p-4 text-sm text-slate-400 font-mono">{a.comerciante_tel || '—'}</td>
                     <td className="p-4 text-sm text-slate-400 font-mono">{a.comerciante_whatsapp || '—'}</td>

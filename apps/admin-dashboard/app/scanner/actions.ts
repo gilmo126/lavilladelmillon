@@ -16,6 +16,8 @@ export type AsistenciaItem = {
   id: string;
   numero_pack: number | null;
   comerciante_nombre: string;
+  comerciante_nombre_comercial: string | null;
+  comerciante_ciudad: string | null;
   comerciante_tel: string | null;
   comerciante_whatsapp: string | null;
   qr_usado_at: string;
@@ -28,7 +30,7 @@ export async function getAsistenciaAction(): Promise<AsistenciaItem[]> {
 
   const { data, error } = await supabaseAdmin
     .from('packs')
-    .select('id, numero_pack, comerciante_nombre, comerciante_tel, comerciante_whatsapp, qr_usado_at, distribuidor:perfiles!distribuidor_id(nombre)')
+    .select('id, numero_pack, comerciante_nombre, comerciante_nombre_comercial, comerciante_ciudad, comerciante_tel, comerciante_whatsapp, qr_usado_at, distribuidor:perfiles!distribuidor_id(nombre)')
     .eq('es_prueba', false)
     .not('qr_usado_at', 'is', null)
     .order('qr_usado_at', { ascending: false })
@@ -109,6 +111,8 @@ export async function validarQrInlineAction(tokenQr: string): Promise<ValidarQrR
 export type PackCedulaItem = {
   id: string;
   comerciante_nombre: string;
+  comerciante_nombre_comercial: string | null;
+  comerciante_ciudad: string | null;
   fecha_venta: string;
   token_qr: string;
   qr_usado_at: string | null;
@@ -124,7 +128,7 @@ export async function buscarPacksPorCedulaAction(cedula: string): Promise<PackCe
 
   const { data, error } = await supabaseAdmin
     .from('packs')
-    .select('id, comerciante_nombre, fecha_venta, token_qr, qr_usado_at, qr_valido_hasta')
+    .select('id, comerciante_nombre, comerciante_nombre_comercial, comerciante_ciudad, fecha_venta, token_qr, qr_usado_at, qr_valido_hasta')
     .eq('comerciante_identificacion', cleaned)
     .eq('estado_pago', 'pagado')
     .eq('es_prueba', false)

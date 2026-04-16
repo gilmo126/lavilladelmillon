@@ -16,6 +16,8 @@ function ComercianteDrawer({
   onUpdated: () => void;
 }) {
   const [nombre, setNombre] = useState(comerciante.comerciante_nombre);
+  const [nombreComercial, setNombreComercial] = useState(comerciante.comerciante_nombre_comercial || '');
+  const [ciudad, setCiudad] = useState(comerciante.comerciante_ciudad || '');
   const [tipoId, setTipoId] = useState(comerciante.comerciante_tipo_id);
   const [tel, setTel] = useState(comerciante.comerciante_tel || '');
   const [wa, setWa] = useState(comerciante.comerciante_whatsapp || '');
@@ -30,6 +32,8 @@ function ComercianteDrawer({
     setSaved(false);
     await actualizarComercianteAction(comerciante.comerciante_identificacion, {
       comerciante_nombre: nombre,
+      comerciante_nombre_comercial: nombreComercial,
+      comerciante_ciudad: ciudad,
       comerciante_tipo_id: tipoId,
       comerciante_tel: tel,
       comerciante_whatsapp: wa,
@@ -95,6 +99,16 @@ function ComercianteDrawer({
             <div>
               <label className="text-[10px] text-slate-500 uppercase font-bold block mb-1">Nombre *</label>
               <input value={nombre} onChange={(e) => setNombre(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-admin-blue" />
+            </div>
+            <div>
+              <label className="text-[10px] text-slate-500 uppercase font-bold block mb-1">Nombre Comercial</label>
+              <input value={nombreComercial} onChange={(e) => setNombreComercial(e.target.value)} placeholder="Nombre del negocio"
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-admin-blue" />
+            </div>
+            <div>
+              <label className="text-[10px] text-slate-500 uppercase font-bold block mb-1">Ciudad</label>
+              <input value={ciudad} onChange={(e) => setCiudad(e.target.value)} placeholder="Ej: Palmira"
                 className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-admin-blue" />
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -183,10 +197,12 @@ export default function ComerciantesClient({ initialData }: { initialData: Comer
     setLoading(false);
   }
 
-  const filtered = data.filter((c) =>
-    c.comerciante_nombre.toLowerCase().includes(search.toLowerCase()) ||
-    c.comerciante_identificacion.includes(search)
-  );
+  const filtered = data.filter((c) => {
+    const s = search.toLowerCase();
+    return c.comerciante_nombre.toLowerCase().includes(s) ||
+      (c.comerciante_nombre_comercial || '').toLowerCase().includes(s) ||
+      c.comerciante_identificacion.includes(search);
+  });
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paged = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
@@ -196,9 +212,11 @@ export default function ComerciantesClient({ initialData }: { initialData: Comer
 
   function handleExportCSV() {
     if (filtered.length === 0) return;
-    const headers = ['Nombre', 'Tipo Doc', 'Identificación', 'Teléfono', 'WhatsApp', 'Email', 'Distribuidor', 'Packs', 'Fecha Registro'];
+    const headers = ['Nombre', 'Nombre Comercial', 'Ciudad', 'Tipo Doc', 'Identificación', 'Teléfono', 'WhatsApp', 'Email', 'Distribuidor', 'Packs', 'Fecha Registro'];
     const rows = filtered.map((c) => [
       c.comerciante_nombre,
+      c.comerciante_nombre_comercial || '',
+      c.comerciante_ciudad || '',
       c.comerciante_tipo_id,
       c.comerciante_identificacion,
       c.comerciante_tel || '',

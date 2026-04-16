@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import {
   getPreRegistrosAction, aprobarPreRegistroAction, rechazarPreRegistroAction,
+  exportarPreRegistrosCsvAction,
   type PreRegistroItem,
 } from './actions';
 
@@ -111,8 +112,8 @@ function PreRegistroDrawer({ reg, jornadasEvento, onClose, onUpdated }: { reg: P
               <div><p className="text-[10px] text-slate-500 uppercase font-bold">Negocio</p><p className="text-admin-gold font-bold">{reg.nombre_negocio}</p></div>
               <div><p className="text-[10px] text-slate-500 uppercase font-bold">Documento</p><p className="text-slate-300">{reg.tipo_doc} {reg.identificacion || '—'}</p></div>
               <div><p className="text-[10px] text-slate-500 uppercase font-bold">WhatsApp</p><p className="text-slate-300 font-mono">{reg.whatsapp}</p></div>
-              <div><p className="text-[10px] text-slate-500 uppercase font-bold">Teléfono</p><p className="text-slate-300 font-mono">{reg.telefono || '—'}</p></div>
               <div><p className="text-[10px] text-slate-500 uppercase font-bold">Email</p><p className="text-slate-300">{reg.email || '—'}</p></div>
+              <div><p className="text-[10px] text-slate-500 uppercase font-bold">Codigo Influencer</p><p className="text-purple-400 font-bold font-mono">{reg.codigo_influencer || '—'}</p></div>
               <div><p className="text-[10px] text-slate-500 uppercase font-bold">Ciudad</p><p className="text-slate-300">{reg.ciudad || '—'}</p></div>
               <div><p className="text-[10px] text-slate-500 uppercase font-bold">Dirección</p><p className="text-slate-300">{reg.direccion || '—'}</p></div>
               <div className="col-span-2"><p className="text-[10px] text-slate-500 uppercase font-bold">¿Cómo se enteró?</p><p className="text-slate-300">{reg.como_se_entero || '—'}</p></div>
@@ -198,9 +199,11 @@ export default function PreRegistrosClient({
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [selectedReg, setSelectedReg] = useState<PreRegistroItem | null>(null);
+  const [busqueda, setBusqueda] = useState('');
+  const [exportando, setExportando] = useState(false);
 
-  async function fetchPage(t: string, p: number) {
-    return getPreRegistrosAction({ estado: t, page: p, pageSize: PAGE_SIZE });
+  async function fetchPage(t: string, p: number, search?: string) {
+    return getPreRegistrosAction({ estado: t, page: p, pageSize: PAGE_SIZE, busqueda: search ?? busqueda });
   }
 
   async function handleTabChange(t: typeof tab) {
@@ -220,6 +223,30 @@ export default function PreRegistrosClient({
     setData(res.items);
     setTotal(res.total);
     setLoading(false);
+  }
+
+  async function handleBusqueda() {
+    setPage(1);
+    setLoading(true);
+    const res = await fetchPage(tab, 1, busqueda);
+    setData(res.items);
+    setTotal(res.total);
+    setLoading(false);
+  }
+
+  async function handleExportCsv() {
+    setExportando(true);
+    const res = await exportarPreRegistrosCsvAction({ estado: tab, busqueda });
+    setExportando(false);
+    if (res.success && res.csv) {
+      const blob = new Blob(['\uFEFF' + res.csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `pre-registros-${tab}-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
   }
 
   async function reload() {
@@ -256,6 +283,34 @@ export default function PreRegistrosClient({
         ))}
       </div>
 
+      {/* Filtros y exportar */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex-1 flex gap-2">
+          <input
+            type="text"
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleBusqueda()}
+            placeholder="Buscar por nombre, cedula o codigo influencer..."
+            className="flex-1 bg-slate-900 border border-admin-border rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-admin-gold transition-all placeholder:text-slate-600"
+          />
+          <button onClick={handleBusqueda} disabled={loading}
+            className="px-4 py-2.5 bg-admin-gold hover:bg-yellow-500 text-slate-900 font-black rounded-xl text-xs uppercase tracking-widest disabled:opacity-40 transition-all">
+            Buscar
+          </button>
+          {busqueda && (
+            <button onClick={() => { setBusqueda(''); setPage(1); fetchPage(tab, 1, '').then(res => { setData(res.items); setTotal(res.total); }); }}
+              className="px-3 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-xl text-xs font-bold transition-all">
+              Limpiar
+            </button>
+          )}
+        </div>
+        <button onClick={handleExportCsv} disabled={exportando || total === 0}
+          className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-black rounded-xl text-xs uppercase tracking-widest transition-all whitespace-nowrap">
+          {exportando ? 'Exportando...' : 'Exportar CSV'}
+        </button>
+      </div>
+
       {/* Table */}
       <div className="bg-admin-card rounded-2xl border border-admin-border overflow-hidden">
         {loading ? (
@@ -266,14 +321,15 @@ export default function PreRegistrosClient({
           <div className="p-12 text-center text-slate-500 text-sm">Sin pre-registros en esta categoría.</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left min-w-[700px]">
+            <table className="w-full text-left min-w-[800px]">
               <thead>
                 <tr className="border-b border-admin-border text-xs uppercase text-slate-500 bg-slate-900/50">
                   <th className="p-4 font-bold">Nombre</th>
                   <th className="p-4 font-bold">Negocio</th>
                   <th className="p-4 font-bold">WhatsApp</th>
+                  <th className="p-4 font-bold">Cod. Influencer</th>
                   <th className="p-4 font-bold">Jornada</th>
-                  <th className="p-4 font-bold">Cómo se enteró</th>
+                  <th className="p-4 font-bold">Como se entero</th>
                   <th className="p-4 font-bold">Fecha</th>
                   <th className="p-4 font-bold">Estado</th>
                 </tr>
@@ -287,6 +343,7 @@ export default function PreRegistrosClient({
                     </td>
                     <td className="p-4 text-sm text-admin-gold font-bold">{r.nombre_negocio}</td>
                     <td className="p-4 text-sm text-slate-300 font-mono">{r.whatsapp}</td>
+                    <td className="p-4 text-sm text-purple-400 font-bold font-mono">{r.codigo_influencer || '—'}</td>
                     <td className="p-4">
                       {r.jornadas_seleccionadas && r.jornadas_seleccionadas.length > 0 ? (
                         <div className="flex flex-wrap gap-1">

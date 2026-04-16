@@ -34,7 +34,6 @@ export default function RegistroEventoClient({ evento }: { evento: EventoData })
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [waError, setWaError] = useState<string | null>(null);
-  const [telError, setTelError] = useState<string | null>(null);
   const [jornadasMarcadas, setJornadasMarcadas] = useState<string[]>([]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -54,15 +53,9 @@ export default function RegistroEventoClient({ evento }: { evento: EventoData })
     }
 
     const wa = (fd.get('whatsapp') as string)?.trim() || '';
-    const tel = (fd.get('telefono') as string)?.trim() || '';
 
     if (wa && !CELULAR_REGEX.test(wa)) {
       setError('WhatsApp debe ser un celular colombiano de 10 dígitos que inicie con 3.');
-      setLoading(false);
-      return;
-    }
-    if (tel && !CELULAR_REGEX.test(tel)) {
-      setError('Teléfono debe ser un celular colombiano de 10 dígitos que inicie con 3.');
       setLoading(false);
       return;
     }
@@ -239,11 +232,9 @@ export default function RegistroEventoClient({ evento }: { evento: EventoData })
               {waError && <p className="text-red-400 text-[10px] mt-1">{waError}</p>}
             </div>
             <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Teléfono <span className="text-slate-600 normal-case">(opcional)</span></label>
-              <input name="telefono" pattern="3[0-9]{9}" maxLength={10} placeholder="3001234567"
-                onChange={(e) => setTelError(e.target.value && !CELULAR_REGEX.test(e.target.value) ? '10 dígitos, inicia con 3' : null)}
-                className={`w-full bg-slate-950 border rounded-xl px-4 py-3 text-white text-sm outline-none transition-all ${telError ? 'border-red-500' : 'border-slate-700/50 focus:border-marca-gold'}`} />
-              {telError && <p className="text-red-400 text-[10px] mt-1">{telError}</p>}
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Codigo Influencer <span className="text-slate-600 normal-case">(opcional)</span></label>
+              <input name="codigo_influencer" maxLength={30} placeholder="Ej: MARIA2026"
+                className="w-full bg-slate-950 border border-slate-700/50 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-marca-gold transition-all uppercase" />
             </div>
           </div>
 

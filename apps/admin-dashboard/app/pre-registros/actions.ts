@@ -12,8 +12,8 @@ export type PreRegistroItem = {
   nombre_negocio: string;
   tipo_doc: string;
   identificacion: string | null;
-  telefono: string | null;
   whatsapp: string;
+  codigo_influencer: string | null;
   email: string | null;
   direccion: string | null;
   ciudad: string | null;
@@ -36,7 +36,7 @@ async function verificarAdmin(): Promise<{ ok: true; userId: string } | { ok: fa
 }
 
 export async function getPreRegistrosAction(
-  params: { estado?: string; page?: number; pageSize?: number } = {}
+  params: { estado?: string; page?: number; pageSize?: number; busqueda?: string } = {}
 ): Promise<PreRegistrosPage> {
   const guard = await verificarAdmin();
   if (!guard.ok) return { items: [], total: 0 };
@@ -53,6 +53,11 @@ export async function getPreRegistrosAction(
 
   if (params.estado && params.estado !== 'todos') {
     query = query.eq('estado', params.estado);
+  }
+
+  if (params.busqueda && params.busqueda.trim()) {
+    const term = params.busqueda.trim();
+    query = query.or(`nombre.ilike.%${term}%,identificacion.ilike.%${term}%,codigo_influencer.ilike.%${term}%`);
   }
 
   const { data, error, count } = await query.range(from, to);
@@ -197,4 +202,49 @@ export async function rechazarPreRegistroAction(id: string): Promise<{ success: 
 
   if (error) return { success: false, error: error.message };
   return { success: true };
+}
+
+export async function exportarPreRegistrosCsvAction(
+  params: { estado?: string; busqueda?: string } = {}
+): Promise<{ success: boolean; csv?: string; error?: string }> {
+  const guard = await verificarAdmin();
+  if (!guard.ok) return { success: false, error: guard.error };
+
+  let query = supabaseAdmin
+    .from('pre_registros')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (params.estado && params.estado !== 'todos') {
+    query = query.eq('estado', params.estado);
+  }
+
+  if (params.busqueda && params.busqueda.trim()) {
+    const term = params.busqueda.trim();
+    query = query.or(`nombre.ilike.%${term}%,identificacion.ilike.%${term}%,codigo_influencer.ilike.%${term}%`);
+  }
+
+  const { data, error } = await query;
+  if (error) return { success: false, error: error.message };
+
+  const rows = (data || []) as PreRegistroItem[];
+  const headers = ['Nombre', 'Negocio', 'Tipo Doc', 'Identificacion', 'WhatsApp', 'Email', 'Ciudad', 'Direccion', 'Como se entero', 'Codigo Influencer', 'Jornadas', 'Estado', 'Fecha'];
+  const csvRows = rows.map(r => [
+    r.nombre,
+    r.nombre_negocio,
+    r.tipo_doc,
+    r.identificacion || '',
+    r.whatsapp,
+    r.email || '',
+    r.ciudad || '',
+    r.direccion || '',
+    r.como_se_entero || '',
+    r.codigo_influencer || '',
+    (r.jornadas_seleccionadas || []).join('; '),
+    r.estado,
+    new Date(r.created_at).toLocaleDateString('es-CO'),
+  ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
+
+  const csv = [headers.join(','), ...csvRows].join('\n');
+  return { success: true, csv };
 }

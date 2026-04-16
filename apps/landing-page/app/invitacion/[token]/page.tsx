@@ -28,11 +28,11 @@ export default async function InvitacionPage({
 
   const { data: inv, error } = await supabaseAdmin
     .from('invitaciones')
-    .select('id, comerciante_nombre, tipo_evento, estado, token_qr, campana_id, jornadas_seleccionadas')
+    .select('id, comerciante_nombre, tipo_evento, estado, token_qr, campana_id, jornadas_seleccionadas, es_prueba')
     .eq('token', token)
     .single();
 
-  if (error || !inv) {
+  if (error || !inv || inv.es_prueba) {
     return <PaginaEstado emoji="🔒" titulo="Invitación no encontrada" mensaje="Este link no existe o ha sido eliminado." />;
   }
 

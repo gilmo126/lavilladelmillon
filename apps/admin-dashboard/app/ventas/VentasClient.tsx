@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { getPackDetail } from '../../lib/actions';
 import { confirmarPagoAction, actualizarDatosPackAction } from '../activar/actions';
+import { marcarPackPruebaAction } from './actions';
 
 const LANDING_URL = process.env.NEXT_PUBLIC_LANDING_URL || 'https://landing-page.guillaumer-orion.workers.dev';
 const ADMIN_URL = process.env.NEXT_PUBLIC_ADMIN_URL || 'https://lavilladelmillon-admin.guillaumer-orion.workers.dev';
@@ -32,7 +33,9 @@ function estadoBoletaBadge(estado: number) {
   }
 }
 
-function PackDetailDrawer({ packId, onClose }: { packId: string; onClose: () => void }) {
+function PackDetailDrawer({ packId, isAdmin, onClose, onChanged }: { packId: string; isAdmin: boolean; onClose: () => void; onChanged: () => void }) {
+  const [markingPrueba, setMarkingPrueba] = useState(false);
+  const [markError, setMarkError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [detail, setDetail] = useState<{ pack: any; boletas: any[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -67,6 +70,25 @@ function PackDetailDrawer({ packId, onClose }: { packId: string; onClose: () => 
   }
 
   useEffect(() => { reloadDetail(); }, [packId]);
+
+  async function handleToggleMarcarPrueba(current: boolean) {
+    const nuevo = !current;
+    const mensaje = nuevo
+      ? '¿Marcar este pack como prueba? Dejará de ser visible en reportes y trazabilidad.'
+      : 'Desmarcar como prueba. El pack volverá a aparecer en reportes.';
+    if (!confirm(mensaje)) return;
+    setMarkingPrueba(true);
+    setMarkError(null);
+    const res = await marcarPackPruebaAction(packId, nuevo);
+    setMarkingPrueba(false);
+    if (res.success) {
+      setFormInitialized(false);
+      reloadDetail();
+      onChanged();
+    } else {
+      setMarkError(res.error || 'Error al actualizar el pack.');
+    }
+  }
 
   async function handleConfirmarPago() {
     setConfirmando(true);
@@ -378,6 +400,36 @@ function PackDetailDrawer({ packId, onClose }: { packId: string; onClose: () => 
               <p className="text-slate-300 font-bold">{p.distribuidor.nombre}</p>
             </section>
           )}
+
+          {/* Gestión Admin — marcar pack de prueba */}
+          {isAdmin && (
+            <section className={`rounded-2xl p-5 border ${p.es_prueba ? 'bg-orange-500/5 border-orange-500/20' : 'bg-slate-950 border-white/5'}`}>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-1 h-4 bg-orange-500 rounded-full" />
+                <h4 className="text-xs font-black text-white uppercase tracking-wider">Gestión Admin</h4>
+                {p.es_prueba && (
+                  <span className="ml-auto inline-block px-2 py-0.5 rounded-full text-[10px] font-black bg-orange-500/20 border border-orange-500/40 text-orange-300 uppercase tracking-widest">⚠ Prueba</span>
+                )}
+              </div>
+              <p className="text-slate-400 text-xs leading-relaxed mb-3">
+                {p.es_prueba
+                  ? 'Este pack está marcado como prueba. No aparece en reportes, trazabilidad ni asistencia, y sus QRs no pueden canjearse.'
+                  : 'Marca este pack como prueba para excluirlo de reportes y trazabilidad. Reversible en cualquier momento.'}
+              </p>
+              {markError && <p className="text-red-400 text-xs font-bold mb-2">{markError}</p>}
+              <button
+                onClick={() => handleToggleMarcarPrueba(!!p.es_prueba)}
+                disabled={markingPrueba}
+                className={`w-full py-2.5 font-black rounded-xl transition-all text-xs uppercase tracking-widest disabled:opacity-40 ${
+                  p.es_prueba
+                    ? 'bg-slate-800 hover:bg-slate-700 text-white border border-white/10'
+                    : 'bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/30'
+                }`}
+              >
+                {markingPrueba ? 'Procesando...' : p.es_prueba ? 'Desmarcar como prueba' : '⚠ Marcar como prueba'}
+              </button>
+            </section>
+          )}
         </div>
 
         {/* Footer */}
@@ -419,6 +471,8 @@ export default function VentasClient({
   query,
   totalPages,
   isDist,
+  isAdmin,
+  incluirPruebas,
 }: {
   initialData: any[];
   total: number;
@@ -426,6 +480,8 @@ export default function VentasClient({
   query: string;
   totalPages: number;
   isDist: boolean;
+  isAdmin: boolean;
+  incluirPruebas: boolean;
 }) {
   const router = useRouter();
   const [search, setSearch] = useState(query);
@@ -433,13 +489,39 @@ export default function VentasClient({
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
-    router.push(`/ventas?query=${search}&page=1`);
+    const p = incluirPruebas ? '&pruebas=1' : '';
+    router.push(`/ventas?query=${search}&page=1${p}`);
+  }
+
+  function togglePruebas() {
+    const next = !incluirPruebas;
+    const p = next ? '&pruebas=1' : '';
+    router.push(`/ventas?query=${query}&page=1${p}`);
   }
 
   return (
     <div className="space-y-6">
       {selectedPackId && (
-        <PackDetailDrawer packId={selectedPackId} onClose={() => setSelectedPackId(null)} />
+        <PackDetailDrawer
+          packId={selectedPackId}
+          isAdmin={isAdmin}
+          onClose={() => setSelectedPackId(null)}
+          onChanged={() => router.refresh()}
+        />
+      )}
+
+      {isAdmin && (
+        <div className="flex items-center justify-end">
+          <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-400 uppercase tracking-widest">
+            <input
+              type="checkbox"
+              checked={incluirPruebas}
+              onChange={togglePruebas}
+              className="w-4 h-4 accent-orange-500"
+            />
+            Incluir packs de prueba
+          </label>
+        </div>
       )}
 
       {/* Search Header */}
@@ -501,6 +583,9 @@ export default function VentasClient({
                   >
                     <td className="p-4">
                       <span className="text-admin-gold font-black text-xs">PACK-{String(p.numero_pack || '').padStart(3, '0')}</span>
+                      {p.es_prueba && (
+                        <span className="ml-2 inline-block px-1.5 py-0.5 rounded text-[9px] font-black bg-orange-500/20 border border-orange-500/40 text-orange-300 uppercase">⚠ Prueba</span>
+                      )}
                     </td>
                     <td className="p-4">
                       <p className="font-bold text-white text-sm">{p.comerciante_nombre}</p>

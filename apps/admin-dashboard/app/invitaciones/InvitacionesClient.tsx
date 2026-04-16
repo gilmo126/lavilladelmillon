@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import {
   crearInvitacionAction, getInvitacionesAction, reenviarInvitacionAction,
-  getInvitacionDetailAction, actualizarInvitacionAction,
+  getInvitacionDetailAction, actualizarInvitacionAction, marcarInvitacionPruebaAction,
   type InvitacionItem, type InvitacionDetail,
 } from './actions';
 
@@ -55,13 +55,34 @@ function JornadasBadges({ ids, jornadas, compact = false }: { ids: string[] | nu
   );
 }
 
-function InvitacionDrawer({ invId, jornadasEvento, onClose, onUpdated }: { invId: string; jornadasEvento: JornadaConfig[]; onClose: () => void; onUpdated: () => void }) {
+function InvitacionDrawer({ invId, jornadasEvento, isAdmin, onClose, onUpdated }: { invId: string; jornadasEvento: JornadaConfig[]; isAdmin: boolean; onClose: () => void; onUpdated: () => void }) {
   const [loading, setLoading] = useState(true);
   const [detail, setDetail] = useState<InvitacionDetail | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [copied, setCopied] = useState(false);
   const [reenviando, setReenviando] = useState(false);
+  const [markingPrueba, setMarkingPrueba] = useState(false);
+  const [markError, setMarkError] = useState<string | null>(null);
+
+  async function handleToggleMarcarPrueba() {
+    if (!detail) return;
+    const nuevo = !detail.es_prueba;
+    const mensaje = nuevo
+      ? '¿Marcar esta invitación como prueba? Dejará de ser visible en reportes y trazabilidad.'
+      : 'Desmarcar como prueba. Volverá a aparecer en reportes.';
+    if (!confirm(mensaje)) return;
+    setMarkingPrueba(true);
+    setMarkError(null);
+    const res = await marcarInvitacionPruebaAction(invId, nuevo);
+    setMarkingPrueba(false);
+    if (res.success) {
+      setDetail({ ...detail, es_prueba: nuevo });
+      onUpdated();
+    } else {
+      setMarkError(res.error || 'Error al actualizar.');
+    }
+  }
 
   // Editable fields
   const [nombre, setNombre] = useState('');
@@ -269,6 +290,36 @@ function InvitacionDrawer({ invId, jornadasEvento, onClose, onUpdated }: { invId
               <p className="text-slate-500 text-sm">El QR se generará cuando el comerciante acepte la invitación.</p>
             </section>
           )}
+
+          {/* Gestión Admin — marcar como prueba */}
+          {isAdmin && (
+            <section className={`rounded-2xl p-5 border ${detail.es_prueba ? 'bg-orange-500/5 border-orange-500/20' : 'bg-slate-950 border-white/5'}`}>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-1 h-4 bg-orange-500 rounded-full" />
+                <h4 className="text-xs font-black text-white uppercase tracking-wider">Gestión Admin</h4>
+                {detail.es_prueba && (
+                  <span className="ml-auto inline-block px-2 py-0.5 rounded-full text-[10px] font-black bg-orange-500/20 border border-orange-500/40 text-orange-300 uppercase tracking-widest">⚠ Prueba</span>
+                )}
+              </div>
+              <p className="text-slate-400 text-xs leading-relaxed mb-3">
+                {detail.es_prueba
+                  ? 'Esta invitación está marcada como prueba. No aparece en la tabla ni en el reporte por distribuidor, y su QR no puede canjearse.'
+                  : 'Marca esta invitación como prueba para excluirla de reportes y trazabilidad. Reversible.'}
+              </p>
+              {markError && <p className="text-red-400 text-xs font-bold mb-2">{markError}</p>}
+              <button
+                onClick={handleToggleMarcarPrueba}
+                disabled={markingPrueba}
+                className={`w-full py-2.5 font-black rounded-xl transition-all text-xs uppercase tracking-widest disabled:opacity-40 ${
+                  detail.es_prueba
+                    ? 'bg-slate-800 hover:bg-slate-700 text-white border border-white/10'
+                    : 'bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/30'
+                }`}
+              >
+                {markingPrueba ? 'Procesando...' : detail.es_prueba ? 'Desmarcar como prueba' : '⚠ Marcar como prueba'}
+              </button>
+            </section>
+          )}
         </div>
 
         {/* Footer */}
@@ -301,6 +352,7 @@ export default function InvitacionesClient({
   tiposEvento,
   jornadasEvento,
   isDist,
+  isAdmin,
   userId,
 }: {
   initialItems: InvitacionItem[];
@@ -309,6 +361,7 @@ export default function InvitacionesClient({
   tiposEvento: string[];
   jornadasEvento: JornadaConfig[];
   isDist: boolean;
+  isAdmin: boolean;
   userId: string;
 }) {
   const [tab, setTab] = useState<'todas' | 'aceptada' | 'pendiente'>('todas');
@@ -322,6 +375,7 @@ export default function InvitacionesClient({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const ITEMS_PER_PAGE = pageSize;
+  const [incluirPruebas, setIncluirPruebas] = useState(false);
 
   async function fetchPage(t: 'todas' | 'aceptada' | 'pendiente', p: number) {
     return getInvitacionesAction({
@@ -329,7 +383,25 @@ export default function InvitacionesClient({
       distribuidorId: isDist ? userId : undefined,
       page: p,
       pageSize: ITEMS_PER_PAGE,
+      incluirPruebas: isAdmin ? incluirPruebas : false,
     });
+  }
+
+  async function togglePruebas() {
+    const next = !incluirPruebas;
+    setIncluirPruebas(next);
+    setPage(1);
+    setLoading(true);
+    const res = await getInvitacionesAction({
+      estado: tab,
+      distribuidorId: isDist ? userId : undefined,
+      page: 1,
+      pageSize: ITEMS_PER_PAGE,
+      incluirPruebas: next,
+    });
+    setData(res.items);
+    setTotal(res.total);
+    setLoading(false);
   }
 
   async function reloadList() {
@@ -390,10 +462,23 @@ export default function InvitacionesClient({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
       {selectedId && (
-        <InvitacionDrawer invId={selectedId} jornadasEvento={jornadasEvento} onClose={() => setSelectedId(null)} onUpdated={reloadList} />
+        <InvitacionDrawer invId={selectedId} jornadasEvento={jornadasEvento} isAdmin={isAdmin} onClose={() => setSelectedId(null)} onUpdated={reloadList} />
       )}
       {/* Lista */}
       <div className="lg:col-span-2 space-y-4">
+        {isAdmin && (
+          <div className="flex items-center justify-end">
+            <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-400 uppercase tracking-widest">
+              <input
+                type="checkbox"
+                checked={incluirPruebas}
+                onChange={togglePruebas}
+                className="w-4 h-4 accent-orange-500"
+              />
+              Incluir invitaciones de prueba
+            </label>
+          </div>
+        )}
         {/* Tabs */}
         <div className="flex border border-admin-border rounded-2xl overflow-hidden">
           {[
@@ -441,7 +526,12 @@ export default function InvitacionesClient({
                   {paged.map((inv) => (
                     <tr key={inv.id} className="hover:bg-slate-800/30 transition-colors cursor-pointer" onClick={() => setSelectedId(inv.id)}>
                       <td className="p-4">
-                        <p className="font-bold text-white text-sm">{inv.comerciante_nombre}</p>
+                        <p className="font-bold text-white text-sm">
+                          {inv.comerciante_nombre}
+                          {inv.es_prueba && (
+                            <span className="ml-2 inline-block px-1.5 py-0.5 rounded text-[9px] font-black bg-orange-500/20 border border-orange-500/40 text-orange-300 uppercase">⚠ Prueba</span>
+                          )}
+                        </p>
                         {inv.comerciante_tel && <p className="text-[10px] text-slate-500 mt-0.5">{inv.comerciante_tel}</p>}
                       </td>
                       <td className="p-4 text-sm text-slate-300">{inv.tipo_evento}</td>

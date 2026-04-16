@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS public.pre_registros (
   direccion text,
   ciudad text,
   como_se_entero text,
+  jornadas_seleccionadas jsonb DEFAULT NULL,
   estado text DEFAULT 'pendiente' CHECK (estado IN ('pendiente', 'aprobado', 'rechazado', 'invitacion_enviada')),
   invitacion_id uuid REFERENCES public.invitaciones(id) DEFAULT NULL,
   created_at timestamptz DEFAULT now()

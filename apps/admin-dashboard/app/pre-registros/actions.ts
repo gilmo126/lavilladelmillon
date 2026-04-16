@@ -18,6 +18,7 @@ export type PreRegistroItem = {
   direccion: string | null;
   ciudad: string | null;
   como_se_entero: string | null;
+  jornadas_seleccionadas: string[] | null;
   estado: string;
   invitacion_id: string | null;
   created_at: string;
@@ -112,6 +113,7 @@ export async function aprobarPreRegistroAction(id: string): Promise<{ success: b
       comerciante_tel: reg.telefono,
       comerciante_whatsapp: reg.whatsapp,
       comerciante_email: reg.email,
+      jornadas_seleccionadas: reg.jornadas_seleccionadas,
     })
     .select('id, token')
     .single();

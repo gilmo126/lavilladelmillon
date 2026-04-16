@@ -9,6 +9,8 @@ import {
 const LANDING_URL = process.env.NEXT_PUBLIC_LANDING_URL || 'https://landing-page.guillaumer-orion.workers.dev';
 const PAGE_SIZE = 10;
 
+type JornadaConfig = { id: string; fecha: string; hora: string; label: string };
+
 function estadoBadge(estado: string) {
   switch (estado) {
     case 'pendiente': return 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400';
@@ -36,7 +38,7 @@ function formatWhatsAppNumber(num: string | null | undefined): string {
   return `57${digits}`;
 }
 
-function PreRegistroDrawer({ reg, onClose, onUpdated }: { reg: PreRegistroItem; onClose: () => void; onUpdated: () => void }) {
+function PreRegistroDrawer({ reg, jornadasEvento, onClose, onUpdated }: { reg: PreRegistroItem; jornadasEvento: JornadaConfig[]; onClose: () => void; onUpdated: () => void }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resultado, setResultado] = useState<{ token: string; whatsapp: string } | null>(null);
@@ -117,6 +119,25 @@ function PreRegistroDrawer({ reg, onClose, onUpdated }: { reg: PreRegistroItem; 
             </div>
           </section>
 
+          {/* Jornadas seleccionadas */}
+          {reg.jornadas_seleccionadas && reg.jornadas_seleccionadas.length > 0 && (
+            <section className="bg-slate-950 border border-emerald-500/20 rounded-2xl p-5 space-y-2">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-1 h-4 bg-emerald-500 rounded-full" />
+                <h4 className="text-xs font-black text-white uppercase tracking-wider">Jornada(s) seleccionada(s)</h4>
+              </div>
+              {reg.jornadas_seleccionadas.map((jId) => {
+                const cfg = jornadasEvento.find(j => j.id === jId);
+                return cfg ? (
+                  <div key={jId} className="bg-emerald-500/5 border border-emerald-500/20 rounded-lg px-3 py-2">
+                    <p className="text-white text-xs font-bold">{cfg.label}</p>
+                    <p className="text-emerald-300 text-[10px]">{cfg.fecha} — {cfg.hora}</p>
+                  </div>
+                ) : null;
+              })}
+            </section>
+          )}
+
           {/* Resultado de aprobación */}
           {resultado && (
             <section className="bg-green-500/10 border border-green-500/20 rounded-2xl p-5 space-y-4">
@@ -165,9 +186,11 @@ function PreRegistroDrawer({ reg, onClose, onUpdated }: { reg: PreRegistroItem; 
 export default function PreRegistrosClient({
   initialItems,
   initialTotal,
+  jornadasEvento,
 }: {
   initialItems: PreRegistroItem[];
   initialTotal: number;
+  jornadasEvento: JornadaConfig[];
 }) {
   const [tab, setTab] = useState<'pendiente' | 'invitacion_enviada' | 'rechazado' | 'todos'>('pendiente');
   const [data, setData] = useState<PreRegistroItem[]>(initialItems);
@@ -211,7 +234,7 @@ export default function PreRegistrosClient({
   return (
     <div className="space-y-4">
       {selectedReg && (
-        <PreRegistroDrawer reg={selectedReg} onClose={() => setSelectedId(null)} onUpdated={reload} />
+        <PreRegistroDrawer reg={selectedReg} jornadasEvento={jornadasEvento} onClose={() => setSelectedId(null)} onUpdated={reload} />
       )}
 
       {/* Tabs */}
@@ -250,6 +273,7 @@ export default function PreRegistrosClient({
                   <th className="p-4 font-bold">Nombre</th>
                   <th className="p-4 font-bold">Negocio</th>
                   <th className="p-4 font-bold">WhatsApp</th>
+                  <th className="p-4 font-bold">Jornada</th>
                   <th className="p-4 font-bold">Cómo se enteró</th>
                   <th className="p-4 font-bold">Fecha</th>
                   <th className="p-4 font-bold">Estado</th>
@@ -264,6 +288,20 @@ export default function PreRegistrosClient({
                     </td>
                     <td className="p-4 text-sm text-admin-gold font-bold">{r.nombre_negocio}</td>
                     <td className="p-4 text-sm text-slate-300 font-mono">{r.whatsapp}</td>
+                    <td className="p-4">
+                      {r.jornadas_seleccionadas && r.jornadas_seleccionadas.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {r.jornadas_seleccionadas.map((jId) => {
+                            const cfg = jornadasEvento.find(j => j.id === jId);
+                            return cfg ? (
+                              <span key={jId} className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 uppercase tracking-wider">
+                                {cfg.label}
+                              </span>
+                            ) : null;
+                          })}
+                        </div>
+                      ) : <span className="text-slate-600 text-xs">—</span>}
+                    </td>
                     <td className="p-4 text-sm text-slate-400">{r.como_se_entero || '—'}</td>
                     <td className="p-4 text-xs text-slate-400">
                       {new Date(r.created_at).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })}

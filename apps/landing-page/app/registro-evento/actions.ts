@@ -15,6 +15,11 @@ export async function registrarPreRegistroAction(formData: FormData): Promise<{ 
   const direccion = (formData.get('direccion') as string)?.trim() || null;
   const ciudad = (formData.get('ciudad') as string)?.trim() || null;
   const comoSeEntero = (formData.get('como_se_entero') as string)?.trim() || null;
+  const jornadasRaw = (formData.get('jornadas_seleccionadas') as string)?.trim() || null;
+  let jornadasSeleccionadas: string[] | null = null;
+  if (jornadasRaw) {
+    try { jornadasSeleccionadas = JSON.parse(jornadasRaw); } catch { /* ignore */ }
+  }
 
   if (!nombre || !nombreNegocio || !whatsapp) {
     return { success: false, error: 'Nombre, nombre del negocio y WhatsApp son obligatorios.' };
@@ -45,6 +50,7 @@ export async function registrarPreRegistroAction(formData: FormData): Promise<{ 
       direccion,
       ciudad,
       como_se_entero: comoSeEntero,
+      jornadas_seleccionadas: jornadasSeleccionadas,
     });
 
   if (error) return { success: false, error: error.message };

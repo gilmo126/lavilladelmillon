@@ -35,6 +35,7 @@ export default function RegistroEventoClient({ evento }: { evento: EventoData })
   const [success, setSuccess] = useState(false);
   const [waError, setWaError] = useState<string | null>(null);
   const [telError, setTelError] = useState<string | null>(null);
+  const [jornadasMarcadas, setJornadasMarcadas] = useState<string[]>([]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -42,6 +43,16 @@ export default function RegistroEventoClient({ evento }: { evento: EventoData })
     setError(null);
 
     const fd = new FormData(e.currentTarget);
+
+    if (evento.jornadas.length > 0 && jornadasMarcadas.length === 0) {
+      setError('Debes seleccionar al menos una jornada.');
+      setLoading(false);
+      return;
+    }
+    if (jornadasMarcadas.length > 0) {
+      fd.set('jornadas_seleccionadas', JSON.stringify(jornadasMarcadas));
+    }
+
     const wa = (fd.get('whatsapp') as string)?.trim() || '';
     const tel = (fd.get('telefono') as string)?.trim() || '';
 
@@ -114,17 +125,38 @@ export default function RegistroEventoClient({ evento }: { evento: EventoData })
         </div>
       )}
 
-      {/* Jornadas */}
+      {/* Jornadas — seleccionar al menos una */}
       {evento.jornadas.length > 0 && (
         <div className="bg-slate-900/60 border border-marca-gold/20 rounded-2xl p-5 space-y-3">
-          <p className="text-[10px] text-marca-gold uppercase tracking-widest font-black">Jornadas del evento</p>
+          <p className="text-[10px] text-marca-gold uppercase tracking-widest font-black">Selecciona tu(s) jornada(s) *</p>
+          <p className="text-slate-400 text-xs">Elige al menos una jornada a la que deseas asistir.</p>
           <div className="space-y-2">
-            {evento.jornadas.map((j: Jornada) => (
-              <div key={j.id} className="bg-marca-gold/5 border border-marca-gold/20 rounded-xl px-4 py-3">
-                <p className="text-white text-sm font-bold">{j.label}</p>
-                <p className="text-marca-gold/80 text-xs">{j.fecha} — {j.hora}</p>
-              </div>
-            ))}
+            {evento.jornadas.map((j: Jornada) => {
+              const checked = jornadasMarcadas.includes(j.id);
+              return (
+                <label
+                  key={j.id}
+                  className={`flex items-center gap-3 cursor-pointer rounded-xl px-4 py-3 border transition-all ${
+                    checked ? 'bg-marca-gold/10 border-marca-gold/40' : 'bg-marca-gold/5 border-marca-gold/20 hover:border-marca-gold/30'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => {
+                      setJornadasMarcadas(prev =>
+                        prev.includes(j.id) ? prev.filter(id => id !== j.id) : [...prev, j.id]
+                      );
+                    }}
+                    className="w-5 h-5 accent-yellow-500 flex-shrink-0"
+                  />
+                  <div>
+                    <p className="text-white text-sm font-bold">{j.label}</p>
+                    <p className="text-marca-gold/80 text-xs">{j.fecha} — {j.hora}</p>
+                  </div>
+                </label>
+              );
+            })}
           </div>
         </div>
       )}

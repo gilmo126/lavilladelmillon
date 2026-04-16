@@ -16,6 +16,13 @@ export default async function PreRegistrosPage() {
   const { data: profile } = await supabaseAdmin.from('perfiles').select('rol').eq('id', user.id).single();
   if (!profile || profile.rol !== 'admin') redirect('/');
 
+  const { data: config } = await supabaseAdmin
+    .from('configuracion_campana')
+    .select('jornadas_evento')
+    .eq('activa', true)
+    .single();
+
+  const jornadasEvento = Array.isArray(config?.jornadas_evento) ? config!.jornadas_evento : [];
   const initial = await getPreRegistrosAction({ estado: 'pendiente', page: 1, pageSize: 10 });
 
   return (
@@ -33,7 +40,7 @@ export default async function PreRegistrosPage() {
         </p>
       </header>
 
-      <PreRegistrosClient initialItems={initial.items} initialTotal={initial.total} />
+      <PreRegistrosClient initialItems={initial.items} initialTotal={initial.total} jornadasEvento={jornadasEvento} />
     </div>
   );
 }

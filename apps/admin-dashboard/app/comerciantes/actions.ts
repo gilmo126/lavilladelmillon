@@ -29,6 +29,7 @@ export async function getComerciantesAction(filtros?: {
   let query = supabaseAdmin
     .from('packs')
     .select('comerciante_identificacion, comerciante_tipo_id, comerciante_nombre, comerciante_tel, comerciante_whatsapp, comerciante_email, fecha_venta, distribuidor:perfiles!distribuidor_id(nombre), estado_pago')
+    .eq('es_prueba', false)
     .not('comerciante_identificacion', 'is', null)
     .order('fecha_venta', { ascending: false });
 

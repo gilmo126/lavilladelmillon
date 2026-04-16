@@ -29,6 +29,7 @@ export async function getAsistenciaAction(): Promise<AsistenciaItem[]> {
   const { data, error } = await supabaseAdmin
     .from('packs')
     .select('id, numero_pack, comerciante_nombre, comerciante_tel, comerciante_whatsapp, qr_usado_at, distribuidor:perfiles!distribuidor_id(nombre)')
+    .eq('es_prueba', false)
     .not('qr_usado_at', 'is', null)
     .order('qr_usado_at', { ascending: false })
     .limit(200);
@@ -51,11 +52,14 @@ export async function validarQrInlineAction(tokenQr: string): Promise<ValidarQrR
   // Buscar primero en packs (QR de beneficio recreativo)
   const { data: pack } = await supabaseAdmin
     .from('packs')
-    .select('id, comerciante_nombre, qr_usado_at, qr_valido_hasta, estado_pago')
+    .select('id, comerciante_nombre, qr_usado_at, qr_valido_hasta, estado_pago, es_prueba')
     .eq('token_qr', tokenQr)
     .maybeSingle();
 
   if (pack) {
+    if (pack.es_prueba) {
+      return { success: false, error: 'Este pack está marcado como prueba y no puede canjearse.' };
+    }
     if (pack.qr_usado_at) {
       return { success: false, error: `QR ya canjeado el ${new Date(pack.qr_usado_at).toLocaleString('es-CO')}.` };
     }
@@ -76,11 +80,14 @@ export async function validarQrInlineAction(tokenQr: string): Promise<ValidarQrR
   // Si no está en packs, buscar en invitaciones
   const { data: inv } = await supabaseAdmin
     .from('invitaciones')
-    .select('id, comerciante_nombre, estado, qr_generado_at, qr_escaneado_at')
+    .select('id, comerciante_nombre, estado, qr_generado_at, qr_escaneado_at, es_prueba')
     .eq('token_qr', tokenQr)
     .maybeSingle();
 
   if (inv) {
+    if (inv.es_prueba) {
+      return { success: false, error: 'Esta invitación está marcada como prueba y no puede canjearse.' };
+    }
     if (inv.estado !== 'aceptada') {
       return { success: false, error: 'Esta invitación no ha sido aceptada aún.' };
     }
@@ -120,6 +127,7 @@ export async function buscarPacksPorCedulaAction(cedula: string): Promise<PackCe
     .select('id, comerciante_nombre, fecha_venta, token_qr, qr_usado_at, qr_valido_hasta')
     .eq('comerciante_identificacion', cleaned)
     .eq('estado_pago', 'pagado')
+    .eq('es_prueba', false)
     .order('fecha_venta', { ascending: false });
 
   if (error) return [];
@@ -143,6 +151,7 @@ export async function getInvitacionesAsistenciaAction(): Promise<InvitacionAsist
   const { data, error } = await supabaseAdmin
     .from('invitaciones')
     .select('id, comerciante_nombre, tipo_evento, qr_generado_at, qr_escaneado_at')
+    .eq('es_prueba', false)
     .eq('estado', 'aceptada')
     .not('qr_generado_at', 'is', null)
     .order('qr_generado_at', { ascending: false })

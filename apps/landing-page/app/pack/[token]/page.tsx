@@ -82,6 +82,22 @@ export default async function PackPage({
     );
   }
 
+  // Validar que el pack no esté marcado como prueba
+  const { data: packFlag } = await supabaseAdmin
+    .from('packs')
+    .select('es_prueba')
+    .eq('token_pagina', token)
+    .single();
+
+  if (packFlag?.es_prueba) {
+    return (
+      <PaginaError
+        titulo="Link no disponible"
+        mensaje="Este link no existe o ha sido eliminado. Consulta con tu distribuidor."
+      />
+    );
+  }
+
   if (pack.is_expired) {
     return (
       <PaginaError
@@ -103,7 +119,8 @@ export default async function PackPage({
       .from('packs')
       .select('id')
       .eq('comerciante_identificacion', packRecord.comerciante_identificacion)
-      .eq('estado_pago', 'pagado');
+      .eq('estado_pago', 'pagado')
+      .eq('es_prueba', false);
 
     if (allPacks && allPacks.length > 1) {
       const allPackIds = allPacks.map((p: any) => p.id);

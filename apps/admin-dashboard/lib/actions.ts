@@ -5,7 +5,7 @@ import { supabaseAdmin } from './supabaseAdmin';
 // ==========================================
 // Módulo: BOLETAS (Estabilización Misión)
 // ==========================================
-export async function getBoletasPaged(page: number, limit: number, query: string, range?: { desde?: number, hasta?: number }, distribuidorId?: string, soloRegistrados?: boolean) {
+export async function getBoletasPaged(page: number, limit: number, query: string, range?: { desde?: number, hasta?: number }, distribuidorId?: string, soloRegistrados?: boolean, incluirPruebas?: boolean) {
   const from = (page - 1) * limit;
   const to = from + limit - 1;
 
@@ -16,6 +16,10 @@ export async function getBoletasPaged(page: number, limit: number, query: string
     premios(nombre_premio),
     distribuidor:perfiles!distribuidor_id(nombre)
   `, { count: 'exact' });
+
+  if (!incluirPruebas) {
+    queryBuilder = queryBuilder.eq('es_prueba', false);
+  }
 
   if (distribuidorId) {
     queryBuilder = queryBuilder.eq('distribuidor_id', distribuidorId);
@@ -101,6 +105,7 @@ export async function exportarParticipantesAction(distribuidorId?: string) {
     .from('boletas')
     .select('id_boleta, nombre_usuario, identificacion_usuario, celular_usuario, email_usuario, premio_seleccionado, fecha_aceptacion_terminos, pack_id')
     .eq('estado', 2)
+    .eq('es_prueba', false)
     .not('nombre_usuario', 'is', null)
     .match(distribuidorId ? { distribuidor_id: distribuidorId } : {})
     .order('fecha_aceptacion_terminos', { ascending: false })
@@ -142,6 +147,7 @@ export async function getPacksDistribuidorAction(distId: string) {
       .from('packs')
       .select('id, comerciante_nombre, tipo_pago, estado_pago, fecha_venta')
       .eq('distribuidor_id', distId)
+      .eq('es_prueba', false)
       .order('fecha_venta', { ascending: false, nullsFirst: false });
 
     if (error) throw error;
@@ -288,7 +294,7 @@ export async function updateConfiguracion(id: string, updates: any) {
   return { success: true };
 }
 
-export async function getPacksPaged(page: number, limit: number, query: string, distribuidorId?: string) {
+export async function getPacksPaged(page: number, limit: number, query: string, distribuidorId?: string, incluirPruebas?: boolean) {
   const from = (page - 1) * limit;
   const to = from + limit - 1;
 
@@ -296,6 +302,10 @@ export async function getPacksPaged(page: number, limit: number, query: string, 
     '*, distribuidor:perfiles!distribuidor_id(nombre)',
     { count: 'exact' }
   );
+
+  if (!incluirPruebas) {
+    queryBuilder = queryBuilder.eq('es_prueba', false);
+  }
 
   if (distribuidorId) {
     queryBuilder = queryBuilder.eq('distribuidor_id', distribuidorId);
@@ -340,7 +350,7 @@ export async function getPackDetail(packId: string) {
       .from('packs')
       .select('*, distribuidor:perfiles!distribuidor_id(nombre)')
       .eq('id', packId)
-      .single(),
+      .single(), // incluye es_prueba al usar *
     supabaseAdmin
       .from('boletas')
       .select('id_boleta, estado')
@@ -403,7 +413,8 @@ export async function cerrarSorteoAction(adminId: string, campanaId: string) {
       .from('boletas')
       .select('*', { count: 'exact', head: true })
       .eq('campana_id', campanaId)
-      .eq('estado', 2); // Registradas
+      .eq('estado', 2)
+      .eq('es_prueba', false); // Registradas reales
 
     if (cError) throw cError;
 
@@ -412,7 +423,8 @@ export async function cerrarSorteoAction(adminId: string, campanaId: string) {
       .from('boletas')
       .update({ estado: 4, updated_at: new Date().toISOString() })
       .eq('campana_id', campanaId)
-      .eq('estado', 2);
+      .eq('estado', 2)
+      .eq('es_prueba', false);
     
     if (uError) throw uError;
 
@@ -423,13 +435,14 @@ export async function cerrarSorteoAction(adminId: string, campanaId: string) {
 }
 
 export async function getDashboardCounts(distribuidorId?: string) {
-  let baseQuery = supabaseAdmin.from('boletas').select('*', { count: 'exact', head: true });
+  const soloReales = { es_prueba: false as const };
+  let baseQuery = supabaseAdmin.from('boletas').select('*', { count: 'exact', head: true }).match(soloReales);
   if (distribuidorId) baseQuery = baseQuery.eq('distribuidor_id', distribuidorId);
 
   const [t, a, r] = await Promise.all([
     baseQuery,
-    supabaseAdmin.from('boletas').select('*', { count: 'exact', head: true }).eq('estado', 1).match(distribuidorId ? { distribuidor_id: distribuidorId } : {}),
-    supabaseAdmin.from('boletas').select('*', { count: 'exact', head: true }).eq('estado', 2).match(distribuidorId ? { distribuidor_id: distribuidorId } : {}),
+    supabaseAdmin.from('boletas').select('*', { count: 'exact', head: true }).eq('estado', 1).match({ ...soloReales, ...(distribuidorId ? { distribuidor_id: distribuidorId } : {}) }),
+    supabaseAdmin.from('boletas').select('*', { count: 'exact', head: true }).eq('estado', 2).match({ ...soloReales, ...(distribuidorId ? { distribuidor_id: distribuidorId } : {}) }),
   ]);
 
   return {

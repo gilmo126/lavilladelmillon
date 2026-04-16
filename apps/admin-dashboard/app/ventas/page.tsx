@@ -7,7 +7,7 @@ import { redirect } from 'next/navigation';
 
 export const metadata = { title: 'Packs Vendidos | AdminPanel' };
 
-export default async function VentasReportPage({ searchParams }: { searchParams: Promise<{ page?: string; query?: string }> }) {
+export default async function VentasReportPage({ searchParams }: { searchParams: Promise<{ page?: string; query?: string; pruebas?: string }> }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
@@ -18,12 +18,14 @@ export default async function VentasReportPage({ searchParams }: { searchParams:
   }
 
   const isDist = profile.rol === 'distribuidor';
+  const isAdmin = profile.rol === 'admin';
   const sParams = await searchParams;
   const page = parseInt(sParams.page || '1');
   const query = sParams.query || '';
   const limit = 25;
+  const incluirPruebas = isAdmin && sParams.pruebas === '1';
 
-  const { data, total, totalPages } = await getPacksPaged(page, limit, query, isDist ? user.id : undefined);
+  const { data, total, totalPages } = await getPacksPaged(page, limit, query, isDist ? user.id : undefined, incluirPruebas);
 
   return (
     <div className="p-8 pb-20 h-full overflow-y-auto">
@@ -46,7 +48,7 @@ export default async function VentasReportPage({ searchParams }: { searchParams:
         </p>
       </header>
 
-      <VentasClient initialData={data || []} total={total} currentPage={page} query={query} totalPages={totalPages} isDist={isDist} />
+      <VentasClient initialData={data || []} total={total} currentPage={page} query={query} totalPages={totalPages} isDist={isDist} isAdmin={isAdmin} incluirPruebas={incluirPruebas} />
     </div>
   );
 }

@@ -224,6 +224,17 @@ Acceso limitado solo a `/scanner` y `/validar-qr/[token_qr]`. Login redirige a `
 
 ---
 
+## SOFT-DELETE DE PACKS E INVITACIONES DE PRUEBA
+
+Flag `es_prueba boolean default false` en `packs`, `invitaciones` y `boletas`. Sólo el admin puede marcar/desmarcar desde los drawers de `/ventas` y `/invitaciones`.
+
+- **Trigger `sync_boletas_es_prueba`:** al marcar un pack, sus boletas heredan el flag. Evita joins en queries de conteo.
+- **Filtros aplicados:** listados de packs/invitaciones, reporte por distribuidor, comerciantes, asistencia, scanner (QRs de prueba no canjeables), dashboard root, cerrar sorteo. Default excluye prueba.
+- **Bypass admin:** checkbox "Incluir pruebas" en `/ventas` (query string `?pruebas=1`) y `/invitaciones` (estado cliente). Distribuidor nunca ve la opción.
+- **Landing pública:** `/pack/[token]` y `/invitacion/[token]` retornan "no encontrado" si el registro es prueba. El RPC `get_pack_publica` no se tocó; el check se hace en la page después del RPC vía `supabaseAdmin.from('packs').select('es_prueba')`.
+- **RPCs pendientes:** `buscar_trazabilidad` aún no filtra por `es_prueba`. Si se marcan packs viejos, sus boletas pueden aparecer en trazabilidad hasta que la RPC se recree con el filtro. Incluido como paso manual en `supabase/migrations/add_es_prueba_soft_delete.sql`.
+- **Actions admin-only:** `marcarPackPruebaAction` (`app/ventas/actions.ts`) y `marcarInvitacionPruebaAction` (`app/invitaciones/actions.ts`) con guard estricto `rol === 'admin'`.
+
 ## PENDIENTES ACTIVOS
 
 Mejoras de seguridad futuras (ver contexto en `CHANGELOG.md`):

@@ -19,6 +19,7 @@ export type InvitacionItem = {
   estado: string;
   created_at: string;
   jornadas_seleccionadas: string[] | null;
+  es_prueba?: boolean;
   distribuidor: { nombre: string } | null;
 };
 
@@ -144,11 +145,18 @@ export async function crearInvitacionAction(formData: FormData): Promise<CrearIn
 export type InvitacionesPage = { items: InvitacionItem[]; total: number };
 
 export async function getInvitacionesAction(
-  params: { estado?: string; distribuidorId?: string; page?: number; pageSize?: number } = {}
+  params: { estado?: string; distribuidorId?: string; page?: number; pageSize?: number; incluirPruebas?: boolean } = {}
 ): Promise<InvitacionesPage> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { items: [], total: 0 };
+
+  // Solo admin puede pedir incluir pruebas
+  let incluirPruebas = false;
+  if (params.incluirPruebas) {
+    const { data: profile } = await supabaseAdmin.from('perfiles').select('rol').eq('id', user.id).single();
+    if (profile?.rol === 'admin') incluirPruebas = true;
+  }
 
   const page = Math.max(1, params.page || 1);
   const pageSize = Math.max(1, Math.min(100, params.pageSize || 10));
@@ -157,8 +165,12 @@ export async function getInvitacionesAction(
 
   let query = supabaseAdmin
     .from('invitaciones')
-    .select('id, tipo_evento, comerciante_nombre, comerciante_tel, comerciante_whatsapp, comerciante_email, token, estado, created_at, jornadas_seleccionadas, distribuidor:perfiles!distribuidor_id(nombre)', { count: 'exact' })
+    .select('id, tipo_evento, comerciante_nombre, comerciante_tel, comerciante_whatsapp, comerciante_email, token, estado, created_at, jornadas_seleccionadas, es_prueba, distribuidor:perfiles!distribuidor_id(nombre)', { count: 'exact' })
     .order('created_at', { ascending: false });
+
+  if (!incluirPruebas) {
+    query = query.eq('es_prueba', false);
+  }
 
   if (params.distribuidorId) {
     query = query.eq('distribuidor_id', params.distribuidorId);
@@ -238,6 +250,7 @@ export type InvitacionDetail = {
   qr_generado_at: string | null;
   qr_escaneado_at: string | null;
   jornadas_seleccionadas: string[] | null;
+  es_prueba: boolean;
   created_at: string;
 };
 
@@ -248,11 +261,32 @@ export async function getInvitacionDetailAction(id: string): Promise<InvitacionD
 
   const { data } = await supabaseAdmin
     .from('invitaciones')
-    .select('id, tipo_evento, comerciante_nombre, comerciante_direccion, comerciante_tel, comerciante_whatsapp, comerciante_email, token, token_qr, estado, qr_generado_at, qr_escaneado_at, jornadas_seleccionadas, created_at')
+    .select('id, tipo_evento, comerciante_nombre, comerciante_direccion, comerciante_tel, comerciante_whatsapp, comerciante_email, token, token_qr, estado, qr_generado_at, qr_escaneado_at, jornadas_seleccionadas, es_prueba, created_at')
     .eq('id', id)
     .single();
 
   return data as InvitacionDetail | null;
+}
+
+// ── MARCAR INVITACIÓN COMO PRUEBA (solo admin) ──────────────────────
+
+export async function marcarInvitacionPruebaAction(invitacionId: string, esPrueba: boolean): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { success: false, error: 'Sesión no válida.' };
+
+  const { data: profile } = await supabaseAdmin.from('perfiles').select('rol').eq('id', user.id).single();
+  if (!profile || profile.rol !== 'admin') {
+    return { success: false, error: 'Solo el administrador puede realizar esta acción.' };
+  }
+
+  const { error } = await supabaseAdmin
+    .from('invitaciones')
+    .update({ es_prueba: esPrueba, updated_at: new Date().toISOString() })
+    .eq('id', invitacionId);
+
+  if (error) return { success: false, error: error.message };
+  return { success: true };
 }
 
 // ── REPORTE POR DISTRIBUIDOR (solo admin) ───────────────────────────
@@ -278,7 +312,8 @@ export async function getReporteInvitacionesAction(): Promise<ReporteDistribuido
 
   const { data, error } = await supabaseAdmin
     .from('invitaciones')
-    .select('distribuidor_id, estado, jornadas_seleccionadas, distribuidor:perfiles!distribuidor_id(nombre)');
+    .select('distribuidor_id, estado, jornadas_seleccionadas, distribuidor:perfiles!distribuidor_id(nombre)')
+    .eq('es_prueba', false);
 
   if (error || !data) return [];
 

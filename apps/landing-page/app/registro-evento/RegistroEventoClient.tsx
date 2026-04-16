@@ -128,26 +128,23 @@ export default function RegistroEventoClient({ evento }: { evento: EventoData })
       {/* Jornadas — seleccionar al menos una */}
       {evento.jornadas.length > 0 && (
         <div className="bg-slate-900/60 border border-marca-gold/20 rounded-2xl p-5 space-y-3">
-          <p className="text-[10px] text-marca-gold uppercase tracking-widest font-black">Selecciona tu(s) jornada(s) *</p>
-          <p className="text-slate-400 text-xs">Elige al menos una jornada a la que deseas asistir.</p>
+          <p className="text-[10px] text-marca-gold uppercase tracking-widest font-black">Selecciona tu jornada *</p>
+          <p className="text-slate-400 text-xs">Elige la jornada a la que deseas asistir.</p>
           <div className="space-y-2">
             {evento.jornadas.map((j: Jornada) => {
-              const checked = jornadasMarcadas.includes(j.id);
+              const selected = jornadasMarcadas[0] === j.id;
               return (
                 <label
                   key={j.id}
                   className={`flex items-center gap-3 cursor-pointer rounded-xl px-4 py-3 border transition-all ${
-                    checked ? 'bg-marca-gold/10 border-marca-gold/40' : 'bg-marca-gold/5 border-marca-gold/20 hover:border-marca-gold/30'
+                    selected ? 'bg-marca-gold/10 border-marca-gold/40' : 'bg-marca-gold/5 border-marca-gold/20 hover:border-marca-gold/30'
                   }`}
                 >
                   <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() => {
-                      setJornadasMarcadas(prev =>
-                        prev.includes(j.id) ? prev.filter(id => id !== j.id) : [...prev, j.id]
-                      );
-                    }}
+                    type="radio"
+                    name="jornada"
+                    checked={selected}
+                    onChange={() => setJornadasMarcadas([j.id])}
                     className="w-5 h-5 accent-yellow-500 flex-shrink-0"
                   />
                   <div>

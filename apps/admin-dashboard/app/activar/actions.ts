@@ -36,8 +36,8 @@ export async function venderPackAction(formData: FormData): Promise<VenderPackRe
     .eq('id', user.id)
     .single();
 
-  if (!profile || profile.rol !== 'distribuidor') {
-    return { success: false, error: 'Solo distribuidores pueden vender packs.' };
+  if (!profile || !['admin', 'distribuidor'].includes(profile.rol)) {
+    return { success: false, error: 'Solo administradores y distribuidores pueden vender packs.' };
   }
 
   const comercianteNombre   = (formData.get('comerciante_nombre') as string)?.trim();

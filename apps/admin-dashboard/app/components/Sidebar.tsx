@@ -15,6 +15,7 @@ export default function Sidebar({ role, userName, campanaNombre }: { role: strin
     { href: '/trazabilidad',    label: '🔎 Buscador Trazabilidad' },
     { href: '/ventas',          label: '📈 Reporte de Ventas' },
     { href: '/boletas',         label: '🎟️ Explorador Boletas' },
+    { href: '/activar',          label: '🎟️ Vender Pack' },
     { sep: true, label: 'LOGÍSTICA' },
     { href: '/sorteos',         label: '📅 Gestión de Sorteos' },
     { href: '/asistencia',      label: '📋 Asistencia Evento' },

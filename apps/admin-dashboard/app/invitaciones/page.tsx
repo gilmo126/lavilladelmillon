@@ -26,7 +26,12 @@ export default async function InvitacionesPage() {
 
   const tiposEvento = config?.tipos_evento || ['Lanzamiento', 'Capacitación', 'Feria Comercial', 'Premiación', 'Networking'];
   const jornadasEvento = Array.isArray(config?.jornadas_evento) ? config!.jornadas_evento : [];
-  const initialData = await getInvitacionesAction('todas', isDist ? user.id : undefined);
+  const initial = await getInvitacionesAction({
+    estado: 'todas',
+    distribuidorId: isDist ? user.id : undefined,
+    page: 1,
+    pageSize: 10,
+  });
 
   return (
     <div className="p-8 pb-20 h-full overflow-y-auto">
@@ -48,7 +53,9 @@ export default async function InvitacionesPage() {
       </header>
 
       <InvitacionesClient
-        initialData={initialData}
+        initialItems={initial.items}
+        initialTotal={initial.total}
+        pageSize={10}
         tiposEvento={tiposEvento}
         jornadasEvento={jornadasEvento}
         isDist={isDist}

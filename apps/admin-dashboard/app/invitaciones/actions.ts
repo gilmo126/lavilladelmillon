@@ -495,6 +495,42 @@ export async function getAlertasSospechosasAction(): Promise<AlertaItem[]> {
   return alertas;
 }
 
+// ── INVITACIONES POR DISTRIBUIDOR (solo admin) ──────────────────────
+
+export type InvitacionDistribuidorItem = {
+  id: string;
+  comerciante_nombre: string;
+  comerciante_nombre_comercial: string | null;
+  comerciante_whatsapp: string | null;
+  comerciante_email: string | null;
+  comerciante_ciudad: string | null;
+  estado: string;
+  jornadas_seleccionadas: string[] | null;
+  origen: string | null;
+  created_at: string;
+};
+
+export async function getInvitacionesPorDistribuidorAction(
+  distribuidorId: string
+): Promise<InvitacionDistribuidorItem[]> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data: profile } = await supabaseAdmin.from('perfiles').select('rol').eq('id', user.id).single();
+  if (!profile || profile.rol !== 'admin') return [];
+
+  const { data, error } = await supabaseAdmin
+    .from('invitaciones')
+    .select('id, comerciante_nombre, comerciante_nombre_comercial, comerciante_whatsapp, comerciante_email, comerciante_ciudad, estado, jornadas_seleccionadas, origen, created_at')
+    .eq('distribuidor_id', distribuidorId)
+    .eq('es_prueba', false)
+    .order('created_at', { ascending: false });
+
+  if (error || !data) return [];
+  return data as InvitacionDistribuidorItem[];
+}
+
 // ── ACTUALIZAR DATOS DEL COMERCIANTE ────────────────────────────────
 
 export async function actualizarInvitacionAction(

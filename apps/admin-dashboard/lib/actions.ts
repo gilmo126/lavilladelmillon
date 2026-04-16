@@ -451,3 +451,32 @@ export async function getDashboardCounts(distribuidorId?: string) {
     registradas: r.count || 0
   };
 }
+
+export async function getDashboardExtendedCounts(distribuidorId?: string) {
+  const distFilter = distribuidorId ? { distribuidor_id: distribuidorId } : {};
+
+  const [
+    packs, packsPendientes,
+    invitaciones, invAceptadas, asistencias,
+    preRegistros,
+    personal,
+  ] = await Promise.all([
+    supabaseAdmin.from('packs').select('*', { count: 'exact', head: true }).eq('es_prueba', false).match(distFilter),
+    supabaseAdmin.from('packs').select('*', { count: 'exact', head: true }).eq('es_prueba', false).eq('estado_pago', 'pendiente').match(distFilter),
+    supabaseAdmin.from('invitaciones').select('*', { count: 'exact', head: true }).eq('es_prueba', false).match(distFilter),
+    supabaseAdmin.from('invitaciones').select('*', { count: 'exact', head: true }).eq('es_prueba', false).eq('estado', 'aceptada').match(distFilter),
+    supabaseAdmin.from('invitaciones').select('*', { count: 'exact', head: true }).eq('es_prueba', false).not('qr_escaneado_at', 'is', null).match(distFilter),
+    supabaseAdmin.from('pre_registros').select('*', { count: 'exact', head: true }).eq('estado', 'pendiente'),
+    supabaseAdmin.from('perfiles').select('*', { count: 'exact', head: true }).in('rol', ['distribuidor', 'asistente']),
+  ]);
+
+  return {
+    totalPacks: packs.count || 0,
+    packsPendientes: packsPendientes.count || 0,
+    totalInvitaciones: invitaciones.count || 0,
+    invAceptadas: invAceptadas.count || 0,
+    asistencias: asistencias.count || 0,
+    preRegistrosPendientes: preRegistros.count || 0,
+    personalActivo: personal.count || 0,
+  };
+}

@@ -2,47 +2,24 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../../lib/supabaseClient';
-import { getBoletasPaged, getDashboardCounts } from '../../lib/actions';
+import { getDashboardCounts, getDashboardExtendedCounts } from '../../lib/actions';
 import Link from 'next/link';
-
-function estadoToString(estado: number) {
-  switch (estado) {
-    case 0: return 'GENERADO';
-    case 1: return 'ACTIVADO';
-    case 2: return 'REGISTRADO';
-    case 3: return 'ANULADO';
-    case 4: return 'SORTEADO';
-    default: return 'DESCONOCIDO';
-  }
-}
-
-function getTimeAgo(dateString: string) {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / 60000);
-  
-  if (diffInMinutes < 1) return 'hace segundos';
-  if (diffInMinutes < 60) return `hace ${diffInMinutes} min`;
-  const diffInHours = Math.floor(diffInMinutes / 60);
-  if (diffInHours < 24) return `hace ${diffInHours} h`;
-  return `hace ${Math.floor(diffInHours / 24)} días`;
-}
-
-interface BoletaRegistro {
-  id_boleta: number;
-  token_integridad: string;
-  zona_comercio: string;
-  estado: number;
-  nombre_usuario: string;
-  updated_at: string;
-  zonas?: { nombre: string }; // Nueva relación para mostrar zona
-}
 
 interface ZonaRanking {
   nombre: string;
   activadas: number;
   registradas: number;
   conversion: string;
+}
+
+interface ExtendedCounts {
+  totalPacks: number;
+  packsPendientes: number;
+  totalInvitaciones: number;
+  invAceptadas: number;
+  asistencias: number;
+  preRegistrosPendientes: number;
+  personalActivo: number;
 }
 
 interface RealtimeDashboardProps {
@@ -52,73 +29,89 @@ interface RealtimeDashboardProps {
     activas: number;
     registradas: number;
   };
-  initialRecientes: BoletaRegistro[];
+  initialExtended: ExtendedCounts;
   initialRanking: ZonaRanking[];
   userProfile: any;
 }
 
-export default function RealtimeDashboard({ initialConfig, initialCounts, initialRecientes, initialRanking, userProfile }: RealtimeDashboardProps) {
+export default function RealtimeDashboard({ initialConfig, initialCounts, initialExtended, initialRanking, userProfile }: RealtimeDashboardProps) {
   const [total, setTotal] = useState(initialCounts.total);
   const [activas, setActivas] = useState(initialCounts.activas);
   const [registradas, setRegistradas] = useState(initialCounts.registradas);
-  
-  // Paginación para la tabla de registros
-  const [recientes, setRecientes] = useState<BoletaRegistro[]>(initialRecientes);
-  const [page, setPage] = useState(1);
-  const limit = 10;
-  const [totalPages, setTotalPages] = useState(Math.ceil(initialCounts.total / limit));
-  const [loading, setLoading] = useState(false);
-
+  const [extended, setExtended] = useState<ExtendedCounts>(initialExtended);
   const [ranking, setRanking] = useState<ZonaRanking[]>(initialRanking);
 
   const isDist = userProfile?.rol === 'distribuidor';
+  const isAdmin = userProfile?.rol === 'admin';
   const myId = userProfile?.id;
 
-  const fetchPagedData = useCallback(async (p: number) => {
-      setLoading(true);
-      try {
-          const [res, counts] = await Promise.all([
-            getBoletasPaged(p, limit, "", {}, isDist ? myId : undefined),
-            getDashboardCounts(isDist ? myId : undefined)
-          ]);
-
-          setRecientes(res.data);
-          setTotalPages(res.totalPages);
-
-          // Actualizar contadores globales
-          setTotal(counts.total);
-          setActivas(counts.activas);
-          setRegistradas(counts.registradas);
-      } catch (e) {
-          console.error(e);
-      } finally {
-          setLoading(false);
-      }
+  const refreshCounts = useCallback(async () => {
+    try {
+      const [counts, ext] = await Promise.all([
+        getDashboardCounts(isDist ? myId : undefined),
+        getDashboardExtendedCounts(isDist ? myId : undefined),
+      ]);
+      setTotal(counts.total);
+      setActivas(counts.activas);
+      setRegistradas(counts.registradas);
+      setExtended(ext);
+    } catch (e) {
+      console.error(e);
+    }
   }, [isDist, myId]);
 
-  // Sincronización Real-time (solo para resetear a la pag 1 o actualizar contadores)
   useEffect(() => {
     const channel = supabase.channel('dashboard-sync')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'boletas' }, () => {
-          // Refrescar página 1 si hay cambios para ver lo más nuevo
-          if (page === 1) fetchPagedData(1);
-      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'boletas' }, () => refreshCounts())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'packs' }, () => refreshCounts())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'invitaciones' }, () => refreshCounts())
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [page, fetchPagedData]);
+  }, [refreshCounts]);
 
   const bodega = total - (activas + registradas);
   const pctRegistradas = total > 0 ? parseFloat(((registradas / total) * 100).toFixed(1)) : 0;
   const pctActivas = total > 0 ? parseFloat(((activas / total) * 100).toFixed(1)) : 0;
   const pctBodega = total > 0 ? parseFloat(((bodega / total) * 100).toFixed(1)) : 0;
 
-  const kpis = [
-    { label: 'Campaña Activa', value: initialConfig, color: 'text-admin-gold' },
-    { label: 'Total Inventario', value: total.toLocaleString(), color: 'text-white' },
-    { label: 'En Punto (Activas)', value: activas.toLocaleString(), color: 'text-admin-blue' },
-    { label: 'Convertidas (Reg)', value: registradas.toLocaleString(), color: 'text-admin-green' },
+  type KpiCard = { label: string; value: string | number; color: string; href: string; emoji: string };
+
+  const row1: KpiCard[] = [
+    { label: 'Campana Activa', value: initialConfig, color: 'text-admin-gold', href: isAdmin ? '/configuracion' : '/', emoji: '🏆' },
+    { label: 'Total Inventario', value: total.toLocaleString(), color: 'text-white', href: '/boletas', emoji: '🎟️' },
+    { label: isDist ? 'Ventas en Comercio' : 'En Punto (Activas)', value: activas.toLocaleString(), color: 'text-admin-blue', href: '/boletas', emoji: '📍' },
+    { label: 'Convertidas (Reg)', value: registradas.toLocaleString(), color: 'text-admin-green', href: '/boletas', emoji: '✅' },
   ];
+
+  const row2: KpiCard[] = [
+    { label: 'Total Packs', value: extended.totalPacks.toLocaleString(), color: 'text-admin-gold', href: '/ventas', emoji: '📦' },
+    { label: 'Total Invitaciones', value: extended.totalInvitaciones.toLocaleString(), color: 'text-purple-400', href: '/invitaciones', emoji: '🎪' },
+    { label: 'Invitaciones Aceptadas', value: extended.invAceptadas.toLocaleString(), color: 'text-green-400', href: isAdmin ? '/invitaciones/reporte' : '/invitaciones', emoji: '🤝' },
+    { label: 'Asistencias Evento', value: extended.asistencias.toLocaleString(), color: 'text-emerald-400', href: '/asistencia', emoji: '📋' },
+  ];
+
+  const row3: KpiCard[] = isAdmin ? [
+    { label: 'Pre-Registros Pendientes', value: extended.preRegistrosPendientes.toLocaleString(), color: extended.preRegistrosPendientes > 0 ? 'text-yellow-400' : 'text-slate-400', href: '/pre-registros', emoji: '⏳' },
+    { label: 'Packs Pago Pendiente', value: extended.packsPendientes.toLocaleString(), color: extended.packsPendientes > 0 ? 'text-orange-400' : 'text-slate-400', href: '/ventas', emoji: '💰' },
+    { label: 'Comerciantes', value: '—', color: 'text-cyan-400', href: '/comerciantes', emoji: '🏪' },
+    { label: 'Personal Activo', value: extended.personalActivo.toLocaleString(), color: 'text-slate-300', href: '/distribuidores', emoji: '👥' },
+  ] : [];
+
+  function KpiGrid({ cards }: { cards: KpiCard[] }) {
+    return (
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {cards.map((kpi, i) => (
+          <Link key={i} href={kpi.href}
+            className="bg-slate-900 border border-white/5 rounded-3xl p-6 shadow-2xl relative overflow-hidden group hover:border-admin-gold/30 transition-all active:scale-[0.98]">
+            <div className="absolute -right-2 -bottom-2 text-4xl opacity-5 group-hover:opacity-15 transition-opacity">{kpi.emoji}</div>
+            <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">{kpi.label}</h3>
+            <p className={`text-2xl md:text-3xl font-black tracking-tighter ${kpi.color}`}>{kpi.value}</p>
+          </Link>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="w-full flex-1 overflow-y-auto px-4 md:px-0 pb-20 custom-scrollbar">
@@ -128,185 +121,85 @@ export default function RealtimeDashboard({ initialConfig, initialCounts, initia
           <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mt-1">Torre de Control Operativa</p>
         </div>
         <div className="px-4 py-2 bg-slate-900 border border-white/5 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-3 text-slate-400">
-          <span className="w-2 h-2 rounded-full bg-admin-green animate-pulse shadow-lg shadow-green-500/50" /> 
-          Sincronización: Live
+          <span className="w-2 h-2 rounded-full bg-admin-green animate-pulse shadow-lg shadow-green-500/50" />
+          Sincronizacion: Live
         </div>
       </header>
 
-      {/* KPIs Responsivos */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-        {kpis.map((kpi, index) => (
-          <div key={index} className="bg-slate-900 border border-white/5 rounded-3xl p-6 shadow-2xl relative overflow-hidden group">
-            <div className="absolute -right-2 -bottom-2 text-4xl opacity-5 group-hover:opacity-10 transition-opacity">📈</div>
-            <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">{kpi.label}</h3>
-            <p className={`text-2xl md:text-3xl font-black tracking-tighter ${kpi.color}`}>{kpi.value}</p>
-          </div>
-        ))}
+      {/* KPIs Fila 1: Boletas */}
+      <div className="mb-4">
+        <KpiGrid cards={row1} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Tabla / Cards de Registros Recientes */}
-        <div className="lg:col-span-2 bg-admin-card rounded-3xl border border-admin-border shadow-2xl overflow-hidden flex flex-col min-h-[500px]">
-          <div className="p-6 md:p-8 border-b border-white/5 flex justify-between items-center bg-slate-950/20">
-            <h3 className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
-                <div className="w-1 h-3 bg-admin-blue rounded-full" />
-                Historial de Trazabilidad
-            </h3>
-            <Link href="/boletas" className="text-[10px] font-black text-admin-blue hover:text-white uppercase tracking-widest transition-colors">Ver Explorador →</Link>
-          </div>
+      {/* KPIs Fila 2: Operacion */}
+      <div className="mb-4">
+        <KpiGrid cards={row2} />
+      </div>
 
-          <div className="flex-1 relative">
-            {loading && (
-                <div className="absolute inset-0 z-10 bg-admin-dark/40 backdrop-blur-sm flex items-center justify-center">
-                    <div className="w-8 h-8 border-4 border-admin-blue/20 border-t-admin-blue rounded-full animate-spin" />
+      {/* KPIs Fila 3: Admin only */}
+      {row3.length > 0 && (
+        <div className="mb-10">
+          <KpiGrid cards={row3} />
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Ranking de Zonas */}
+        <div className="bg-slate-900 border border-white/5 rounded-3xl p-8 shadow-2xl">
+          <h3 className="text-xs font-black text-white uppercase tracking-widest mb-8 flex items-center justify-between">
+            Desempeno Geografico
+            <span className="bg-admin-gold/10 text-admin-gold px-2 py-0.5 rounded text-[8px]">En tiempo real</span>
+          </h3>
+          <div className="space-y-6">
+            {ranking.length === 0 ? (
+              <p className="text-slate-500 text-sm text-center py-8">Sin datos de zonas.</p>
+            ) : ranking.map((z, idx) => (
+              <div key={idx} className="space-y-2">
+                <div className="flex justify-between items-end">
+                  <span className="text-[11px] font-black text-white uppercase tracking-tighter">{z.nombre}</span>
+                  <span className="text-[10px] font-black text-admin-gold">{z.conversion}%</span>
                 </div>
-            )}
-
-            {/* Mobile: Layout de Tarjetas */}
-            <div className="md:hidden divide-y divide-white/5">
-                {recientes.map(reg => (
-                    <div key={reg.id_boleta} className="p-6 space-y-4">
-                        <div className="flex justify-between items-start">
-                            <div>
-                                <p className="text-[10px] font-bold text-slate-600 uppercase mb-0.5">#{reg.id_boleta}</p>
-                                <p className="text-sm font-black text-white font-mono">{reg.token_integridad}</p>
-                            </div>
-                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-black border tracking-tighter ${
-                            reg.estado === 1 ? 'bg-admin-blue/10 border-admin-blue/20 text-admin-blue' :
-                            reg.estado === 2 ? 'bg-admin-green/10 border-admin-green/20 text-admin-green' :
-                            reg.estado === 3 ? 'bg-red-500/10 border-red-500/20 text-red-500' :
-                            reg.estado === 4 ? 'bg-admin-gold/10 border-admin-gold/20 text-admin-gold' :
-                            'bg-slate-100/10 border-white/5 text-slate-300'
-                        }`}>
-                            {estadoToString(reg.estado)}
-                        </span>
-                        </div>
-                        <div className="flex justify-between items-end border-t border-white/5 pt-4">
-                            <div>
-                                <p className="text-[9px] font-bold text-slate-600 uppercase">Frente</p>
-                                <p className="text-[10px] font-black text-admin-gold uppercase">{reg.zonas?.nombre || 'General'}</p>
-                            </div>
-                            <p className="text-[10px] font-bold text-slate-500">{getTimeAgo(reg.updated_at)}</p>
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            {/* Desktop: Tabla Densa */}
-            <div className="hidden md:block overflow-x-auto">
-                <table className="w-full text-left text-[11px] whitespace-nowrap">
-                <thead className="bg-slate-950/40 text-slate-500 uppercase font-black tracking-tighter">
-                    <tr className="border-b border-white/5">
-                    <th className="p-6 pl-8">ID</th>
-                    <th className="p-6">Token Hash</th>
-                    <th className="p-6">Frente Comercial</th>
-                    <th className="p-6">Estado Vida</th>
-                    <th className="p-6">Custodia / Titular</th>
-                    <th className="p-6 text-right pr-8">Cronos</th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5">
-                    {recientes.map((reg) => (
-                    <tr key={reg.id_boleta} className="hover:bg-admin-blue/5 transition-all">
-                        <td className="p-4 pl-8 font-black text-white">#{reg.id_boleta}</td>
-                        <td className="p-4 font-mono text-slate-500 text-[10px]">{reg.token_integridad}</td>
-                        <td className="p-4 text-admin-gold font-black uppercase text-[10px]">{reg.zonas?.nombre || 'General'}</td>
-                        <td className="p-4">
-                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-black border tracking-tighter ${
-                            reg.estado === 1 ? 'bg-admin-blue/10 border-admin-blue/20 text-admin-blue' :
-                            reg.estado === 2 ? 'bg-admin-green/10 border-admin-green/20 text-admin-green' :
-                            reg.estado === 3 ? 'bg-red-500/10 border-red-500/20 text-red-500' :
-                            reg.estado === 4 ? 'bg-admin-gold/10 border-admin-gold/20 text-admin-gold' :
-                            'bg-slate-100/10 border-white/5 text-slate-300'
-                            }`}>
-                            {estadoToString(reg.estado)}
-                            </span>
-                        </td>
-                        <td className="p-4 text-slate-400 font-bold uppercase">{reg.nombre_usuario || 'Sin titular'}</td>
-                        <td className="p-4 text-right pr-8 text-slate-500 font-bold">
-                            {getTimeAgo(reg.updated_at)}
-                        </td>
-                    </tr>
-                    ))}
-                </tbody>
-                </table>
-            </div>
-          </div>
-
-          {/* Paginación Dashboard */}
-          <div className="p-8 bg-slate-950/20 border-t border-white/5 flex justify-between items-center">
-             <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Pág {page} / {totalPages}</span>
-             <div className="flex gap-3">
-                <button 
-                    disabled={page === 1 || loading} 
-                    onClick={() => { const p = page - 1; setPage(p); fetchPagedData(p); }}
-                    className="w-12 h-12 md:w-10 md:h-10 flex items-center justify-center bg-slate-900 border border-white/5 rounded-xl text-white disabled:opacity-10 active:scale-90 transition-all font-black text-lg md:text-base"
-                >←</button>
-                <button 
-                    disabled={page >= totalPages || loading} 
-                    onClick={() => { const p = page + 1; setPage(p); fetchPagedData(p); }}
-                    className="w-12 h-12 md:w-10 md:h-10 flex items-center justify-center bg-slate-900 border border-white/5 rounded-xl text-white disabled:opacity-10 active:scale-90 transition-all font-black text-lg md:text-base"
-                >→</button>
-             </div>
+                <div className="w-full h-1.5 bg-slate-950 rounded-full overflow-hidden flex shadow-inner">
+                  <div className="h-full bg-admin-blue/40" style={{ width: `${Math.min(100, (z.activadas / (total || 1)) * 100)}%` }} />
+                  <div className="h-full bg-admin-green shadow-lg shadow-green-500/50" style={{ width: `${z.conversion}%` }} />
+                </div>
+                <div className="flex justify-between text-[9px] font-bold text-slate-600 uppercase tracking-widest">
+                  <span>{z.activadas} Activas</span>
+                  <span>{z.registradas} Reg</span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
-        <div className="space-y-6">
-            {/* Ranking de Zonas */}
-            <div className="bg-slate-900 border border-white/5 rounded-3xl p-8 shadow-2xl">
-                <h3 className="text-xs font-black text-white uppercase tracking-widest mb-8 flex items-center justify-between">
-                    Desempeño Geográfico
-                    <span className="bg-admin-gold/10 text-admin-gold px-2 py-0.5 rounded text-[8px]">En tiempo real</span>
-                </h3>
-                <div className="space-y-6">
-                    {ranking.map((z, idx) => (
-                        <div key={idx} className="space-y-2">
-                            <div className="flex justify-between items-end">
-                                <span className="text-[11px] font-black text-white uppercase tracking-tighter">{z.nombre}</span>
-                                <span className="text-[10px] font-black text-admin-gold">{z.conversion}%</span>
-                            </div>
-                            <div className="w-full h-1.5 bg-slate-950 rounded-full overflow-hidden flex shadow-inner">
-                                <div className="h-full bg-admin-blue/40" style={{ width: `${Math.min(100, (z.activadas / (total || 1)) * 100)}%` }} />
-                                <div className="h-full bg-admin-green shadow-lg shadow-green-500/50" style={{ width: `${z.conversion}%` }} />
-                            </div>
-                            <div className="flex justify-between text-[9px] font-bold text-slate-600 uppercase tracking-widest">
-                                <span>{z.activadas} Activas</span>
-                                <span>{z.registradas} Reg</span>
-                            </div>
-                        </div>
-                    ))}
-                </div>
+        {/* Embudo de Conversion */}
+        <div className="bg-slate-900 border border-white/5 rounded-3xl p-8 flex flex-col items-center">
+          <h3 className="text-xs font-black text-white uppercase tracking-widest mb-10 w-full">Embudo de Conversion</h3>
+          <div className="relative w-40 h-40 rounded-full border-[6px] border-slate-950 flex items-center justify-center shadow-2xl"
+            style={{ background: `conic-gradient(#10B981 0% ${pctRegistradas}%, #3B82F6 ${pctRegistradas}% ${pctRegistradas + pctActivas}%, #1E293B ${pctRegistradas + pctActivas}% 100%)` }}>
+            <div className="w-32 h-32 bg-slate-900 rounded-full flex flex-col items-center justify-center border border-white/5 shadow-inner">
+              <span className="text-3xl font-black text-white tracking-tighter">
+                {pctRegistradas > 0 ? pctRegistradas : pctActivas}%
+              </span>
+              <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest mt-1">
+                {pctRegistradas > 0 ? 'Exito Total' : 'Progreso Ventas'}
+              </span>
             </div>
-
-            {/* Funnel Circular Responsivo */}
-            <div className="bg-slate-900 border border-white/5 rounded-3xl p-8 flex flex-col items-center">
-                <h3 className="text-xs font-black text-white uppercase tracking-widest mb-10 w-full">Embudo de Conversión</h3>
-                <div className="relative w-40 h-40 rounded-full border-[6px] border-slate-950 flex items-center justify-center shadow-2xl"
-                    style={{ background: `conic-gradient(#10B981 0% ${pctRegistradas}%, #3B82F6 ${pctRegistradas}% ${pctRegistradas + pctActivas}%, #1E293B ${pctRegistradas + pctActivas}% 100%)` }}>
-                    <div className="w-32 h-32 bg-slate-900 rounded-full flex flex-col items-center justify-center border border-white/5 shadow-inner">
-                        <span className="text-3xl font-black text-white tracking-tighter">
-                            {pctRegistradas > 0 ? pctRegistradas : pctActivas}%
-                        </span>
-                        <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest mt-1">
-                            {pctRegistradas > 0 ? 'Éxito Total' : 'Progreso Ventas'}
-                        </span>
-                    </div>
-                </div>
-                <div className="mt-10 w-full space-y-4">
-                    <div className="flex justify-between items-center text-[10px] font-black uppercase text-slate-400">
-                        <span className="flex items-center gap-3"><span className="w-2 h-2 rounded-full bg-admin-green" /> Registradas</span>
-                        <span className="text-white">{pctRegistradas}%</span>
-                    </div>
-                    <div className="flex justify-between items-center text-[10px] font-black uppercase text-slate-400">
-                        <span className="flex items-center gap-3"><span className="w-2 h-2 rounded-full bg-admin-blue" /> {isDist ? 'Ventas en Comercio' : 'Activas en PDV'}</span>
-                        <span className="text-white">{pctActivas}%</span>
-                    </div>
-                    <div className="flex justify-between items-center text-[10px] font-black uppercase text-slate-400">
-                        <span className="flex items-center gap-3"><span className="w-2 h-2 rounded-full bg-slate-700" /> {isDist ? 'Por Activar' : 'Generados (Sin Activar)'}</span>
-                        <span className="text-slate-500">{pctBodega}%</span>
-                    </div>
-                </div>
+          </div>
+          <div className="mt-10 w-full space-y-4">
+            <div className="flex justify-between items-center text-[10px] font-black uppercase text-slate-400">
+              <span className="flex items-center gap-3"><span className="w-2 h-2 rounded-full bg-admin-green" /> Registradas</span>
+              <span className="text-white">{pctRegistradas}%</span>
             </div>
+            <div className="flex justify-between items-center text-[10px] font-black uppercase text-slate-400">
+              <span className="flex items-center gap-3"><span className="w-2 h-2 rounded-full bg-admin-blue" /> {isDist ? 'Ventas en Comercio' : 'Activas en PDV'}</span>
+              <span className="text-white">{pctActivas}%</span>
+            </div>
+            <div className="flex justify-between items-center text-[10px] font-black uppercase text-slate-400">
+              <span className="flex items-center gap-3"><span className="w-2 h-2 rounded-full bg-slate-700" /> {isDist ? 'Por Activar' : 'Generados (Sin Activar)'}</span>
+              <span className="text-slate-500">{pctBodega}%</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>

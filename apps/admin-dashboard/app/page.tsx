@@ -25,43 +25,29 @@ export default async function DashboardPage() {
 
   const isDist = profile.rol === 'distribuidor';
 
-  // Construir consultas base dependientes del ROL
-  let baseBoletas = supabaseAdmin.from('boletas').select('*', { count: 'exact', head: true }).eq('es_prueba', false);
-
-  if (isDist) {
-    baseBoletas = baseBoletas.eq('distribuidor_id', user!.id);
-  }
-
-  const { getBoletasPaged, getRankingZonas, getConfiguracion } = await import('../lib/actions');
+  const { getDashboardCounts, getDashboardExtendedCounts, getRankingZonas, getConfiguracion } = await import('../lib/actions');
 
   const [
     config,
-    { data: recientes, total: totalCount },
     counts,
+    extendedCounts,
     ranking
   ] = await Promise.all([
     getConfiguracion().catch(() => ({ nombre_campana: "Sin Campaña" })),
-    getBoletasPaged(1, 10, "", {}, isDist ? user.id : undefined),
-    (async () => {
-        const { count: t } = await baseBoletas;
-        const { count: a } = await supabaseAdmin.from('boletas').select('*', { count: 'exact', head: true }).eq('estado', 1).eq('es_prueba', false).match(isDist ? { distribuidor_id: user?.id } : {});
-        const { count: r } = await supabaseAdmin.from('boletas').select('*', { count: 'exact', head: true }).eq('estado', 2).eq('es_prueba', false).match(isDist ? { distribuidor_id: user?.id } : {});
-        return { total: t || 0, activas: a || 0, registradas: r || 0 };
-    })(),
+    getDashboardCounts(isDist ? user.id : undefined),
+    getDashboardExtendedCounts(isDist ? user.id : undefined),
     getRankingZonas(isDist ? user!.id : undefined)
   ]);
 
   const nombreCampana = config?.nombre_campana || "Sin Campaña Activa";
 
-  const initialCounts = counts;
-
   return (
     <>
       <main className="flex-1 overflow-y-auto bg-admin-dark p-6 md:p-10 w-full">
-        <RealtimeDashboard 
+        <RealtimeDashboard
           initialConfig={nombreCampana}
-          initialCounts={initialCounts}
-          initialRecientes={recientes || []}
+          initialCounts={counts}
+          initialExtended={extendedCounts}
           initialRanking={ranking || []}
           userProfile={profile}
         />

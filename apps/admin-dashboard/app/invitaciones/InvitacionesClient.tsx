@@ -86,6 +86,8 @@ function InvitacionDrawer({ invId, jornadasEvento, isAdmin, onClose, onUpdated }
 
   // Editable fields
   const [nombre, setNombre] = useState('');
+  const [nombreComercial, setNombreComercial] = useState('');
+  const [ciudad, setCiudad] = useState('');
   const [direccion, setDireccion] = useState('');
   const [tel, setTel] = useState('');
   const [wa, setWa] = useState('');
@@ -96,6 +98,8 @@ function InvitacionDrawer({ invId, jornadasEvento, isAdmin, onClose, onUpdated }
       setDetail(d);
       if (d) {
         setNombre(d.comerciante_nombre || '');
+        setNombreComercial(d.comerciante_nombre_comercial || '');
+        setCiudad(d.comerciante_ciudad || '');
         setDireccion(d.comerciante_direccion || '');
         setTel(d.comerciante_tel || '');
         setWa(d.comerciante_whatsapp || '');
@@ -110,6 +114,8 @@ function InvitacionDrawer({ invId, jornadasEvento, isAdmin, onClose, onUpdated }
     setSaved(false);
     await actualizarInvitacionAction(invId, {
       comerciante_nombre: nombre,
+      comerciante_nombre_comercial: nombreComercial,
+      comerciante_ciudad: ciudad,
       comerciante_direccion: direccion,
       comerciante_tel: tel,
       comerciante_whatsapp: wa,
@@ -177,9 +183,21 @@ function InvitacionDrawer({ invId, jornadasEvento, isAdmin, onClose, onUpdated }
                   className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-admin-blue" />
               </div>
               <div>
-                <label className="text-[10px] text-slate-500 uppercase font-bold block mb-1">Dirección</label>
-                <input value={direccion} onChange={(e) => setDireccion(e.target.value)}
+                <label className="text-[10px] text-slate-500 uppercase font-bold block mb-1">Nombre Comercial</label>
+                <input value={nombreComercial} onChange={(e) => setNombreComercial(e.target.value)} placeholder="Nombre del negocio"
                   className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-admin-blue" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] text-slate-500 uppercase font-bold block mb-1">Ciudad</label>
+                  <input value={ciudad} onChange={(e) => setCiudad(e.target.value)} placeholder="Ej: Palmira"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-admin-blue" />
+                </div>
+                <div>
+                  <label className="text-[10px] text-slate-500 uppercase font-bold block mb-1">Dirección</label>
+                  <input value={direccion} onChange={(e) => setDireccion(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-admin-blue" />
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -532,6 +550,12 @@ export default function InvitacionesClient({
                             <span className="ml-2 inline-block px-1.5 py-0.5 rounded text-[9px] font-black bg-orange-500/20 border border-orange-500/40 text-orange-300 uppercase">⚠ Prueba</span>
                           )}
                         </p>
+                        {inv.comerciante_nombre_comercial && (
+                          <p className="text-[10px] text-admin-gold font-bold mt-0.5">{inv.comerciante_nombre_comercial}</p>
+                        )}
+                        {inv.comerciante_ciudad && (
+                          <p className="text-[10px] text-slate-500 mt-0.5">{inv.comerciante_ciudad}</p>
+                        )}
                         {inv.comerciante_tel && <p className="text-[10px] text-slate-500 mt-0.5">{inv.comerciante_tel}</p>}
                       </td>
                       <td className="p-4 text-sm text-slate-300">{inv.tipo_evento}</td>
@@ -640,11 +664,21 @@ export default function InvitacionesClient({
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Nombre Comerciante *</label>
-                  <input name="comerciante_nombre" required placeholder="Ej: Tienda El Progreso" className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-admin-blue" />
+                  <input name="comerciante_nombre" required placeholder="Ej: Juan Pérez" className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-admin-blue" />
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Dirección</label>
-                  <input name="comerciante_direccion" placeholder="Cra 10 #20-30" className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-admin-blue" />
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Nombre Comercial <span className="text-slate-600 normal-case">(nombre del negocio)</span></label>
+                  <input name="comerciante_nombre_comercial" placeholder="Ej: Tienda El Progreso" className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-admin-blue" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Ciudad</label>
+                    <input name="comerciante_ciudad" placeholder="Ej: Palmira" className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-admin-blue" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Dirección</label>
+                    <input name="comerciante_direccion" placeholder="Cra 10 #20-30" className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-admin-blue" />
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>

@@ -43,6 +43,8 @@ function PackDetailDrawer({ packId, isAdmin, onClose, onChanged }: { packId: str
   const [confirmando, setConfirmando] = useState(false);
   const [confirmError, setConfirmError] = useState<string | null>(null);
   const [editNombre, setEditNombre] = useState('');
+  const [editNombreComercial, setEditNombreComercial] = useState('');
+  const [editCiudad, setEditCiudad] = useState('');
   const [editTipoId, setEditTipoId] = useState('CC');
   const [editIdent, setEditIdent] = useState('');
   const [editTel, setEditTel] = useState('');
@@ -57,6 +59,8 @@ function PackDetailDrawer({ packId, isAdmin, onClose, onChanged }: { packId: str
         setDetail(d);
         if (!formInitialized) {
           setEditNombre(d.pack.comerciante_nombre || '');
+          setEditNombreComercial(d.pack.comerciante_nombre_comercial || '');
+          setEditCiudad(d.pack.comerciante_ciudad || '');
           setEditTipoId(d.pack.comerciante_tipo_id || 'CC');
           setEditIdent(d.pack.comerciante_identificacion || '');
           setEditTel(d.pack.comerciante_tel || '');
@@ -95,6 +99,8 @@ function PackDetailDrawer({ packId, isAdmin, onClose, onChanged }: { packId: str
     setConfirmError(null);
     const res = await confirmarPagoAction(packId, {
       comerciante_nombre: editNombre,
+      comerciante_nombre_comercial: editNombreComercial,
+      comerciante_ciudad: editCiudad,
       comerciante_tipo_id: editTipoId,
       comerciante_identificacion: editIdent,
       comerciante_tel: editTel,
@@ -189,6 +195,16 @@ function PackDetailDrawer({ packId, isAdmin, onClose, onChanged }: { packId: str
                   <input value={editNombre} onChange={(e) => setEditNombre(e.target.value)}
                     className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-admin-blue" />
                 </div>
+                <div>
+                  <label className="text-[10px] text-slate-500 uppercase font-bold block mb-1">Nombre Comercial</label>
+                  <input value={editNombreComercial} onChange={(e) => setEditNombreComercial(e.target.value)} placeholder="Nombre del negocio"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-admin-blue" />
+                </div>
+                <div>
+                  <label className="text-[10px] text-slate-500 uppercase font-bold block mb-1">Ciudad</label>
+                  <input value={editCiudad} onChange={(e) => setEditCiudad(e.target.value)} placeholder="Ej: Palmira"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-admin-blue" />
+                </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-[10px] text-slate-500 uppercase font-bold block mb-1">Tipo Doc</label>
@@ -229,6 +245,8 @@ function PackDetailDrawer({ packId, isAdmin, onClose, onChanged }: { packId: str
                     onClick={async () => {
                       const res = await actualizarDatosPackAction(packId, {
                         comerciante_nombre: editNombre,
+                        comerciante_nombre_comercial: editNombreComercial,
+                        comerciante_ciudad: editCiudad,
                         comerciante_tipo_id: editTipoId,
                         comerciante_identificacion: editIdent,
                         comerciante_tel: editTel,
@@ -589,10 +607,11 @@ export default function VentasClient({
                     </td>
                     <td className="p-4">
                       <p className="font-bold text-white text-sm">{p.comerciante_nombre}</p>
-                      {p.comerciante_tel && (
-                        <p className="text-[10px] text-slate-500 font-mono mt-0.5">
-                          {p.comerciante_tel}
-                        </p>
+                      {p.comerciante_nombre_comercial && (
+                        <p className="text-[10px] text-admin-gold font-bold mt-0.5">{p.comerciante_nombre_comercial}</p>
+                      )}
+                      {p.comerciante_ciudad && (
+                        <p className="text-[10px] text-slate-500 mt-0.5">{p.comerciante_ciudad}</p>
                       )}
                     </td>
                     {!isDist && (

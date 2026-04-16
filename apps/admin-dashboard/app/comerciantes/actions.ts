@@ -7,6 +7,8 @@ export type ComercianteItem = {
   comerciante_identificacion: string;
   comerciante_tipo_id: string;
   comerciante_nombre: string;
+  comerciante_nombre_comercial: string | null;
+  comerciante_ciudad: string | null;
   comerciante_tel: string | null;
   comerciante_whatsapp: string | null;
   comerciante_email: string | null;
@@ -28,7 +30,7 @@ export async function getComerciantesAction(filtros?: {
 
   let query = supabaseAdmin
     .from('packs')
-    .select('comerciante_identificacion, comerciante_tipo_id, comerciante_nombre, comerciante_tel, comerciante_whatsapp, comerciante_email, fecha_venta, distribuidor:perfiles!distribuidor_id(nombre), estado_pago')
+    .select('comerciante_identificacion, comerciante_tipo_id, comerciante_nombre, comerciante_nombre_comercial, comerciante_ciudad, comerciante_tel, comerciante_whatsapp, comerciante_email, fecha_venta, distribuidor:perfiles!distribuidor_id(nombre), estado_pago')
     .eq('es_prueba', false)
     .not('comerciante_identificacion', 'is', null)
     .order('fecha_venta', { ascending: false });
@@ -57,6 +59,8 @@ export async function getComerciantesAction(filtros?: {
       }
       // Actualizar con datos más recientes
       if (p.comerciante_nombre) existing.comerciante_nombre = p.comerciante_nombre;
+      if (p.comerciante_nombre_comercial) existing.comerciante_nombre_comercial = p.comerciante_nombre_comercial;
+      if (p.comerciante_ciudad) existing.comerciante_ciudad = p.comerciante_ciudad;
       if (p.comerciante_tel) existing.comerciante_tel = p.comerciante_tel;
       if (p.comerciante_whatsapp) existing.comerciante_whatsapp = p.comerciante_whatsapp;
       if (p.comerciante_email) existing.comerciante_email = p.comerciante_email;
@@ -65,6 +69,8 @@ export async function getComerciantesAction(filtros?: {
         comerciante_identificacion: id,
         comerciante_tipo_id: p.comerciante_tipo_id || 'CC',
         comerciante_nombre: p.comerciante_nombre || '',
+        comerciante_nombre_comercial: p.comerciante_nombre_comercial || null,
+        comerciante_ciudad: p.comerciante_ciudad || null,
         comerciante_tel: p.comerciante_tel || null,
         comerciante_whatsapp: p.comerciante_whatsapp || null,
         comerciante_email: p.comerciante_email || null,

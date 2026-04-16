@@ -41,6 +41,8 @@ export async function venderPackAction(formData: FormData): Promise<VenderPackRe
   }
 
   const comercianteNombre   = (formData.get('comerciante_nombre') as string)?.trim();
+  const comercianteNombreComercial = (formData.get('comerciante_nombre_comercial') as string)?.trim() || null;
+  const comercianteCiudad   = (formData.get('comerciante_ciudad') as string)?.trim() || null;
   const comercianteTipoId   = (formData.get('comerciante_tipo_id') as string)?.trim() || 'CC';
   const comercianteIdent    = (formData.get('comerciante_identificacion') as string)?.trim();
   const comercianteTel      = (formData.get('comerciante_tel') as string)?.trim();
@@ -78,6 +80,8 @@ export async function venderPackAction(formData: FormData): Promise<VenderPackRe
       .from('packs')
       .update({
         comerciante_nombre: comercianteNombre,
+        comerciante_nombre_comercial: comercianteNombreComercial,
+        comerciante_ciudad: comercianteCiudad,
         comerciante_tipo_id: comercianteTipoId,
         comerciante_identificacion: comercianteIdent,
         comerciante_tel: comercianteTel,
@@ -134,6 +138,8 @@ export async function venderPackAction(formData: FormData): Promise<VenderPackRe
       campana_id: config.id,
       distribuidor_id: user.id,
       comerciante_nombre: comercianteNombre,
+      comerciante_nombre_comercial: comercianteNombreComercial,
+      comerciante_ciudad: comercianteCiudad,
       comerciante_tipo_id: comercianteTipoId,
       comerciante_identificacion: comercianteIdent,
       comerciante_tel: comercianteTel,
@@ -179,6 +185,8 @@ export type ConfirmarPagoResult =
 
 export async function confirmarPagoAction(packId: string, datosActualizados?: {
   comerciante_nombre?: string;
+  comerciante_nombre_comercial?: string;
+  comerciante_ciudad?: string;
   comerciante_tipo_id?: string;
   comerciante_identificacion?: string;
   comerciante_tel?: string;
@@ -314,6 +322,8 @@ export async function actualizarDatosPackAction(
   packId: string,
   datos: {
     comerciante_nombre?: string;
+    comerciante_nombre_comercial?: string;
+    comerciante_ciudad?: string;
     comerciante_tipo_id?: string;
     comerciante_identificacion?: string;
     comerciante_tel?: string;
@@ -340,6 +350,8 @@ export async function actualizarDatosPackAction(
 
   const payload: Record<string, string> = {};
   if (datos.comerciante_nombre?.trim()) payload.comerciante_nombre = datos.comerciante_nombre.trim();
+  if (datos.comerciante_nombre_comercial !== undefined) payload.comerciante_nombre_comercial = datos.comerciante_nombre_comercial?.trim() || '';
+  if (datos.comerciante_ciudad !== undefined) payload.comerciante_ciudad = datos.comerciante_ciudad?.trim() || '';
   if (datos.comerciante_tipo_id?.trim()) payload.comerciante_tipo_id = datos.comerciante_tipo_id.trim();
   if (datos.comerciante_identificacion?.trim()) payload.comerciante_identificacion = datos.comerciante_identificacion.trim();
   if (datos.comerciante_tel !== undefined) payload.comerciante_tel = datos.comerciante_tel?.trim() || '';

@@ -313,7 +313,25 @@ export default function VenderPackForm({ diasVencimientoPago }: Props) {
           <input
             name="comerciante_nombre"
             required
-            placeholder="Ej: Juan Pérez / Tienda El Progreso"
+            placeholder="Ej: Juan Pérez"
+            className="w-full bg-slate-950 border border-slate-700/50 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-admin-blue transition-all"
+          />
+        </div>
+
+        <div>
+          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Nombre Comercial <span className="text-slate-600 normal-case">(nombre del negocio)</span></label>
+          <input
+            name="comerciante_nombre_comercial"
+            placeholder="Ej: Tienda El Progreso"
+            className="w-full bg-slate-950 border border-slate-700/50 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-admin-blue transition-all"
+          />
+        </div>
+
+        <div>
+          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Ciudad</label>
+          <input
+            name="comerciante_ciudad"
+            placeholder="Ej: Palmira"
             className="w-full bg-slate-950 border border-slate-700/50 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-admin-blue transition-all"
           />
         </div>

@@ -12,6 +12,8 @@ export type InvitacionItem = {
   id: string;
   tipo_evento: string;
   comerciante_nombre: string;
+  comerciante_nombre_comercial: string | null;
+  comerciante_ciudad: string | null;
   comerciante_tel: string | null;
   comerciante_whatsapp: string | null;
   comerciante_email: string | null;
@@ -41,6 +43,8 @@ export async function crearInvitacionAction(formData: FormData): Promise<CrearIn
 
   const tipoEvento = (formData.get('tipo_evento') as string)?.trim() || 'Lanzamiento';
   const nombre = (formData.get('comerciante_nombre') as string)?.trim();
+  const nombreComercial = (formData.get('comerciante_nombre_comercial') as string)?.trim() || null;
+  const ciudad = (formData.get('comerciante_ciudad') as string)?.trim() || null;
   const direccion = (formData.get('comerciante_direccion') as string)?.trim() || null;
   const tel = (formData.get('comerciante_tel') as string)?.trim() || null;
   const whatsapp = (formData.get('comerciante_whatsapp') as string)?.trim() || null;
@@ -69,6 +73,8 @@ export async function crearInvitacionAction(formData: FormData): Promise<CrearIn
       campana_id: config?.id || null,
       tipo_evento: tipoEvento,
       comerciante_nombre: nombre,
+      comerciante_nombre_comercial: nombreComercial,
+      comerciante_ciudad: ciudad,
       comerciante_direccion: direccion,
       comerciante_tel: tel,
       comerciante_whatsapp: whatsapp,
@@ -165,7 +171,7 @@ export async function getInvitacionesAction(
 
   let query = supabaseAdmin
     .from('invitaciones')
-    .select('id, tipo_evento, comerciante_nombre, comerciante_tel, comerciante_whatsapp, comerciante_email, token, estado, created_at, jornadas_seleccionadas, es_prueba, distribuidor:perfiles!distribuidor_id(nombre)', { count: 'exact' })
+    .select('id, tipo_evento, comerciante_nombre, comerciante_nombre_comercial, comerciante_ciudad, comerciante_tel, comerciante_whatsapp, comerciante_email, token, estado, created_at, jornadas_seleccionadas, es_prueba, distribuidor:perfiles!distribuidor_id(nombre)', { count: 'exact' })
     .order('created_at', { ascending: false });
 
   if (!incluirPruebas) {
@@ -240,6 +246,8 @@ export type InvitacionDetail = {
   id: string;
   tipo_evento: string;
   comerciante_nombre: string;
+  comerciante_nombre_comercial: string | null;
+  comerciante_ciudad: string | null;
   comerciante_direccion: string | null;
   comerciante_tel: string | null;
   comerciante_whatsapp: string | null;
@@ -261,7 +269,7 @@ export async function getInvitacionDetailAction(id: string): Promise<InvitacionD
 
   const { data } = await supabaseAdmin
     .from('invitaciones')
-    .select('id, tipo_evento, comerciante_nombre, comerciante_direccion, comerciante_tel, comerciante_whatsapp, comerciante_email, token, token_qr, estado, qr_generado_at, qr_escaneado_at, jornadas_seleccionadas, es_prueba, created_at')
+    .select('id, tipo_evento, comerciante_nombre, comerciante_nombre_comercial, comerciante_ciudad, comerciante_direccion, comerciante_tel, comerciante_whatsapp, comerciante_email, token, token_qr, estado, qr_generado_at, qr_escaneado_at, jornadas_seleccionadas, es_prueba, created_at')
     .eq('id', id)
     .single();
 
@@ -371,6 +379,8 @@ export async function actualizarInvitacionAction(
   id: string,
   datos: {
     comerciante_nombre?: string;
+    comerciante_nombre_comercial?: string;
+    comerciante_ciudad?: string;
     comerciante_direccion?: string;
     comerciante_tel?: string;
     comerciante_whatsapp?: string;
@@ -383,6 +393,8 @@ export async function actualizarInvitacionAction(
 
   const payload: Record<string, string> = {};
   if (datos.comerciante_nombre?.trim()) payload.comerciante_nombre = datos.comerciante_nombre.trim();
+  if (datos.comerciante_nombre_comercial !== undefined) payload.comerciante_nombre_comercial = datos.comerciante_nombre_comercial?.trim() || '';
+  if (datos.comerciante_ciudad !== undefined) payload.comerciante_ciudad = datos.comerciante_ciudad?.trim() || '';
   if (datos.comerciante_direccion !== undefined) payload.comerciante_direccion = datos.comerciante_direccion?.trim() || '';
   if (datos.comerciante_tel !== undefined) payload.comerciante_tel = datos.comerciante_tel?.trim() || '';
   if (datos.comerciante_whatsapp !== undefined) payload.comerciante_whatsapp = datos.comerciante_whatsapp?.trim() || '';

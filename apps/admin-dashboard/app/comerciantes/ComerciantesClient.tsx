@@ -263,7 +263,8 @@ export default function ComerciantesClient({ initialData }: { initialData: Comer
                   <tr key={c.comerciante_identificacion} className="hover:bg-slate-800/30 transition-colors cursor-pointer" onClick={() => setSelected(c)}>
                     <td className="p-4">
                       <p className="font-bold text-white text-sm">{c.comerciante_nombre}</p>
-                      {c.comerciante_email && <p className="text-[10px] text-slate-500 mt-0.5">{c.comerciante_email}</p>}
+                      {c.comerciante_nombre_comercial && <p className="text-[10px] text-admin-gold font-bold mt-0.5">{c.comerciante_nombre_comercial}</p>}
+                      {c.comerciante_ciudad && <p className="text-[10px] text-slate-500 mt-0.5">{c.comerciante_ciudad}</p>}
                     </td>
                     <td className="p-4 text-sm text-slate-300 font-mono">{c.comerciante_tipo_id} {c.comerciante_identificacion}</td>
                     <td className="p-4 text-sm text-slate-400">{c.comerciante_tel || '—'}</td>

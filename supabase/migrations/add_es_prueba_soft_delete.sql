@@ -9,7 +9,7 @@ ALTER TABLE public.boletas        ADD COLUMN IF NOT EXISTS es_prueba boolean NOT
 -- 2) Índices parciales — optimizan "sólo registros reales" (caso 99%)
 CREATE INDEX IF NOT EXISTS idx_packs_es_prueba_false        ON public.packs(id)        WHERE es_prueba = false;
 CREATE INDEX IF NOT EXISTS idx_invitaciones_es_prueba_false ON public.invitaciones(id) WHERE es_prueba = false;
-CREATE INDEX IF NOT EXISTS idx_boletas_es_prueba_false      ON public.boletas(id)      WHERE es_prueba = false;
+CREATE INDEX IF NOT EXISTS idx_boletas_es_prueba_false      ON public.boletas(id_boleta) WHERE es_prueba = false;
 
 -- 3) Trigger: al marcar/desmarcar un pack como prueba, sincroniza sus boletas
 CREATE OR REPLACE FUNCTION public.sync_boletas_es_prueba()

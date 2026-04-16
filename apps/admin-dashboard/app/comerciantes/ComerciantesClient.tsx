@@ -80,13 +80,14 @@ function ComercianteDrawer({
                 <p className="text-slate-300 font-bold">{comerciante.distribuidor_nombre || '—'}</p>
               </div>
               <div>
-                <p className="text-[10px] text-slate-600 uppercase font-bold">Packs comprados</p>
-                <p className="text-admin-gold font-black text-lg">{comerciante.total_packs}</p>
-              </div>
-              <div className="col-span-2">
                 <p className="text-[10px] text-slate-600 uppercase font-bold">Primer registro</p>
                 <p className="text-slate-300">{comerciante.fecha_primer_pack ? new Date(comerciante.fecha_primer_pack).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' }) : '—'}</p>
               </div>
+            </div>
+            <div className="flex flex-wrap gap-2 mt-3">
+              {comerciante.total_packs > 0 && <span className="inline-flex px-3 py-1 rounded-full text-[10px] font-black bg-admin-gold/10 border border-admin-gold/30 text-admin-gold">Packs: {comerciante.total_packs}</span>}
+              {comerciante.total_invitaciones > 0 && <span className="inline-flex px-3 py-1 rounded-full text-[10px] font-black bg-purple-500/10 border border-purple-500/30 text-purple-400">Invitaciones: {comerciante.total_invitaciones}</span>}
+              {comerciante.total_pre_registros > 0 && <span className="inline-flex px-3 py-1 rounded-full text-[10px] font-black bg-cyan-500/10 border border-cyan-500/30 text-cyan-400">Pre-registro virtual: {comerciante.total_pre_registros}</span>}
             </div>
           </section>
 
@@ -155,7 +156,7 @@ function ComercianteDrawer({
           {confirmDelete ? (
             <div className="space-y-3">
               <p className="text-red-400 text-xs font-bold text-center">
-                ¿Eliminar a {comerciante.comerciante_nombre} y sus {comerciante.total_packs} pack{comerciante.total_packs !== 1 ? 's' : ''}?
+                ¿Eliminar a {comerciante.comerciante_nombre}{comerciante.total_packs > 0 ? ` y sus ${comerciante.total_packs} pack${comerciante.total_packs !== 1 ? 's' : ''}` : ''}?
               </p>
               <div className="grid grid-cols-2 gap-3">
                 <button onClick={() => setConfirmDelete(false)} className="py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-xs uppercase">Cancelar</button>
@@ -201,7 +202,8 @@ export default function ComerciantesClient({ initialData }: { initialData: Comer
     const s = search.toLowerCase();
     return c.comerciante_nombre.toLowerCase().includes(s) ||
       (c.comerciante_nombre_comercial || '').toLowerCase().includes(s) ||
-      c.comerciante_identificacion.includes(search);
+      c.comerciante_identificacion.includes(search) ||
+      (c.comerciante_whatsapp || '').includes(search);
   });
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
@@ -212,7 +214,7 @@ export default function ComerciantesClient({ initialData }: { initialData: Comer
 
   function handleExportCSV() {
     if (filtered.length === 0) return;
-    const headers = ['Nombre', 'Nombre Comercial', 'Ciudad', 'Tipo Doc', 'Identificación', 'Teléfono', 'WhatsApp', 'Email', 'Distribuidor', 'Packs', 'Fecha Registro'];
+    const headers = ['Nombre', 'Nombre Comercial', 'Ciudad', 'Tipo Doc', 'Identificación', 'Teléfono', 'WhatsApp', 'Email', 'Distribuidor', 'Packs', 'Invitaciones', 'Pre-Registros', 'Origen', 'Fecha Registro'];
     const rows = filtered.map((c) => [
       c.comerciante_nombre,
       c.comerciante_nombre_comercial || '',
@@ -224,6 +226,9 @@ export default function ComerciantesClient({ initialData }: { initialData: Comer
       c.comerciante_email || '',
       c.distribuidor_nombre || '',
       String(c.total_packs),
+      String(c.total_invitaciones),
+      String(c.total_pre_registros),
+      c.origenes.join(', '),
       c.fecha_primer_pack ? new Date(c.fecha_primer_pack).toLocaleDateString('es-CO') : '',
     ]);
     const csv = [headers, ...rows].map((r) => r.map((c) => `"${c}"`).join(',')).join('\n');
@@ -267,9 +272,9 @@ export default function ComerciantesClient({ initialData }: { initialData: Comer
               <tr className="border-b border-admin-border text-xs uppercase text-slate-500 bg-slate-900/50">
                 <th className="p-4 font-bold">Comerciante</th>
                 <th className="p-4 font-bold">Identificación</th>
-                <th className="p-4 font-bold">Teléfono</th>
+                <th className="p-4 font-bold">WhatsApp</th>
                 <th className="p-4 font-bold">Distribuidor</th>
-                <th className="p-4 font-bold text-center">Packs</th>
+                <th className="p-4 font-bold text-center">Origen</th>
                 <th className="p-4 font-bold">Registro</th>
               </tr>
             </thead>
@@ -284,11 +289,15 @@ export default function ComerciantesClient({ initialData }: { initialData: Comer
                       {c.comerciante_nombre_comercial && <p className="text-[10px] text-admin-gold font-bold mt-0.5">{c.comerciante_nombre_comercial}</p>}
                       {c.comerciante_ciudad && <p className="text-[10px] text-slate-500 mt-0.5">{c.comerciante_ciudad}</p>}
                     </td>
-                    <td className="p-4 text-sm text-slate-300 font-mono">{c.comerciante_tipo_id} {c.comerciante_identificacion}</td>
-                    <td className="p-4 text-sm text-slate-400">{c.comerciante_tel || '—'}</td>
+                    <td className="p-4 text-sm text-slate-300 font-mono">{c.comerciante_tipo_id} {c.comerciante_identificacion || '—'}</td>
+                    <td className="p-4 text-sm text-slate-400 font-mono">{c.comerciante_whatsapp || '—'}</td>
                     <td className="p-4 text-sm text-slate-300 font-bold uppercase">{c.distribuidor_nombre || '—'}</td>
-                    <td className="p-4 text-center">
-                      <span className="bg-admin-gold/10 text-admin-gold font-black text-xs px-3 py-1 rounded-lg">{c.total_packs}</span>
+                    <td className="p-4">
+                      <div className="flex flex-wrap justify-center gap-1">
+                        {c.total_packs > 0 && <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-black bg-admin-gold/10 border border-admin-gold/30 text-admin-gold">Pack {c.total_packs}</span>}
+                        {c.total_invitaciones > 0 && <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-black bg-purple-500/10 border border-purple-500/30 text-purple-400">Inv {c.total_invitaciones}</span>}
+                        {c.total_pre_registros > 0 && <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-black bg-cyan-500/10 border border-cyan-500/30 text-cyan-400">Virtual {c.total_pre_registros}</span>}
+                      </div>
                     </td>
                     <td className="p-4 text-xs text-slate-400">
                       {c.fecha_primer_pack ? new Date(c.fecha_primer_pack).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}

@@ -29,7 +29,7 @@ export default async function ComerciantesPage() {
           </div>
         </div>
         <p className="text-slate-400 text-sm mt-2">
-          Todos los comerciantes registrados a través de venta de packs. Edición y eliminación centralizada.
+          Todos los comerciantes registrados: packs, invitaciones y pre-registros virtuales unificados.
         </p>
       </header>
 

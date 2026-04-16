@@ -1,7 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { getReporteInvitacionesAction, type ReporteDistribuidorItem, type AlertaItem } from '../actions';
+import {
+  getReporteInvitacionesAction, getInvitacionesPorDistribuidorAction,
+  type ReporteDistribuidorItem, type AlertaItem, type InvitacionDistribuidorItem,
+} from '../actions';
 
 type JornadaConfig = { id: string; fecha: string; hora: string; label: string };
 
@@ -30,12 +33,45 @@ export default function ReporteClient({
   const [alertasOpen, setAlertasOpen] = useState(alertas.length > 0);
   const [reporte, setReporte] = useState<ReporteDistribuidorItem[]>(initial);
   const [loading, setLoading] = useState(false);
+  const [drawerDist, setDrawerDist] = useState<ReporteDistribuidorItem | null>(null);
+  const [drawerItems, setDrawerItems] = useState<InvitacionDistribuidorItem[]>([]);
+  const [drawerLoading, setDrawerLoading] = useState(false);
 
   async function refresh() {
     setLoading(true);
     const res = await getReporteInvitacionesAction();
     setReporte(res);
     setLoading(false);
+  }
+
+  async function openDrawer(dist: ReporteDistribuidorItem) {
+    setDrawerDist(dist);
+    setDrawerLoading(true);
+    const items = await getInvitacionesPorDistribuidorAction(dist.distribuidor_id);
+    setDrawerItems(items);
+    setDrawerLoading(false);
+  }
+
+  function closeDrawer() {
+    setDrawerDist(null);
+    setDrawerItems([]);
+  }
+
+  function estadoInvBadge(estado: string) {
+    switch (estado) {
+      case 'aceptada': return 'bg-green-500/10 border-green-500/20 text-green-400';
+      case 'rechazada': return 'bg-red-500/10 border-red-500/20 text-red-400';
+      default: return 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400';
+    }
+  }
+
+  function estadoInvLabel(estado: string) {
+    switch (estado) {
+      case 'aceptada': return 'Aceptada';
+      case 'rechazada': return 'Rechazada';
+      case 'pendiente': return 'Pendiente';
+      default: return estado;
+    }
   }
 
   function exportCSV() {
@@ -59,6 +95,90 @@ export default function ReporteClient({
 
   return (
     <div className="space-y-6">
+    {/* Drawer de invitaciones por distribuidor */}
+    {drawerDist && (
+      <div className="fixed inset-0 z-[200] flex justify-end">
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={closeDrawer} />
+        <div className="relative w-full max-w-xl bg-slate-900 border-l border-white/10 shadow-2xl animate-in slide-in-from-right duration-300 flex flex-col h-full">
+          {/* Header */}
+          <div className="p-6 border-b border-white/10 bg-slate-950/50">
+            <div className="flex justify-between items-start">
+              <div>
+                <h3 className="text-xl font-black text-white tracking-tight">{drawerDist.distribuidor}</h3>
+                <p className="text-[10px] text-admin-gold font-bold uppercase tracking-widest mt-1">
+                  {drawerDist.total} invitaciones · {drawerDist.conversion.toFixed(1)}% conversion
+                </p>
+              </div>
+              <button onClick={closeDrawer} className="w-8 h-8 flex items-center justify-center bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition-all">✕</button>
+            </div>
+            {/* Mini resumen */}
+            <div className="flex gap-3 mt-4">
+              <span className="px-3 py-1 rounded-full text-[10px] font-black bg-green-500/10 border border-green-500/30 text-green-400">Aceptadas {drawerDist.aceptadas}</span>
+              <span className="px-3 py-1 rounded-full text-[10px] font-black bg-yellow-500/10 border border-yellow-500/30 text-yellow-400">Pendientes {drawerDist.pendientes}</span>
+              <span className="px-3 py-1 rounded-full text-[10px] font-black bg-red-500/10 border border-red-500/30 text-red-400">Rechazadas {drawerDist.rechazadas}</span>
+            </div>
+          </div>
+
+          {/* Lista de invitaciones */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-3 custom-scrollbar">
+            {drawerLoading ? (
+              <div className="flex justify-center py-12">
+                <div className="w-8 h-8 border-4 border-admin-gold/20 border-t-admin-gold rounded-full animate-spin" />
+              </div>
+            ) : drawerItems.length === 0 ? (
+              <p className="text-slate-500 text-sm text-center py-12">Sin invitaciones encontradas.</p>
+            ) : (
+              drawerItems.map((inv) => (
+                <div key={inv.id} className="bg-slate-950 border border-white/5 rounded-xl p-4 space-y-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-white text-sm font-bold truncate">{inv.comerciante_nombre}</p>
+                      {inv.comerciante_nombre_comercial && (
+                        <p className="text-admin-gold text-xs font-bold truncate">{inv.comerciante_nombre_comercial}</p>
+                      )}
+                    </div>
+                    <span className={`flex-shrink-0 inline-flex px-2 py-0.5 rounded-full text-[10px] font-black border uppercase ${estadoInvBadge(inv.estado)}`}>
+                      {estadoInvLabel(inv.estado)}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div><span className="text-slate-500">WhatsApp:</span> <span className="text-slate-300 font-mono">{inv.comerciante_whatsapp || '—'}</span></div>
+                    <div><span className="text-slate-500">Email:</span> <span className="text-slate-300">{inv.comerciante_email || '—'}</span></div>
+                    <div><span className="text-slate-500">Ciudad:</span> <span className="text-slate-300">{inv.comerciante_ciudad || '—'}</span></div>
+                    <div><span className="text-slate-500">Origen:</span> <span className="text-slate-300">{inv.origen || 'manual'}</span></div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    {inv.jornadas_seleccionadas && inv.jornadas_seleccionadas.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {inv.jornadas_seleccionadas.map((jId) => {
+                          const cfg = jornadasEvento.find(j => j.id === jId);
+                          return (
+                            <span key={jId} className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 uppercase tracking-wider">
+                              {cfg?.label || jId}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    ) : <span className="text-slate-600 text-[10px]">Sin jornada</span>}
+                    <span className="text-[10px] text-slate-500">
+                      {new Date(inv.created_at).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })}
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="p-6 border-t border-white/10 bg-slate-950/80">
+            <button onClick={closeDrawer} className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white font-black rounded-2xl transition-all text-xs uppercase tracking-widest border border-white/5">
+              Cerrar
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
     {/* Alertas */}
     {alertas.length > 0 && (
       <section className="bg-admin-card rounded-2xl border border-red-500/20 overflow-hidden">
@@ -134,7 +254,7 @@ export default function ReporteClient({
             </thead>
             <tbody className="divide-y divide-admin-border">
               {reporte.map((r) => (
-                <tr key={r.distribuidor_id} className="hover:bg-slate-800/30 transition-colors">
+                <tr key={r.distribuidor_id} className="hover:bg-slate-800/30 transition-colors cursor-pointer" onClick={() => openDrawer(r)}>
                   <td className="p-4 text-white text-sm font-bold">{r.distribuidor}</td>
                   <td className="p-4 text-right text-white text-sm font-black">{r.total}</td>
                   <td className="p-4 text-right">

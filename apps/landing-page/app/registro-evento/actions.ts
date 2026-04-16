@@ -9,7 +9,7 @@ export async function registrarPreRegistroAction(formData: FormData): Promise<{ 
   const nombreNegocio = (formData.get('nombre_negocio') as string)?.trim();
   const tipoDoc = (formData.get('tipo_doc') as string)?.trim() || 'CC';
   const identificacion = (formData.get('identificacion') as string)?.trim() || null;
-  const telefono = (formData.get('telefono') as string)?.trim() || null;
+  const codigoInfluencer = (formData.get('codigo_influencer') as string)?.trim().toUpperCase() || null;
   const whatsapp = (formData.get('whatsapp') as string)?.trim();
   const email = (formData.get('email') as string)?.trim() || null;
   const direccion = (formData.get('direccion') as string)?.trim() || null;
@@ -29,10 +29,6 @@ export async function registrarPreRegistroAction(formData: FormData): Promise<{ 
     return { success: false, error: 'WhatsApp debe ser un celular colombiano de 10 dígitos que inicie con 3.' };
   }
 
-  if (telefono && !CELULAR_REGEX.test(telefono)) {
-    return { success: false, error: 'Teléfono debe ser un celular colombiano de 10 dígitos que inicie con 3.' };
-  }
-
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return { success: false, error: 'El formato del email no es válido.' };
   }
@@ -44,8 +40,8 @@ export async function registrarPreRegistroAction(formData: FormData): Promise<{ 
       nombre_negocio: nombreNegocio,
       tipo_doc: tipoDoc,
       identificacion,
-      telefono,
       whatsapp,
+      codigo_influencer: codigoInfluencer,
       email,
       direccion,
       ciudad,

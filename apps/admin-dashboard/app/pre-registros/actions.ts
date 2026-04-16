@@ -57,7 +57,7 @@ export async function getPreRegistrosAction(
 
   if (params.busqueda && params.busqueda.trim()) {
     const term = params.busqueda.trim();
-    query = query.or(`nombre.ilike.%${term}%,identificacion.ilike.%${term}%,codigo_influencer.ilike.%${term}%`);
+    query = query.or(`nombre.ilike.%${term}%,identificacion.ilike.%${term}%,codigo_influencer.ilike.%${term}%,whatsapp.ilike.%${term}%`);
   }
 
   const { data, error, count } = await query.range(from, to);
@@ -221,7 +221,7 @@ export async function exportarPreRegistrosCsvAction(
 
   if (params.busqueda && params.busqueda.trim()) {
     const term = params.busqueda.trim();
-    query = query.or(`nombre.ilike.%${term}%,identificacion.ilike.%${term}%,codigo_influencer.ilike.%${term}%`);
+    query = query.or(`nombre.ilike.%${term}%,identificacion.ilike.%${term}%,codigo_influencer.ilike.%${term}%,whatsapp.ilike.%${term}%`);
   }
 
   const { data, error } = await query;

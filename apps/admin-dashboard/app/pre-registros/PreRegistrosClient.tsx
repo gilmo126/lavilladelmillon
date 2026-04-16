@@ -298,7 +298,7 @@ export default function PreRegistrosClient({
             type="text"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
-            placeholder="Buscar por nombre, cedula o codigo influencer..."
+            placeholder="Buscar por nombre, cedula, WhatsApp o codigo influencer..."
             className="w-full bg-slate-900 border border-admin-border rounded-xl px-4 py-2.5 pr-10 text-white text-sm outline-none focus:border-admin-gold transition-all placeholder:text-slate-600"
           />
           {busqueda && (

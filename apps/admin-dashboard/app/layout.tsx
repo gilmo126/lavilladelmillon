@@ -31,11 +31,17 @@ export default async function RootLayout({
   const campanaNombre = config?.nombre_campana || 'La Villa del Millón';
   const sesionTimeoutMin = config?.sesion_timeout_minutos ?? 30;
 
+  let preRegistrosCount = 0;
+
   if (user) {
     const { data: profile } = await supabaseAdmin.from('perfiles').select('rol, nombre').eq('id', user.id).single();
     if (profile) {
        role = profile.rol;
        userName = profile.nombre;
+       if (profile.rol === 'admin') {
+         const { count } = await supabaseAdmin.from('pre_registros').select('*', { count: 'exact', head: true }).eq('estado', 'pendiente');
+         preRegistrosCount = count || 0;
+       }
     }
   }
 
@@ -43,7 +49,7 @@ export default async function RootLayout({
     <html lang="es">
       <body className={`${inter.className} antialiased bg-admin-dark text-slate-100 flex h-screen`}>
         {/* Usamos Sidebar envuelto pasando props */}
-        {user ? <Sidebar role={role} userName={userName} campanaNombre={campanaNombre} /> : null}
+        {user ? <Sidebar role={role} userName={userName} campanaNombre={campanaNombre} preRegistrosCount={preRegistrosCount} /> : null}
         <div className="flex-1 h-screen overflow-y-auto flex flex-col">
           {children}
         </div>

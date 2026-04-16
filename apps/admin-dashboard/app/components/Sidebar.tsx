@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { logout } from '../login/actions';
 
-export default function Sidebar({ role, userName, campanaNombre }: { role: string; userName: string; campanaNombre: string }) {
+export default function Sidebar({ role, userName, campanaNombre, preRegistrosCount = 0 }: { role: string; userName: string; campanaNombre: string; preRegistrosCount?: number }) {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -21,6 +21,7 @@ export default function Sidebar({ role, userName, campanaNombre }: { role: strin
     { href: '/asistencia',      label: '📋 Asistencia Evento' },
     { href: '/invitaciones',    label: '🎪 Invitaciones Evento' },
     { href: '/invitaciones/reporte', label: '📊 Reporte Invitaciones' },
+    { href: '/pre-registros', label: '📋 Pre-Registros Evento', badge: preRegistrosCount },
     { sep: true, label: 'PERSONAL' },
     { href: '/comerciantes',    label: '🏪 Comerciantes' },
     { href: '/distribuidores',  label: '👥 Gestión de Personal' },
@@ -137,7 +138,12 @@ export default function Sidebar({ role, userName, campanaNombre }: { role: strin
                 }`}
               >
                 <div className={`w-1.5 h-1.5 rounded-full transition-all ${isActive ? 'bg-admin-blue scale-125' : 'bg-slate-700 opacity-50 group-hover:bg-slate-500'}`} />
-                {(item as any).label}
+                <span className="flex-1">{(item as any).label}</span>
+                {(item as any).badge > 0 && (
+                  <span className="ml-auto px-2 py-0.5 rounded-full text-[9px] font-black bg-admin-gold/20 border border-admin-gold/40 text-admin-gold">
+                    {(item as any).badge}
+                  </span>
+                )}
               </Link>
             );
           })}

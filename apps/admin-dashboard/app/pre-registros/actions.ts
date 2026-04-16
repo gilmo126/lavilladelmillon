@@ -114,6 +114,7 @@ export async function aprobarPreRegistroAction(id: string): Promise<{ success: b
       comerciante_whatsapp: reg.whatsapp,
       comerciante_email: reg.email,
       jornadas_seleccionadas: reg.jornadas_seleccionadas,
+      origen: 'pre_registro',
     })
     .select('id, token')
     .single();

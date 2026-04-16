@@ -22,6 +22,7 @@ export type InvitacionItem = {
   created_at: string;
   jornadas_seleccionadas: string[] | null;
   es_prueba?: boolean;
+  origen?: string;
   distribuidor: { nombre: string } | null;
 };
 
@@ -178,7 +179,7 @@ export async function getInvitacionesAction(
 
   let query = supabaseAdmin
     .from('invitaciones')
-    .select('id, tipo_evento, comerciante_nombre, comerciante_nombre_comercial, comerciante_ciudad, comerciante_tel, comerciante_whatsapp, comerciante_email, token, estado, created_at, jornadas_seleccionadas, es_prueba, distribuidor:perfiles!distribuidor_id(nombre)', { count: 'exact' })
+    .select('id, tipo_evento, comerciante_nombre, comerciante_nombre_comercial, comerciante_ciudad, comerciante_tel, comerciante_whatsapp, comerciante_email, token, estado, created_at, jornadas_seleccionadas, es_prueba, origen, distribuidor:perfiles!distribuidor_id(nombre)', { count: 'exact' })
     .order('created_at', { ascending: false });
 
   if (!incluirPruebas) {

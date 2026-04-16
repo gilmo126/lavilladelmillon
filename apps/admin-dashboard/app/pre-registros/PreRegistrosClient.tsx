@@ -197,7 +197,7 @@ export default function PreRegistrosClient({
   const [total, setTotal] = useState(initialTotal);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedReg, setSelectedReg] = useState<PreRegistroItem | null>(null);
 
   async function fetchPage(t: string, p: number) {
     return getPreRegistrosAction({ estado: t, page: p, pageSize: PAGE_SIZE });
@@ -229,12 +229,11 @@ export default function PreRegistrosClient({
   }
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const selectedReg = selectedId ? data.find(d => d.id === selectedId) : null;
 
   return (
     <div className="space-y-4">
       {selectedReg && (
-        <PreRegistroDrawer reg={selectedReg} jornadasEvento={jornadasEvento} onClose={() => setSelectedId(null)} onUpdated={reload} />
+        <PreRegistroDrawer reg={selectedReg} jornadasEvento={jornadasEvento} onClose={() => { setSelectedReg(null); reload(); }} onUpdated={() => {}} />
       )}
 
       {/* Tabs */}
@@ -281,7 +280,7 @@ export default function PreRegistrosClient({
               </thead>
               <tbody className="divide-y divide-admin-border">
                 {data.map((r) => (
-                  <tr key={r.id} className="hover:bg-slate-800/30 transition-colors cursor-pointer" onClick={() => setSelectedId(r.id)}>
+                  <tr key={r.id} className="hover:bg-slate-800/30 transition-colors cursor-pointer" onClick={() => setSelectedReg(r)}>
                     <td className="p-4">
                       <p className="font-bold text-white text-sm">{r.nombre}</p>
                       {r.ciudad && <p className="text-[10px] text-slate-500 mt-0.5">{r.ciudad}</p>}

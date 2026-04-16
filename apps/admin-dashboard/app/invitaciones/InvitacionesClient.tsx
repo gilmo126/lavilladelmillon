@@ -563,7 +563,12 @@ export default function InvitacionesClient({
                         )}
                         {inv.comerciante_tel && <p className="text-[10px] text-slate-500 mt-0.5">{inv.comerciante_tel}</p>}
                       </td>
-                      <td className="p-4 text-sm text-slate-300">{inv.tipo_evento}</td>
+                      <td className="p-4 text-sm text-slate-300">
+                        {inv.tipo_evento}
+                        {inv.origen === 'pre_registro' && (
+                          <span className="ml-2 inline-block px-1.5 py-0.5 rounded text-[9px] font-black bg-purple-500/20 border border-purple-500/40 text-purple-300 uppercase">Virtual</span>
+                        )}
+                      </td>
                       {!isDist && (
                         <td className="p-4 text-sm text-slate-400 font-bold uppercase">{inv.distribuidor?.nombre || '—'}</td>
                       )}

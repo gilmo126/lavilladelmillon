@@ -53,6 +53,13 @@ export async function venderPackAction(formData: FormData): Promise<VenderPackRe
   if (!comercianteNombre || !comercianteIdent || !comercianteWa) {
     return { success: false, error: 'Nombre, identificación y WhatsApp del comerciante son obligatorios.' };
   }
+  const celularRegex = /^3[0-9]{9}$/;
+  if (!celularRegex.test(comercianteWa)) {
+    return { success: false, error: 'WhatsApp debe ser un celular colombiano de 10 dígitos que inicie con 3.' };
+  }
+  if (comercianteTel && !celularRegex.test(comercianteTel)) {
+    return { success: false, error: 'Teléfono debe ser un celular colombiano de 10 dígitos que inicie con 3.' };
+  }
   if (!['inmediato', 'pendiente'].includes(tipoPago)) {
     return { success: false, error: 'Tipo de pago inválido.' };
   }
@@ -361,6 +368,22 @@ export async function actualizarDatosPackAction(
   if (Object.keys(payload).length === 0) return { success: true };
 
   const { error } = await supabaseAdmin.from('packs').update(payload).eq('id', packId);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+// ── CONFIRMAR WHATSAPP ENTREGADO ────────────────────────────────────
+
+export async function confirmarWhatsappPackAction(packId: string): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { success: false, error: 'Sesión no válida.' };
+
+  const { error } = await supabaseAdmin
+    .from('packs')
+    .update({ whatsapp_confirmado: true, whatsapp_confirmado_at: new Date().toISOString() })
+    .eq('id', packId);
+
   if (error) return { success: false, error: error.message };
   return { success: true };
 }

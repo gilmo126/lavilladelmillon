@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { venderPackAction, enviarEmailPackAction, type VenderPackResult } from './actions';
+import { venderPackAction, enviarEmailPackAction, confirmarWhatsappPackAction, type VenderPackResult } from './actions';
+
+const CELULAR_REGEX = /^3[0-9]{9}$/;
 
 const ADMIN_URL   = process.env.NEXT_PUBLIC_ADMIN_URL || 'https://lavilladelmillon-admin.guillaumer-orion.workers.dev';
 const LANDING_URL = process.env.NEXT_PUBLIC_LANDING_URL || 'https://landing-page.guillaumer-orion.workers.dev';
@@ -29,6 +31,10 @@ export default function VenderPackForm({ diasVencimientoPago }: Props) {
   const [copied, setCopied]       = useState(false);
   const [emailStatus, setEmailStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [emailError, setEmailError]   = useState<string | null>(null);
+  const [waConfirmado, setWaConfirmado] = useState(false);
+  const [waConfirmando, setWaConfirmando] = useState(false);
+  const [waError, setWaError] = useState<string | null>(null);
+  const [telError, setTelError] = useState<string | null>(null);
 
   const fechaVencimientoDisplay = new Date(
     Date.now() + diasVencimientoPago * 24 * 60 * 60 * 1000
@@ -42,6 +48,19 @@ export default function VenderPackForm({ diasVencimientoPago }: Props) {
 
     const fd = new FormData(e.currentTarget);
     fd.set('tipo_pago', tipoPago);
+
+    const waVal = (fd.get('comerciante_whatsapp') as string)?.trim() || '';
+    const telVal = (fd.get('comerciante_tel') as string)?.trim() || '';
+    if (waVal && !CELULAR_REGEX.test(waVal)) {
+      setError('WhatsApp debe ser un celular colombiano de 10 dígitos que inicie con 3.');
+      setLoading(false);
+      return;
+    }
+    if (telVal && !CELULAR_REGEX.test(telVal)) {
+      setError('Teléfono debe ser un celular colombiano de 10 dígitos que inicie con 3.');
+      setLoading(false);
+      return;
+    }
 
     const exitosos: SuccessData[] = [];
 
@@ -64,6 +83,18 @@ export default function VenderPackForm({ diasVencimientoPago }: Props) {
         setResult(exitosos[0]);
       }
     }
+  }
+
+  async function handleConfirmarWa() {
+    if (!result) return;
+    setWaConfirmando(true);
+    const packs = resultados.length > 1 ? resultados : [result];
+    for (const p of packs) {
+      const res = await confirmarWhatsappPackAction(p.packId);
+      if (!res.success) { setWaConfirmando(false); return; }
+    }
+    setWaConfirmado(true);
+    setWaConfirmando(false);
   }
 
   function handleCopy(text: string) {
@@ -125,9 +156,23 @@ export default function VenderPackForm({ diasVencimientoPago }: Props) {
             <span className="text-lg">📲</span> Informar al Comerciante por WhatsApp
           </a>
 
+          <label className={`flex items-center gap-3 p-4 rounded-2xl border cursor-pointer transition-all ${waConfirmado ? 'bg-green-500/10 border-green-500/30' : 'bg-orange-500/5 border-orange-500/20'}`}>
+            <input
+              type="checkbox"
+              checked={waConfirmado}
+              onChange={handleConfirmarWa}
+              disabled={waConfirmando || waConfirmado}
+              className="w-5 h-5 accent-green-500 flex-shrink-0"
+            />
+            <span className={`text-xs font-bold ${waConfirmado ? 'text-green-400' : 'text-orange-300'}`}>
+              {waConfirmando ? 'Guardando...' : waConfirmado ? '✅ Confirmado — WhatsApp entregado' : 'Confirmo que el mensaje de WhatsApp fue entregado al comerciante'}
+            </span>
+          </label>
+
           <button
-            onClick={() => { setResult(null); setResultados([]); setError(null); setCantidadPacks(1); }}
-            className="w-full py-4 bg-slate-800 hover:bg-slate-700 text-white font-black rounded-2xl transition-all text-sm uppercase tracking-widest border border-white/5"
+            onClick={() => { setResult(null); setResultados([]); setError(null); setCantidadPacks(1); setWaConfirmado(false); setEmailStatus('idle'); setEmailError(null); }}
+            disabled={!waConfirmado}
+            className="w-full py-4 bg-slate-800 hover:bg-slate-700 text-white font-black rounded-2xl transition-all text-sm uppercase tracking-widest border border-white/5 disabled:opacity-30 disabled:cursor-not-allowed"
           >
             Nueva Venta
           </button>
@@ -282,9 +327,23 @@ export default function VenderPackForm({ diasVencimientoPago }: Props) {
           )}
         </div>
 
+        <label className={`flex items-center gap-3 p-4 rounded-2xl border cursor-pointer transition-all ${waConfirmado ? 'bg-green-500/10 border-green-500/30' : 'bg-orange-500/5 border-orange-500/20'}`}>
+          <input
+            type="checkbox"
+            checked={waConfirmado}
+            onChange={handleConfirmarWa}
+            disabled={waConfirmando || waConfirmado}
+            className="w-5 h-5 accent-green-500 flex-shrink-0"
+          />
+          <span className={`text-xs font-bold ${waConfirmado ? 'text-green-400' : 'text-orange-300'}`}>
+            {waConfirmando ? 'Guardando...' : waConfirmado ? '✅ Confirmado — WhatsApp entregado' : 'Confirmo que el mensaje de WhatsApp fue entregado al comerciante'}
+          </span>
+        </label>
+
         <button
-          onClick={() => { setResult(null); setResultados([]); setError(null); setEmailStatus('idle'); setEmailError(null); setCantidadPacks(1); }}
-          className="w-full py-4 bg-slate-800 hover:bg-slate-700 text-white font-black rounded-2xl transition-all text-sm uppercase tracking-widest border border-white/5"
+          onClick={() => { setResult(null); setResultados([]); setError(null); setEmailStatus('idle'); setEmailError(null); setCantidadPacks(1); setWaConfirmado(false); }}
+          disabled={!waConfirmado}
+          className="w-full py-4 bg-slate-800 hover:bg-slate-700 text-white font-black rounded-2xl transition-all text-sm uppercase tracking-widest border border-white/5 disabled:opacity-30 disabled:cursor-not-allowed"
         >
           Nueva Venta
         </button>
@@ -368,17 +427,25 @@ export default function VenderPackForm({ diasVencimientoPago }: Props) {
             <input
               name="comerciante_whatsapp"
               required
+              pattern="3[0-9]{9}"
+              maxLength={10}
               placeholder="3001234567"
-              className="w-full bg-slate-950 border border-slate-700/50 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-admin-blue transition-all"
+              onChange={(e) => setWaError(e.target.value && !CELULAR_REGEX.test(e.target.value) ? '10 dígitos, inicia con 3' : null)}
+              className={`w-full bg-slate-950 border rounded-xl px-4 py-3 text-white text-sm outline-none transition-all ${waError ? 'border-red-500 focus:border-red-500' : 'border-slate-700/50 focus:border-admin-blue'}`}
             />
+            {waError && <p className="text-red-400 text-[10px] mt-1">{waError}</p>}
           </div>
           <div>
             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Teléfono <span className="text-slate-600 normal-case">(opcional)</span></label>
             <input
               name="comerciante_tel"
+              pattern="3[0-9]{9}"
+              maxLength={10}
               placeholder="3001234567"
-              className="w-full bg-slate-950 border border-slate-700/50 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-admin-blue transition-all"
+              onChange={(e) => setTelError(e.target.value && !CELULAR_REGEX.test(e.target.value) ? '10 dígitos, inicia con 3' : null)}
+              className={`w-full bg-slate-950 border rounded-xl px-4 py-3 text-white text-sm outline-none transition-all ${telError ? 'border-red-500 focus:border-red-500' : 'border-slate-700/50 focus:border-admin-blue'}`}
             />
+            {telError && <p className="text-red-400 text-[10px] mt-1">{telError}</p>}
           </div>
         </div>
 

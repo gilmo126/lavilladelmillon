@@ -1,17 +1,33 @@
 'use client';
 
 import { useState } from 'react';
-import { getReporteInvitacionesAction, type ReporteDistribuidorItem } from '../actions';
+import { getReporteInvitacionesAction, type ReporteDistribuidorItem, type AlertaItem } from '../actions';
 
 type JornadaConfig = { id: string; fecha: string; hora: string; label: string };
+
+function conversionColor(conv: number, total: number): string {
+  if (total <= 5) return 'text-slate-400';
+  if (conv > 50) return 'text-green-400';
+  if (conv >= 20) return 'text-yellow-400';
+  return 'text-red-400';
+}
+
+const alertaTipoLabel: Record<string, { emoji: string; label: string; color: string }> = {
+  sin_confirmacion: { emoji: '📵', label: 'Sin confirmar WhatsApp', color: 'border-orange-500/30 bg-orange-500/5' },
+  baja_conversion: { emoji: '📉', label: 'Baja conversión', color: 'border-red-500/30 bg-red-500/5' },
+  telefono_repetido: { emoji: '📞', label: 'Teléfono repetido', color: 'border-yellow-500/30 bg-yellow-500/5' },
+};
 
 export default function ReporteClient({
   initial,
   jornadasEvento,
+  alertas,
 }: {
   initial: ReporteDistribuidorItem[];
   jornadasEvento: JornadaConfig[];
+  alertas: AlertaItem[];
 }) {
+  const [alertasOpen, setAlertasOpen] = useState(alertas.length > 0);
   const [reporte, setReporte] = useState<ReporteDistribuidorItem[]>(initial);
   const [loading, setLoading] = useState(false);
 
@@ -42,6 +58,40 @@ export default function ReporteClient({
   }
 
   return (
+    <div className="space-y-6">
+    {/* Alertas */}
+    {alertas.length > 0 && (
+      <section className="bg-admin-card rounded-2xl border border-red-500/20 overflow-hidden">
+        <button
+          onClick={() => setAlertasOpen(!alertasOpen)}
+          className="w-full flex items-center justify-between gap-4 p-5 text-left"
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-xl">🚨</span>
+            <h2 className="text-white text-sm font-black uppercase tracking-widest">Alertas de Actividad Sospechosa</h2>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-red-500/20 border border-red-500/40 text-red-400">{alertas.length}</span>
+          </div>
+          <span className="text-slate-500 text-xs">{alertasOpen ? '▼' : '▶'}</span>
+        </button>
+        {alertasOpen && (
+          <div className="px-5 pb-5 space-y-3">
+            {alertas.map((a, i) => {
+              const meta = alertaTipoLabel[a.tipo] || alertaTipoLabel.sin_confirmacion;
+              return (
+                <div key={`${a.distribuidor_id}-${a.tipo}-${i}`} className={`flex items-start gap-3 p-4 rounded-xl border ${meta.color}`}>
+                  <span className="text-lg flex-shrink-0">{meta.emoji}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white text-sm font-bold">{a.distribuidor}</p>
+                    <p className="text-slate-400 text-xs mt-0.5">{meta.label}: <span className="text-white font-bold">{a.detalle}</span></p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+    )}
+
     <section className="bg-admin-card rounded-2xl border border-admin-border overflow-hidden">
       <div className="flex items-center justify-between gap-4 p-5 border-b border-admin-border">
         <div className="flex items-center gap-3">
@@ -96,7 +146,10 @@ export default function ReporteClient({
                   <td className="p-4 text-right">
                     <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-black bg-red-500/10 border border-red-500/30 text-red-400">{r.rechazadas}</span>
                   </td>
-                  <td className="p-4 text-right text-admin-gold text-sm font-black">{r.conversion.toFixed(1)}%</td>
+                  <td className={`p-4 text-right text-sm font-black ${conversionColor(r.conversion, r.total)}`}>
+                    {r.conversion.toFixed(1)}%
+                    {r.total > 5 && r.conversion < 20 && <span className="ml-1">🚨</span>}
+                  </td>
                   <td className="p-4">
                     {r.jornadas.length === 0 ? (
                       <span className="text-slate-600 text-xs">—</span>
@@ -121,5 +174,6 @@ export default function ReporteClient({
         </div>
       )}
     </section>
+    </div>
   );
 }

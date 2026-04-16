@@ -4,7 +4,7 @@ import { createClient } from '../../../utils/supabase/server';
 import { supabaseAdmin } from '../../../lib/supabaseAdmin';
 import { redirect } from 'next/navigation';
 import ReporteClient from './ReporteClient';
-import { getReporteInvitacionesAction } from '../actions';
+import { getReporteInvitacionesAction, getAlertasSospechosasAction } from '../actions';
 
 export const metadata = { title: 'Reporte de Invitaciones | AdminPanel' };
 
@@ -23,7 +23,10 @@ export default async function ReporteInvitacionesPage() {
     .single();
 
   const jornadasEvento = Array.isArray(config?.jornadas_evento) ? config!.jornadas_evento : [];
-  const initial = await getReporteInvitacionesAction();
+  const [initial, alertas] = await Promise.all([
+    getReporteInvitacionesAction(),
+    getAlertasSospechosasAction(),
+  ]);
 
   return (
     <div className="p-8 pb-20 h-full overflow-y-auto">
@@ -40,7 +43,7 @@ export default async function ReporteInvitacionesPage() {
         </p>
       </header>
 
-      <ReporteClient initial={initial} jornadasEvento={jornadasEvento} />
+      <ReporteClient initial={initial} jornadasEvento={jornadasEvento} alertas={alertas} />
     </div>
   );
 }

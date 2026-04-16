@@ -4,8 +4,11 @@ import { useState, useEffect } from 'react';
 import {
   crearInvitacionAction, getInvitacionesAction, reenviarInvitacionAction,
   getInvitacionDetailAction, actualizarInvitacionAction, marcarInvitacionPruebaAction,
+  confirmarWhatsappInvitacionAction,
   type InvitacionItem, type InvitacionDetail,
 } from './actions';
+
+const CELULAR_REGEX = /^3[0-9]{9}$/;
 
 const LANDING_URL = process.env.NEXT_PUBLIC_LANDING_URL || 'https://landing-page.guillaumer-orion.workers.dev';
 const ADMIN_URL = process.env.NEXT_PUBLIC_ADMIN_URL || 'https://lavilladelmillon-admin.guillaumer-orion.workers.dev';
@@ -394,6 +397,8 @@ export default function InvitacionesClient({
   const [page, setPage] = useState(1);
   const ITEMS_PER_PAGE = pageSize;
   const [incluirPruebas, setIncluirPruebas] = useState(false);
+  const [waConfirmado, setWaConfirmado] = useState(false);
+  const [waConfirmando, setWaConfirmando] = useState(false);
 
   async function fetchPage(t: 'todas' | 'aceptada' | 'pendiente', p: number) {
     return getInvitacionesAction({
@@ -633,15 +638,32 @@ export default function InvitacionesClient({
                   href={`https://wa.me/${formResult.comercianteWhatsapp || ''}?text=${encodeURIComponent(`Hola ${formResult.comercianteNombre}, estás invitado(a) a ${formResult.tipoEvento} de La Villa del Millón. Confirma tu asistencia aquí: ${LANDING_URL}/invitacion/${formResult.token}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  onClick={() => { setTimeout(() => { setFormMsg(null); setFormResult(null); }, 500); }}
                   className="flex items-center justify-center gap-2 w-full py-3 bg-green-600 hover:bg-green-500 text-white font-black rounded-xl transition-all text-xs uppercase tracking-widest active:scale-95"
                 >
                   📲 Enviar por WhatsApp
                 </a>
               </div>
+              <label className={`flex items-center gap-3 p-4 rounded-2xl border cursor-pointer transition-all ${waConfirmado ? 'bg-green-500/10 border-green-500/30' : 'bg-orange-500/5 border-orange-500/20'}`}>
+                <input
+                  type="checkbox"
+                  checked={waConfirmado}
+                  onChange={async () => {
+                    setWaConfirmando(true);
+                    const res = await confirmarWhatsappInvitacionAction(formResult.id);
+                    if (res.success) setWaConfirmado(true);
+                    setWaConfirmando(false);
+                  }}
+                  disabled={waConfirmando || waConfirmado}
+                  className="w-5 h-5 accent-green-500 flex-shrink-0"
+                />
+                <span className={`text-xs font-bold ${waConfirmado ? 'text-green-400' : 'text-orange-300'}`}>
+                  {waConfirmando ? 'Guardando...' : waConfirmado ? '✅ Confirmado — WhatsApp entregado' : 'Confirmo que el mensaje de WhatsApp fue entregado al comerciante'}
+                </span>
+              </label>
               <button
-                onClick={() => { setFormMsg(null); setFormResult(null); }}
-                className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition-all text-sm uppercase tracking-widest border border-white/5"
+                onClick={() => { setFormMsg(null); setFormResult(null); setWaConfirmado(false); }}
+                disabled={!waConfirmado}
+                className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition-all text-sm uppercase tracking-widest border border-white/5 disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 Nueva Invitación
               </button>
@@ -683,11 +705,11 @@ export default function InvitacionesClient({
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">WhatsApp *</label>
-                    <input name="comerciante_whatsapp" required placeholder="3001234567" className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-admin-blue" />
+                    <input name="comerciante_whatsapp" required pattern="3[0-9]{9}" maxLength={10} placeholder="3001234567" className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-admin-blue" />
                   </div>
                   <div>
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Teléfono <span className="text-slate-600 normal-case">(opcional)</span></label>
-                    <input name="comerciante_tel" placeholder="3001234567" className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-admin-blue" />
+                    <input name="comerciante_tel" pattern="3[0-9]{9}" maxLength={10} placeholder="3001234567" className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-admin-blue" />
                   </div>
                 </div>
                 <div>

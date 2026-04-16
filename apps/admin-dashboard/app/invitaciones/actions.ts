@@ -26,7 +26,7 @@ export type InvitacionItem = {
 };
 
 export type CrearInvitacionResult =
-  | { success: true; token: string; comercianteNombre: string; comercianteWhatsapp: string | null; comercianteEmail: string | null; tipoEvento: string }
+  | { success: true; id: string; token: string; comercianteNombre: string; comercianteWhatsapp: string | null; comercianteEmail: string | null; tipoEvento: string }
   | { success: false; error: string };
 
 // ── CREAR INVITACIÓN ────────────────────────────────────────────────
@@ -51,6 +51,13 @@ export async function crearInvitacionAction(formData: FormData): Promise<CrearIn
   const email = (formData.get('comerciante_email') as string)?.trim() || null;
 
   if (!nombre) return { success: false, error: 'El nombre del comerciante es obligatorio.' };
+  const celularRegex = /^3[0-9]{9}$/;
+  if (whatsapp && !celularRegex.test(whatsapp)) {
+    return { success: false, error: 'WhatsApp debe ser un celular colombiano de 10 dígitos que inicie con 3.' };
+  }
+  if (tel && !celularRegex.test(tel)) {
+    return { success: false, error: 'Teléfono debe ser un celular colombiano de 10 dígitos que inicie con 3.' };
+  }
 
   const { data: config } = await supabaseAdmin
     .from('configuracion_campana')
@@ -80,7 +87,7 @@ export async function crearInvitacionAction(formData: FormData): Promise<CrearIn
       comerciante_whatsapp: whatsapp,
       comerciante_email: email,
     })
-    .select('token')
+    .select('id, token')
     .single();
 
   if (insertErr || !inv) {
@@ -143,7 +150,7 @@ export async function crearInvitacionAction(formData: FormData): Promise<CrearIn
     } catch { /* best-effort */ }
   }
 
-  return { success: true, token: inv.token, comercianteNombre: nombre, comercianteWhatsapp: whatsapp, comercianteEmail: email, tipoEvento };
+  return { success: true, id: inv.id, token: inv.token, comercianteNombre: nombre, comercianteWhatsapp: whatsapp, comercianteEmail: email, tipoEvento };
 }
 
 // ── LISTAR INVITACIONES (paginado server-side) ──────────────────────
@@ -276,6 +283,22 @@ export async function getInvitacionDetailAction(id: string): Promise<InvitacionD
   return data as InvitacionDetail | null;
 }
 
+// ── CONFIRMAR WHATSAPP ENTREGADO ────────────────────────────────────
+
+export async function confirmarWhatsappInvitacionAction(invitacionId: string): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { success: false, error: 'Sesión no válida.' };
+
+  const { error } = await supabaseAdmin
+    .from('invitaciones')
+    .update({ whatsapp_confirmado: true, whatsapp_confirmado_at: new Date().toISOString() })
+    .eq('id', invitacionId);
+
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
 // ── MARCAR INVITACIÓN COMO PRUEBA (solo admin) ──────────────────────
 
 export async function marcarInvitacionPruebaAction(invitacionId: string, esPrueba: boolean): Promise<{ success: boolean; error?: string }> {
@@ -371,6 +394,104 @@ export async function getReporteInvitacionesAction(): Promise<ReporteDistribuido
 
   result.sort((a, b) => b.total - a.total);
   return result;
+}
+
+// ── ALERTAS DE ACTIVIDAD SOSPECHOSA (solo admin) ────────────────────
+
+export type AlertaItem = {
+  distribuidor_id: string;
+  distribuidor: string;
+  tipo: 'sin_confirmacion' | 'baja_conversion' | 'telefono_repetido';
+  detalle: string;
+  cantidad: number;
+};
+
+export async function getAlertasSospechosasAction(): Promise<AlertaItem[]> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data: profile } = await supabaseAdmin.from('perfiles').select('rol').eq('id', user.id).single();
+  if (!profile || profile.rol !== 'admin') return [];
+
+  const alertas: AlertaItem[] = [];
+
+  // 1. Packs sin whatsapp_confirmado por distribuidor
+  const { data: packsNoConf } = await supabaseAdmin
+    .from('packs')
+    .select('distribuidor_id, distribuidor:perfiles!distribuidor_id(nombre)')
+    .eq('es_prueba', false)
+    .eq('whatsapp_confirmado', false);
+
+  if (packsNoConf) {
+    const map = new Map<string, { nombre: string; count: number }>();
+    for (const p of packsNoConf as any[]) {
+      const dId = p.distribuidor_id;
+      const nombre = Array.isArray(p.distribuidor) ? p.distribuidor[0]?.nombre : p.distribuidor?.nombre;
+      const e = map.get(dId) || { nombre: nombre || 'Sin nombre', count: 0 };
+      e.count++;
+      map.set(dId, e);
+    }
+    Array.from(map.entries()).forEach(([dId, e]) => {
+      if (e.count > 5) {
+        alertas.push({ distribuidor_id: dId, distribuidor: e.nombre, tipo: 'sin_confirmacion', detalle: `${e.count} packs sin confirmar WhatsApp`, cantidad: e.count });
+      }
+    });
+  }
+
+  // 2. Invitaciones sin whatsapp_confirmado por distribuidor
+  const { data: invsNoConf } = await supabaseAdmin
+    .from('invitaciones')
+    .select('distribuidor_id, distribuidor:perfiles!distribuidor_id(nombre)')
+    .eq('es_prueba', false)
+    .eq('whatsapp_confirmado', false);
+
+  if (invsNoConf) {
+    const map = new Map<string, { nombre: string; count: number }>();
+    for (const i of invsNoConf as any[]) {
+      const dId = i.distribuidor_id;
+      const nombre = Array.isArray(i.distribuidor) ? i.distribuidor[0]?.nombre : i.distribuidor?.nombre;
+      const e = map.get(dId) || { nombre: nombre || 'Sin nombre', count: 0 };
+      e.count++;
+      map.set(dId, e);
+    }
+    Array.from(map.entries()).forEach(([dId, e]) => {
+      if (e.count > 5) {
+        alertas.push({ distribuidor_id: dId, distribuidor: e.nombre, tipo: 'sin_confirmacion', detalle: `${e.count} invitaciones sin confirmar WhatsApp`, cantidad: e.count });
+      }
+    });
+  }
+
+  // 3. Teléfonos repetidos en diferentes comerciantes (packs)
+  const { data: packsPhones } = await supabaseAdmin
+    .from('packs')
+    .select('distribuidor_id, comerciante_whatsapp, comerciante_nombre, distribuidor:perfiles!distribuidor_id(nombre)')
+    .eq('es_prueba', false)
+    .not('comerciante_whatsapp', 'is', null);
+
+  if (packsPhones) {
+    const byDist = new Map<string, { nombre: string; phones: Map<string, Set<string>> }>();
+    for (const p of packsPhones as any[]) {
+      const dId = p.distribuidor_id;
+      const phone = p.comerciante_whatsapp?.trim();
+      const cName = p.comerciante_nombre?.trim();
+      if (!phone || !cName || !dId) continue;
+      const nombre = Array.isArray(p.distribuidor) ? p.distribuidor[0]?.nombre : p.distribuidor?.nombre;
+      if (!byDist.has(dId)) byDist.set(dId, { nombre: nombre || 'Sin nombre', phones: new Map() });
+      const entry = byDist.get(dId)!;
+      if (!entry.phones.has(phone)) entry.phones.set(phone, new Set());
+      entry.phones.get(phone)!.add(cName);
+    }
+    Array.from(byDist.entries()).forEach(([dId, e]) => {
+      Array.from(e.phones.entries()).forEach(([phone, names]) => {
+        if (names.size >= 3) {
+          alertas.push({ distribuidor_id: dId, distribuidor: e.nombre, tipo: 'telefono_repetido', detalle: `${phone} usado en ${names.size} comerciantes distintos`, cantidad: names.size });
+        }
+      });
+    });
+  }
+
+  return alertas;
 }
 
 // ── ACTUALIZAR DATOS DEL COMERCIANTE ────────────────────────────────

@@ -22,7 +22,7 @@ export default async function VentasReportPage({ searchParams }: { searchParams:
   const sParams = await searchParams;
   const page = parseInt(sParams.page || '1');
   const query = sParams.query || '';
-  const limit = 25;
+  const limit = 10;
   const incluirPruebas = isAdmin && sParams.pruebas === '1';
 
   const { data, total, totalPages } = await getPacksPaged(page, limit, query, isDist ? user.id : undefined, incluirPruebas);

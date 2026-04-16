@@ -652,14 +652,14 @@ export default function VentasClient({
         </div>
         <div className="flex gap-2">
           <button
-            onClick={() => router.push(`/ventas?query=${query}&page=${currentPage - 1}`)}
+            onClick={() => { const p = incluirPruebas ? '&pruebas=1' : ''; router.push(`/ventas?query=${query}&page=${currentPage - 1}${p}`); }}
             disabled={currentPage <= 1}
             className="p-2 bg-admin-card border border-admin-border rounded-lg text-white disabled:opacity-30 disabled:grayscale transition-all hover:bg-slate-800 text-sm font-bold"
           >
             ← Anterior
           </button>
           <button
-            onClick={() => router.push(`/ventas?query=${query}&page=${currentPage + 1}`)}
+            onClick={() => { const p = incluirPruebas ? '&pruebas=1' : ''; router.push(`/ventas?query=${query}&page=${currentPage + 1}${p}`); }}
             disabled={currentPage >= totalPages}
             className="p-2 bg-admin-card border border-admin-border rounded-lg text-white disabled:opacity-30 disabled:grayscale transition-all hover:bg-slate-800 text-sm font-bold"
           >

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   getPreRegistrosAction, aprobarPreRegistroAction, rechazarPreRegistroAction,
   exportarPreRegistrosCsvAction,
@@ -201,10 +201,27 @@ export default function PreRegistrosClient({
   const [selectedReg, setSelectedReg] = useState<PreRegistroItem | null>(null);
   const [busqueda, setBusqueda] = useState('');
   const [exportando, setExportando] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const busquedaRef = useRef(busqueda);
+  busquedaRef.current = busqueda;
 
   async function fetchPage(t: string, p: number, search?: string) {
-    return getPreRegistrosAction({ estado: t, page: p, pageSize: PAGE_SIZE, busqueda: search ?? busqueda });
+    return getPreRegistrosAction({ estado: t, page: p, pageSize: PAGE_SIZE, busqueda: search ?? busquedaRef.current });
   }
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      setPage(1);
+      setLoading(true);
+      const res = await fetchPage(tab, 1, busqueda);
+      setData(res.items);
+      setTotal(res.total);
+      setLoading(false);
+    }, 400);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [busqueda]);
 
   async function handleTabChange(t: typeof tab) {
     setTab(t);
@@ -220,15 +237,6 @@ export default function PreRegistrosClient({
     setPage(p);
     setLoading(true);
     const res = await fetchPage(tab, p);
-    setData(res.items);
-    setTotal(res.total);
-    setLoading(false);
-  }
-
-  async function handleBusqueda() {
-    setPage(1);
-    setLoading(true);
-    const res = await fetchPage(tab, 1, busqueda);
     setData(res.items);
     setTotal(res.total);
     setLoading(false);
@@ -285,23 +293,18 @@ export default function PreRegistrosClient({
 
       {/* Filtros y exportar */}
       <div className="flex flex-col sm:flex-row gap-3">
-        <div className="flex-1 flex gap-2">
+        <div className="flex-1 relative">
           <input
             type="text"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleBusqueda()}
             placeholder="Buscar por nombre, cedula o codigo influencer..."
-            className="flex-1 bg-slate-900 border border-admin-border rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-admin-gold transition-all placeholder:text-slate-600"
+            className="w-full bg-slate-900 border border-admin-border rounded-xl px-4 py-2.5 pr-10 text-white text-sm outline-none focus:border-admin-gold transition-all placeholder:text-slate-600"
           />
-          <button onClick={handleBusqueda} disabled={loading}
-            className="px-4 py-2.5 bg-admin-gold hover:bg-yellow-500 text-slate-900 font-black rounded-xl text-xs uppercase tracking-widest disabled:opacity-40 transition-all">
-            Buscar
-          </button>
           {busqueda && (
-            <button onClick={() => { setBusqueda(''); setPage(1); fetchPage(tab, 1, '').then(res => { setData(res.items); setTotal(res.total); }); }}
-              className="px-3 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-xl text-xs font-bold transition-all">
-              Limpiar
+            <button onClick={() => setBusqueda('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors text-sm">
+              ✕
             </button>
           )}
         </div>

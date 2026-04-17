@@ -14,6 +14,7 @@ export const metadata: Metadata = {
 
 import { createClient } from '../utils/supabase/server';
 import { supabaseAdmin } from '../lib/supabaseAdmin';
+import { getPreRegistrosPendientesCount } from './pre-registros/actions';
 
 export default async function RootLayout({
   children,
@@ -39,8 +40,7 @@ export default async function RootLayout({
        role = profile.rol;
        userName = profile.nombre;
        if (profile.rol === 'admin') {
-         const { count } = await supabaseAdmin.from('pre_registros').select('*', { count: 'exact', head: true }).eq('estado', 'pendiente');
-         preRegistrosCount = count || 0;
+         preRegistrosCount = await getPreRegistrosPendientesCount();
        }
     }
   }

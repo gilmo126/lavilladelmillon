@@ -129,6 +129,10 @@ Detalle y ejemplos completos en [`LESSONS_LEARNED.md`](./LESSONS_LEARNED.md).
 
 Invitaciones a eventos con `token` único, `token_qr`, `estado` (pendiente/aceptada/rechazada), `qr_escaneado_at` (uso único), `jornadas_seleccionadas` (jsonb).
 
+### Tabla `pre_registros`
+
+Pre-registros de evento vía formulario público. Columnas principales: `nombre`, `nombre_negocio`, `tipo_doc`, `identificacion`, `whatsapp`, `email`, `ciudad`, `direccion`, `como_se_entero`, `jornadas_seleccionadas` (jsonb), `estado` (pendiente/invitacion_enviada/rechazado), `invitacion_id` (FK a invitaciones, se llena al aprobar), `codigo_influencer` (text, alfanumérico libre).
+
 ### Enums
 
 | Enum | Valores |
@@ -170,7 +174,7 @@ Distribuidor ve sus packs (filtrado por `distribuidor_id`), admin ve todos. Clic
 
 ### Comerciantes (`/comerciantes` — solo admin)
 
-Directorio centralizado. Drawer editable (cascada a todos sus packs). Eliminar: activaciones → boletas → packs.
+Directorio unificado de comerciantes consolidando 3 fuentes: packs, invitaciones y pre-registros virtuales. Agrupación por WhatsApp como clave primaria (campo obligatorio en las 3 tablas), fallback a identificación. Tabla muestra badges de origen (Pack dorado, Invitación morado, Virtual cyan) con conteos independientes. Búsqueda por nombre, identificación o WhatsApp. Export CSV incluye columnas de las 3 fuentes. Drawer editable (cascada a todos sus packs). Eliminar: activaciones → boletas → packs.
 
 ### Scanner + Asistencia (`/scanner` — admin/asistente, `/asistencia` — admin)
 
@@ -187,6 +191,27 @@ Directorio centralizado. Drawer editable (cascada a todos sus packs). Eliminar: 
 - Retrofit: invitaciones aceptadas pre-feature sin jornadas muestran pantalla de confirmación de jornadas (`actualizarJornadasAction`) sin regenerar QR.
 - Editor contenido landing en `/configuracion`: logo, título, subtítulo, mensaje (auspiciantes resaltados en dorado), ubicación + maps URL.
 - QRs de invitación con `qr_escaneado_at` — uso único.
+
+### Pre-registros virtuales (`/registro-evento` — landing, `/pre-registros` — admin)
+
+- **Landing pública** (`/registro-evento`): formulario sin auth. Campos: nombre*, negocio*, tipo_doc, identificación, WhatsApp*, email, ciudad, dirección, cómo se enteró, jornada (radio), **código influencer** (alfanumérico opcional, se guarda en mayúsculas).
+- **Action** `registrarPreRegistroAction` inserta en `pre_registros` con `estado='pendiente'`. Columna `codigo_influencer` almacena el código libre ingresado.
+- **Admin** `/pre-registros`: tabs por estado (Pendiente/Invitación Enviada/Rechazado/Todos). Búsqueda en tiempo real (debounce 400ms) por nombre, cédula, WhatsApp o código influencer. Columna "Cod. Influencer" en tabla y drawer. Botón exportar CSV con filtros aplicados.
+- **Aprobar** crea invitación y envía email. **Rechazar** actualiza estado.
+- Badge con conteo de pendientes en sidebar.
+
+### Reporte de invitaciones (`/invitaciones/reporte` — solo admin)
+
+Tabla resumen por distribuidor: total, aceptadas, pendientes, rechazadas, % conversión, jornadas escogidas. Export CSV. Alertas de actividad sospechosa (WhatsApp no confirmado, baja conversión, teléfono repetido). **Filas clickeables**: al hacer click en un distribuidor se abre drawer lateral con todas sus invitaciones individuales (comerciante, negocio, WhatsApp, email, ciudad, origen, jornada, estado, fecha).
+
+### Dashboard Principal (`/` — admin y distribuidor)
+
+KPIs interactivos en 3 filas de cards clickeables con link directo al módulo:
+- **Fila 1 (boletas):** Campaña Activa, Total Inventario, En Punto (Activas), Convertidas (Reg)
+- **Fila 2 (operación):** Total Packs, Total Invitaciones, Invitaciones Aceptadas, Asistencias Evento
+- **Fila 3 (solo admin):** Pre-Registros Pendientes, Packs Pago Pendiente, Comerciantes, Personal Activo
+
+Panel lateral: Desempeño Geográfico (ranking zonas) + Embudo de Conversión (conic-gradient). Realtime via Supabase channels (boletas, packs, invitaciones).
 
 ### Credenciales — Distribuidores y Asistentes
 

@@ -8,7 +8,10 @@ import { getInvitacionesAction } from './actions';
 
 export const metadata = { title: 'Invitaciones | AdminPanel' };
 
-export default async function InvitacionesPage() {
+export default async function InvitacionesPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
+  const sParams = await searchParams;
+  const validTabs = ['todas', 'aceptada', 'pendiente'] as const;
+  const initialTab = validTabs.includes(sParams.tab as any) ? (sParams.tab as 'todas' | 'aceptada' | 'pendiente') : 'todas';
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
@@ -27,7 +30,7 @@ export default async function InvitacionesPage() {
   const tiposEvento = config?.tipos_evento || ['Lanzamiento', 'Capacitación', 'Feria Comercial', 'Premiación', 'Networking'];
   const jornadasEvento = Array.isArray(config?.jornadas_evento) ? config!.jornadas_evento : [];
   const initial = await getInvitacionesAction({
-    estado: 'todas',
+    estado: initialTab,
     distribuidorId: isDist ? user.id : undefined,
     page: 1,
     pageSize: 10,
@@ -61,6 +64,7 @@ export default async function InvitacionesPage() {
         isDist={isDist}
         isAdmin={profile.rol === 'admin'}
         userId={user.id}
+        initialTab={initialTab}
       />
     </div>
   );

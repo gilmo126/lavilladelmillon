@@ -159,7 +159,7 @@ export async function crearInvitacionAction(formData: FormData): Promise<CrearIn
 export type InvitacionesPage = { items: InvitacionItem[]; total: number };
 
 export async function getInvitacionesAction(
-  params: { estado?: string; distribuidorId?: string; page?: number; pageSize?: number; incluirPruebas?: boolean } = {}
+  params: { estado?: string; distribuidorId?: string; page?: number; pageSize?: number; incluirPruebas?: boolean; busqueda?: string } = {}
 ): Promise<InvitacionesPage> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -177,6 +177,20 @@ export async function getInvitacionesAction(
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
+  // Si hay busqueda por distribuidor, resolver IDs primero
+  let distribuidorIds: string[] | null = null;
+  if (params.busqueda?.trim() && !params.distribuidorId) {
+    const term = params.busqueda.trim();
+    const { data: matchDist } = await supabaseAdmin
+      .from('perfiles')
+      .select('id')
+      .ilike('nombre', `%${term}%`)
+      .in('rol', ['admin', 'distribuidor']);
+    if (matchDist && matchDist.length > 0) {
+      distribuidorIds = matchDist.map((d: any) => d.id);
+    }
+  }
+
   let query = supabaseAdmin
     .from('invitaciones')
     .select('id, tipo_evento, comerciante_nombre, comerciante_nombre_comercial, comerciante_ciudad, comerciante_tel, comerciante_whatsapp, comerciante_email, token, estado, created_at, jornadas_seleccionadas, es_prueba, origen, distribuidor:perfiles!distribuidor_id(nombre)', { count: 'exact' })
@@ -191,6 +205,15 @@ export async function getInvitacionesAction(
   }
   if (params.estado && params.estado !== 'todas') {
     query = query.eq('estado', params.estado);
+  }
+
+  if (params.busqueda?.trim()) {
+    const term = params.busqueda.trim();
+    const orParts = [`comerciante_nombre.ilike.%${term}%`, `comerciante_whatsapp.ilike.%${term}%`];
+    if (distribuidorIds && distribuidorIds.length > 0) {
+      orParts.push(`distribuidor_id.in.(${distribuidorIds.join(',')})`);
+    }
+    query = query.or(orParts.join(','));
   }
 
   const { data, error, count } = await query.range(from, to);

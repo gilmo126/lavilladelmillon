@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { venderPackAction, enviarEmailPackAction, confirmarWhatsappPackAction, type VenderPackResult } from './actions';
+import ComprobanteUploader from './ComprobanteUploader';
 
 const CELULAR_REGEX = /^3[0-9]{9}$/;
 
@@ -142,10 +143,19 @@ export default function VenderPackForm({ diasVencimientoPago }: Props) {
                 Fecha límite: <span className="text-yellow-400 font-bold">{fechaVenc}</span>
               </p>
               <p className="text-slate-500 text-xs">
-                Para confirmar el pago, ve a <span className="text-admin-blue font-bold">Mis Packs</span> y presiona "Confirmar Pago".
+                El comerciante puede subir el comprobante desde el link del pack, o tú puedes adjuntarlo aquí si ya te lo entregó.
               </p>
             </div>
           </div>
+
+          {/* Comprobante opcional en pago pendiente — el distribuidor puede adelantarlo */}
+          {(resultados.length > 1 ? resultados : [result]).map((r) => (
+            <ComprobanteUploader
+              key={`comp-${r.packId}`}
+              packId={r.packId}
+              estadoInicial={{ tipo: 'sin_subir' }}
+            />
+          ))}
 
           <a
             href={`https://wa.me/${formatWhatsAppNumber(result.comercianteWhatsapp)}?text=${waPendienteText}`}
@@ -222,6 +232,15 @@ export default function VenderPackForm({ diasVencimientoPago }: Props) {
               </div>
             </div>
           )
+        ))}
+
+        {/* Comprobante de pago por cada pack */}
+        {(resultados.length > 1 ? resultados : [result]).map((r) => (
+          <ComprobanteUploader
+            key={`comp-${r.packId}`}
+            packId={r.packId}
+            estadoInicial={{ tipo: 'sin_subir' }}
+          />
         ))}
 
         {/* Links y QR de todos los packs */}

@@ -349,10 +349,10 @@ export async function getPacksPaged(page: number, limit: number, query: string, 
 }
 
 export async function getPackDetail(packId: string) {
-  const [{ data: pack, error: packErr }, { data: boletas, error: bolErr }] = await Promise.all([
+  const [{ data: pack, error: packErr }, { data: boletas }] = await Promise.all([
     supabaseAdmin
       .from('packs')
-      .select('*, distribuidor:perfiles!distribuidor_id(nombre)')
+      .select('*, distribuidor:perfiles!distribuidor_id(nombre), verificador:perfiles!pago_verificado_por(nombre)')
       .eq('id', packId)
       .single(), // incluye es_prueba al usar *
     supabaseAdmin
@@ -364,7 +364,15 @@ export async function getPackDetail(packId: string) {
 
   if (packErr || !pack) throw new Error(packErr?.message || 'Pack no encontrado');
 
-  return { pack, boletas: boletas || [] };
+  // Generar signed URL fresca para el comprobante si existe
+  let comprobanteSignedUrl: string | null = null;
+  const p: any = pack;
+  if (p.comprobante_path) {
+    const { getSignedUrlComprobante } = await import('./comprobantes');
+    comprobanteSignedUrl = await getSignedUrlComprobante(p.comprobante_path);
+  }
+
+  return { pack, boletas: boletas || [], comprobanteSignedUrl };
 }
 
 

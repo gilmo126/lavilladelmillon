@@ -49,7 +49,8 @@ export async function getBoletasPaged(page: number, limit: number, query: string
     }
 
     if (isNum) {
-      const paddedId = query.padStart(6, '0');
+      const numQ = Number(query);
+      const paddedId = numQ < 1_000_000 ? query.padStart(6, '0') : query;
       queryBuilder = queryBuilder.or(`id_boleta.eq.${query},identificacion_usuario.ilike.%${query}%,token_integridad.eq.TKN-${paddedId}${extraFilters}`);
     } else {
       queryBuilder = queryBuilder.or(`token_integridad.ilike.%${query}%,identificacion_usuario.ilike.%${query}%${extraFilters}`);
@@ -130,7 +131,7 @@ export async function exportarParticipantesAction(distribuidorId?: string) {
   }
 
   return data.map((b: any) => ({
-    numero: String(b.id_boleta).padStart(6, '0'),
+    numero: b.id_boleta < 1_000_000 ? String(b.id_boleta).padStart(6, '0') : String(b.id_boleta),
     nombre: b.nombre_usuario || '',
     identificacion: b.identificacion_usuario || '',
     celular: b.celular_usuario || '',
@@ -312,7 +313,10 @@ export async function getPacksPaged(page: number, limit: number, query: string, 
   }
 
   if (query) {
-    queryBuilder = queryBuilder.or(`comerciante_nombre.ilike.%${query}%,comerciante_tel.ilike.%${query}%`);
+    const q = query.replace(/[,()]/g, '');
+    queryBuilder = queryBuilder.or(
+      `comerciante_nombre.ilike.%${q}%,comerciante_nombre_comercial.ilike.%${q}%,comerciante_whatsapp.ilike.%${q}%,comerciante_tel.ilike.%${q}%,comerciante_identificacion.ilike.%${q}%`
+    );
   }
 
   const { data, count, error } = await queryBuilder
@@ -406,27 +410,40 @@ export async function upsertSorteo(payload: { id?: string, premio_id: string, fe
   }
 }
 
-export async function cerrarSorteoAction(adminId: string, campanaId: string) {
+export async function cerrarSorteoAction(adminId: string, campanaId: string, premioId?: string) {
   try {
-    // 1. Auditamos cuántas boletas pasarán a Estado 4 (Sorteado)
-    const { count, error: cError } = await supabaseAdmin
+    // 1. Auditar cuántas boletas pasarán a estado 4 (Sorteado) — solo las del premio indicado
+    let countQuery = supabaseAdmin
       .from('boletas')
       .select('*', { count: 'exact', head: true })
       .eq('campana_id', campanaId)
       .eq('estado', 2)
-      .eq('es_prueba', false); // Registradas reales
+      .eq('es_prueba', false);
+    if (premioId) countQuery = countQuery.eq('premio_seleccionado', premioId);
 
+    const { count, error: cError } = await countQuery;
     if (cError) throw cError;
 
-    // 2. Ejecutar actualización masiva
-    const { error: uError } = await supabaseAdmin
+    // 2. Actualización masiva filtrada por premio
+    let updateQuery = supabaseAdmin
       .from('boletas')
       .update({ estado: 4, updated_at: new Date().toISOString() })
       .eq('campana_id', campanaId)
       .eq('estado', 2)
       .eq('es_prueba', false);
-    
+    if (premioId) updateQuery = updateQuery.eq('premio_seleccionado', premioId);
+
+    const { error: uError } = await updateQuery;
     if (uError) throw uError;
+
+    // 3. Marcar el sorteo asociado como finalizado
+    if (premioId) {
+      await supabaseAdmin
+        .from('sorteos')
+        .update({ estado: 'finalizado', updated_at: new Date().toISOString() })
+        .eq('premio_id', premioId)
+        .eq('estado', 'programado');
+    }
 
     return { success: true, count: count || 0 };
   } catch (error: any) {

@@ -1,6 +1,7 @@
 'use client';
 
 import type { PackData, NumeroDetalle } from './page';
+import { formatearNumeroBoleta } from '../../../lib/numeroBoleta';
 
 const LANDING_URL = process.env.NEXT_PUBLIC_LANDING_URL || 'https://landing-page.guillaumer-orion.workers.dev';
 
@@ -11,7 +12,7 @@ function NumeroCard({
   detalle: NumeroDetalle;
   nombreCampana: string;
 }) {
-  const numStr = String(detalle.numero).padStart(6, '0');
+  const numStr = formatearNumeroBoleta(detalle.numero);
   const registrado = detalle.estado >= 2;
 
   const registroUrl = `${LANDING_URL}?numero=${detalle.numero}`;

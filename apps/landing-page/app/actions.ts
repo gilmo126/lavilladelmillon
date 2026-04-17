@@ -2,6 +2,7 @@
 
 import { supabaseAdmin } from '../lib/supabaseAdmin';
 import { sendMail } from '../lib/mailer';
+import { esRangoValidoBoleta, formatearNumeroBoleta } from '../lib/numeroBoleta';
 
 // ── TIPOS ───────────────────────────────────────────────────────────
 
@@ -28,7 +29,7 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 
 export async function verificarBoletaAction(numero: string): Promise<VerificarResult> {
   const idBoleta = parseInt(numero.replace(/\D/g, ''), 10);
-  if (isNaN(idBoleta) || idBoleta < 100000 || idBoleta > 999999) return { estado: 'no_encontrado' };
+  if (isNaN(idBoleta) || !esRangoValidoBoleta(idBoleta)) return { estado: 'no_encontrado' };
 
   const { data: boleta } = await supabaseAdmin
     .from('boletas')
@@ -61,7 +62,7 @@ export async function verificarBoletaAction(numero: string): Promise<VerificarRe
     return {
       estado: 'registrado',
       data: {
-        numero: String(boleta.id_boleta).padStart(6, '0'),
+        numero: formatearNumeroBoleta(boleta.id_boleta),
         nombre: boleta.nombre_usuario,
         premio: premioNombre,
         fechaSorteo,
@@ -112,10 +113,10 @@ export async function registrarBoletaAction(data: {
     return { success: false, error: 'Formato de correo electrónico inválido.' };
   }
 
-  // Validar número de boleta (6 dígitos, rango 100000-999999)
+  // Validar número de boleta (acepta rango legacy 6-dígitos y rango nuevo 7-dígitos)
   const idBoleta = parseInt(numero.replace(/\D/g, ''), 10);
-  if (isNaN(idBoleta) || idBoleta < 100000 || idBoleta > 999999) {
-    return { success: false, error: 'Número de boleta inválido (debe ser de 6 dígitos).' };
+  if (isNaN(idBoleta) || !esRangoValidoBoleta(idBoleta)) {
+    return { success: false, error: 'Número de boleta inválido.' };
   }
 
   const { data: boleta, error: searchError } = await supabaseAdmin
@@ -174,7 +175,7 @@ export async function registrarBoletaAction(data: {
   if (updateError) return { success: false, error: updateError.message };
 
   const fechaSorteoStr = new Intl.DateTimeFormat('es-CO', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(sorteo.fecha_sorteo));
-  const numStr = String(idBoleta).padStart(6, '0');
+  const numStr = formatearNumeroBoleta(idBoleta);
 
   // Enviar email de confirmación si hay email
   if (email) {

@@ -15,13 +15,15 @@ const ITEMS_PER_PAGE = 10;
 
 function QrEstado({ pack }: { pack: PackCedulaItem }) {
   const ahora = new Date();
-  if (pack.qr_usado_at) {
-    return <span className="text-[10px] font-bold text-red-400 bg-red-500/10 px-2 py-1 rounded-lg">Canjeado {new Date(pack.qr_usado_at).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })}</span>;
+  const agotado = pack.max_usos > 0 && pack.qr_usos >= pack.max_usos;
+  const vencido = pack.qr_valido_hasta ? new Date(pack.qr_valido_hasta) < ahora : false;
+  if (agotado) {
+    return <span className="text-[10px] font-bold text-red-400 bg-red-500/10 px-2 py-1 rounded-lg">Agotado {pack.qr_usos}/{pack.max_usos}</span>;
   }
-  if (pack.qr_valido_hasta && new Date(pack.qr_valido_hasta) < ahora) {
+  if (vencido) {
     return <span className="text-[10px] font-bold text-yellow-400 bg-yellow-500/10 px-2 py-1 rounded-lg">QR Vencido</span>;
   }
-  return <span className="text-[10px] font-bold text-green-400 bg-green-500/10 px-2 py-1 rounded-lg">QR Vigente</span>;
+  return <span className="text-[10px] font-bold text-green-400 bg-green-500/10 px-2 py-1 rounded-lg">Vigente {pack.qr_usos}/{pack.max_usos || '?'}</span>;
 }
 
 function Paginador({ page, totalPages, onChange }: { page: number; totalPages: number; onChange: (p: number) => void }) {
@@ -165,7 +167,9 @@ export default function ScannerClient({
               ) : (
                 <div className="divide-y divide-admin-border">
                   {resultados.map((p) => {
-                    const vigente = !p.qr_usado_at && (!p.qr_valido_hasta || new Date(p.qr_valido_hasta) > new Date());
+                    const agotado = p.max_usos > 0 && p.qr_usos >= p.max_usos;
+                    const vencido = p.qr_valido_hasta ? new Date(p.qr_valido_hasta) < new Date() : false;
+                    const vigente = !agotado && !vencido;
                     return (
                       <div key={p.id} className="p-4 space-y-3">
                         <div className="flex items-start justify-between">

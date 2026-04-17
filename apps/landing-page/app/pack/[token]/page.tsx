@@ -110,9 +110,19 @@ export default async function PackPage({
   // Buscar TODOS los packs del mismo comerciante para mostrar todos sus números
   const { data: packRecord } = await supabaseAdmin
     .from('packs')
-    .select('comerciante_identificacion')
+    .select('id, comerciante_identificacion, qr_usos')
     .eq('token_pagina', token)
     .single();
+
+  let qrUsos = packRecord?.qr_usos ?? 0;
+  let qrMaxUsos = 0;
+  if (packRecord?.id) {
+    const { count: boletasCount } = await supabaseAdmin
+      .from('boletas')
+      .select('*', { count: 'exact', head: true })
+      .eq('pack_id', packRecord.id);
+    qrMaxUsos = boletasCount || 0;
+  }
 
   if (packRecord?.comerciante_identificacion) {
     const { data: allPacks } = await supabaseAdmin
@@ -136,5 +146,5 @@ export default async function PackPage({
     }
   }
 
-  return <PackPageClient pack={pack} />;
+  return <PackPageClient pack={pack} qrUsos={qrUsos} qrMaxUsos={qrMaxUsos} />;
 }

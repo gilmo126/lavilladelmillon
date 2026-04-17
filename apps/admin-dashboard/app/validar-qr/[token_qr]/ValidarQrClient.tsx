@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { anularQrAction } from './actions';
 
 type Props = {
@@ -26,11 +27,23 @@ export default function ValidarQrClient({
   maxUsos,
   agotado,
 }: Props) {
+  const router = useRouter();
   const [usos, setUsos] = useState(qrUsos);
-  const [status, setStatus] = useState<'idle' | 'confirming' | 'processing' | 'done' | 'error'>(
+  const [status, setStatus] = useState<'idle' | 'confirming' | 'processing' | 'registered' | 'done' | 'error'>(
     agotado ? 'done' : 'idle'
   );
   const [error, setError] = useState<string | null>(null);
+  const [redirectIn, setRedirectIn] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (status !== 'registered' || redirectIn === null) return;
+    if (redirectIn <= 0) {
+      router.push('/scanner');
+      return;
+    }
+    const t = setTimeout(() => setRedirectIn(redirectIn - 1), 1000);
+    return () => clearTimeout(t);
+  }, [status, redirectIn, router]);
 
   const fechaVentaStr = new Date(fechaVenta).toLocaleDateString('es-CO', {
     day: '2-digit',
@@ -51,13 +64,9 @@ export default function ValidarQrClient({
     setError(null);
     const res = await anularQrAction(tokenQr);
     if (res.success) {
-      const nuevosUsos = usos + 1;
-      setUsos(nuevosUsos);
-      if (nuevosUsos >= maxUsos) {
-        setStatus('done');
-      } else {
-        setStatus('idle');
-      }
+      setUsos(usos + 1);
+      setStatus('registered');
+      setRedirectIn(3);
     } else {
       setStatus('error');
       setError(res.error || 'Error desconocido');
@@ -148,7 +157,23 @@ export default function ValidarQrClient({
         </div>
 
         {/* Accion */}
-        {usos >= maxUsos ? (
+        {status === 'registered' ? (
+          <div className="bg-green-500/10 border border-green-500/20 rounded-3xl p-6 text-center space-y-3">
+            <p className="text-green-400 font-black text-lg">✓ Asistencia registrada</p>
+            <p className="text-slate-300 text-sm">
+              Uso {usos} de {maxUsos} canjeado.
+            </p>
+            <p className="text-[10px] text-slate-500 uppercase tracking-widest">
+              Volviendo al scanner en {redirectIn ?? 0}s…
+            </p>
+            <button
+              onClick={() => router.push('/scanner')}
+              className="w-full py-3 bg-admin-gold hover:bg-yellow-500 text-slate-900 font-black rounded-2xl transition-all text-xs uppercase tracking-widest"
+            >
+              Volver al scanner
+            </button>
+          </div>
+        ) : usos >= maxUsos ? (
           <div className="bg-green-500/10 border border-green-500/20 rounded-3xl p-6 text-center">
             <p className="text-green-400 font-black text-lg">QR Completado</p>
             <p className="text-slate-400 text-sm mt-2">

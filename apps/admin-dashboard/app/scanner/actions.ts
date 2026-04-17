@@ -126,6 +126,7 @@ export type PackCedulaItem = {
   qr_usado_at: string | null;
   qr_valido_hasta: string | null;
   qr_usos: number;
+  max_usos: number;
 };
 
 export async function buscarPacksPorCedulaAction(cedula: string): Promise<PackCedulaItem[]> {
@@ -143,8 +144,24 @@ export async function buscarPacksPorCedulaAction(cedula: string): Promise<PackCe
     .eq('es_prueba', false)
     .order('fecha_venta', { ascending: false });
 
-  if (error) return [];
-  return (data || []) as PackCedulaItem[];
+  if (error || !data) return [];
+
+  const packIds = (data as any[]).map((p) => p.id);
+  const countsByPack = new Map<string, number>();
+  if (packIds.length > 0) {
+    const { data: boletasRows } = await supabaseAdmin
+      .from('boletas')
+      .select('pack_id')
+      .in('pack_id', packIds);
+    for (const b of (boletasRows || []) as any[]) {
+      countsByPack.set(b.pack_id, (countsByPack.get(b.pack_id) || 0) + 1);
+    }
+  }
+
+  return (data as any[]).map((p) => ({
+    ...p,
+    max_usos: countsByPack.get(p.id) || 0,
+  })) as PackCedulaItem[];
 }
 
 // ── ASISTENCIA DE INVITACIONES A EVENTOS ────────────────────────────

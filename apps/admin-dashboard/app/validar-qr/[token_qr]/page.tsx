@@ -35,7 +35,7 @@ export default async function ValidarQrPage({
   const { data: pack, error } = await supabaseAdmin
     .from('packs')
     .select(
-      'id, comerciante_nombre, fecha_venta, qr_valido_hasta, tipo_pago, estado_pago, token_qr, qr_usado_at'
+      'id, comerciante_nombre, fecha_venta, qr_valido_hasta, tipo_pago, estado_pago, token_qr, qr_usado_at, qr_usos'
     )
     .eq('token_qr', token_qr)
     .single();
@@ -69,6 +69,15 @@ export default async function ValidarQrPage({
     );
   }
 
+  // Contar boletas del pack
+  const { count: totalBoletas } = await supabaseAdmin
+    .from('boletas')
+    .select('*', { count: 'exact', head: true })
+    .eq('pack_id', pack.id);
+  const maxUsos = totalBoletas || 25;
+  const usosActuales = pack.qr_usos || 0;
+  const agotado = usosActuales >= maxUsos;
+
   return (
     <ValidarQrClient
       tokenQr={token_qr}
@@ -77,7 +86,9 @@ export default async function ValidarQrPage({
       qrValidoHasta={pack.qr_valido_hasta}
       tipoPago={pack.tipo_pago}
       estadoPago={pack.estado_pago}
-      yaUsado={!!pack.qr_usado_at}
+      qrUsos={usosActuales}
+      maxUsos={maxUsos}
+      agotado={agotado}
     />
   );
 }

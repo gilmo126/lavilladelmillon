@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 import React from 'react';
 import { supabaseAdmin } from '../lib/supabaseAdmin';
 import RealtimeDashboard from './components/RealtimeDashboard';
+
 import { createClient } from '../utils/supabase/server';
 import { redirect } from 'next/navigation';
 
@@ -25,18 +26,12 @@ export default async function DashboardPage() {
 
   const isDist = profile.rol === 'distribuidor';
 
-  const { getDashboardCounts, getDashboardExtendedCounts, getRankingZonas, getConfiguracion } = await import('../lib/actions');
+  const { getDashboardCounts, getDashboardExtendedCounts, getConfiguracion } = await import('../lib/actions');
 
-  const [
-    config,
-    counts,
-    extendedCounts,
-    ranking
-  ] = await Promise.all([
+  const [config, counts, extendedCounts] = await Promise.all([
     getConfiguracion().catch(() => ({ nombre_campana: "Sin Campaña" })),
     getDashboardCounts(isDist ? user.id : undefined),
     getDashboardExtendedCounts(isDist ? user.id : undefined),
-    getRankingZonas(isDist ? user!.id : undefined)
   ]);
 
   const nombreCampana = config?.nombre_campana || "Sin Campaña Activa";
@@ -48,7 +43,6 @@ export default async function DashboardPage() {
           initialConfig={nombreCampana}
           initialCounts={counts}
           initialExtended={extendedCounts}
-          initialRanking={ranking || []}
           userProfile={profile}
         />
       </main>

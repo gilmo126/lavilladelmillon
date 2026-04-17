@@ -457,7 +457,7 @@ export async function getDashboardExtendedCounts(distribuidorId?: string) {
 
   const [
     packs, packsPendientes,
-    invitaciones, invAceptadas, asistencias,
+    invitaciones, invAceptadas, invPendientes, invRechazadas, asistencias,
     preRegistros,
     personal,
   ] = await Promise.all([
@@ -465,6 +465,8 @@ export async function getDashboardExtendedCounts(distribuidorId?: string) {
     supabaseAdmin.from('packs').select('*', { count: 'exact', head: true }).eq('es_prueba', false).eq('estado_pago', 'pendiente').match(distFilter),
     supabaseAdmin.from('invitaciones').select('*', { count: 'exact', head: true }).eq('es_prueba', false).match(distFilter),
     supabaseAdmin.from('invitaciones').select('*', { count: 'exact', head: true }).eq('es_prueba', false).eq('estado', 'aceptada').match(distFilter),
+    supabaseAdmin.from('invitaciones').select('*', { count: 'exact', head: true }).eq('es_prueba', false).eq('estado', 'pendiente').match(distFilter),
+    supabaseAdmin.from('invitaciones').select('*', { count: 'exact', head: true }).eq('es_prueba', false).eq('estado', 'rechazada').match(distFilter),
     supabaseAdmin.from('invitaciones').select('*', { count: 'exact', head: true }).eq('es_prueba', false).not('qr_escaneado_at', 'is', null).match(distFilter),
     supabaseAdmin.from('pre_registros').select('*', { count: 'exact', head: true }).eq('estado', 'pendiente'),
     supabaseAdmin.from('perfiles').select('*', { count: 'exact', head: true }).in('rol', ['distribuidor', 'asistente']),
@@ -475,6 +477,8 @@ export async function getDashboardExtendedCounts(distribuidorId?: string) {
     packsPendientes: packsPendientes.count || 0,
     totalInvitaciones: invitaciones.count || 0,
     invAceptadas: invAceptadas.count || 0,
+    invPendientes: invPendientes.count || 0,
+    invRechazadas: invRechazadas.count || 0,
     asistencias: asistencias.count || 0,
     preRegistrosPendientes: preRegistros.count || 0,
     personalActivo: personal.count || 0,

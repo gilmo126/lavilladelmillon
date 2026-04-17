@@ -5,18 +5,13 @@ import { supabase } from '../../lib/supabaseClient';
 import { getDashboardCounts, getDashboardExtendedCounts } from '../../lib/actions';
 import Link from 'next/link';
 
-interface ZonaRanking {
-  nombre: string;
-  activadas: number;
-  registradas: number;
-  conversion: string;
-}
-
 interface ExtendedCounts {
   totalPacks: number;
   packsPendientes: number;
   totalInvitaciones: number;
   invAceptadas: number;
+  invPendientes: number;
+  invRechazadas: number;
   asistencias: number;
   preRegistrosPendientes: number;
   personalActivo: number;
@@ -30,16 +25,14 @@ interface RealtimeDashboardProps {
     registradas: number;
   };
   initialExtended: ExtendedCounts;
-  initialRanking: ZonaRanking[];
   userProfile: any;
 }
 
-export default function RealtimeDashboard({ initialConfig, initialCounts, initialExtended, initialRanking, userProfile }: RealtimeDashboardProps) {
+export default function RealtimeDashboard({ initialConfig, initialCounts, initialExtended, userProfile }: RealtimeDashboardProps) {
   const [total, setTotal] = useState(initialCounts.total);
   const [activas, setActivas] = useState(initialCounts.activas);
   const [registradas, setRegistradas] = useState(initialCounts.registradas);
   const [extended, setExtended] = useState<ExtendedCounts>(initialExtended);
-  const [ranking, setRanking] = useState<ZonaRanking[]>(initialRanking);
 
   const isDist = userProfile?.rol === 'distribuidor';
   const isAdmin = userProfile?.rol === 'admin';
@@ -85,15 +78,20 @@ export default function RealtimeDashboard({ initialConfig, initialCounts, initia
   ];
 
   const row2: KpiCard[] = [
-    { label: 'Total Packs', value: extended.totalPacks.toLocaleString(), color: 'text-admin-gold', href: '/ventas', emoji: '📦' },
-    { label: 'Total Invitaciones', value: extended.totalInvitaciones.toLocaleString(), color: 'text-purple-400', href: '/invitaciones', emoji: '🎪' },
-    { label: 'Invitaciones Aceptadas', value: extended.invAceptadas.toLocaleString(), color: 'text-green-400', href: isAdmin ? '/invitaciones/reporte' : '/invitaciones', emoji: '🤝' },
+    { label: 'Total Invitaciones', value: extended.totalInvitaciones.toLocaleString(), color: 'text-purple-400', href: '/invitaciones?tab=todas', emoji: '🎪' },
+    { label: 'Inv. Aceptadas', value: extended.invAceptadas.toLocaleString(), color: 'text-green-400', href: '/invitaciones?tab=aceptada', emoji: '🤝' },
+    { label: 'Inv. Pendientes', value: extended.invPendientes.toLocaleString(), color: extended.invPendientes > 0 ? 'text-yellow-400' : 'text-slate-400', href: '/invitaciones?tab=pendiente', emoji: '⏳' },
     { label: 'Asistencias Evento', value: extended.asistencias.toLocaleString(), color: 'text-emerald-400', href: '/asistencia', emoji: '📋' },
   ];
 
   const row3: KpiCard[] = isAdmin ? [
-    { label: 'Pre-Registros Pendientes', value: extended.preRegistrosPendientes.toLocaleString(), color: extended.preRegistrosPendientes > 0 ? 'text-yellow-400' : 'text-slate-400', href: '/pre-registros', emoji: '⏳' },
+    { label: 'Total Packs', value: extended.totalPacks.toLocaleString(), color: 'text-admin-gold', href: '/ventas', emoji: '📦' },
     { label: 'Packs Pago Pendiente', value: extended.packsPendientes.toLocaleString(), color: extended.packsPendientes > 0 ? 'text-orange-400' : 'text-slate-400', href: '/ventas', emoji: '💰' },
+    { label: 'Pre-Registros Pendientes', value: extended.preRegistrosPendientes.toLocaleString(), color: extended.preRegistrosPendientes > 0 ? 'text-yellow-400' : 'text-slate-400', href: '/pre-registros', emoji: '📝' },
+    { label: 'Inv. Rechazadas', value: extended.invRechazadas.toLocaleString(), color: extended.invRechazadas > 0 ? 'text-red-400' : 'text-slate-400', href: '/invitaciones?tab=todas', emoji: '❌' },
+  ] : [];
+
+  const row4: KpiCard[] = isAdmin ? [
     { label: 'Comerciantes', value: '—', color: 'text-cyan-400', href: '/comerciantes', emoji: '🏪' },
     { label: 'Personal Activo', value: extended.personalActivo.toLocaleString(), color: 'text-slate-300', href: '/distribuidores', emoji: '👥' },
   ] : [];
@@ -138,37 +136,59 @@ export default function RealtimeDashboard({ initialConfig, initialCounts, initia
 
       {/* KPIs Fila 3: Admin only */}
       {row3.length > 0 && (
-        <div className="mb-10">
+        <div className="mb-4">
           <KpiGrid cards={row3} />
         </div>
       )}
 
+      {/* KPIs Fila 4: Admin extras */}
+      {row4.length > 0 && (
+        <div className="mb-10">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {row4.map((kpi, i) => (
+              <Link key={i} href={kpi.href}
+                className="bg-slate-900 border border-white/5 rounded-3xl p-6 shadow-2xl relative overflow-hidden group hover:border-admin-gold/30 transition-all active:scale-[0.98]">
+                <div className="absolute -right-2 -bottom-2 text-4xl opacity-5 group-hover:opacity-15 transition-opacity">{kpi.emoji}</div>
+                <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">{kpi.label}</h3>
+                <p className={`text-2xl md:text-3xl font-black tracking-tighter ${kpi.color}`}>{kpi.value}</p>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Ranking de Zonas */}
+        {/* Resumen de Invitaciones */}
         <div className="bg-slate-900 border border-white/5 rounded-3xl p-8 shadow-2xl">
           <h3 className="text-xs font-black text-white uppercase tracking-widest mb-8 flex items-center justify-between">
-            Desempeno Geografico
-            <span className="bg-admin-gold/10 text-admin-gold px-2 py-0.5 rounded text-[8px]">En tiempo real</span>
+            Resumen de Invitaciones
+            <Link href="/invitaciones/reporte" className="text-[10px] font-black text-admin-gold hover:text-white uppercase tracking-widest transition-colors">
+              Ver Reporte →
+            </Link>
           </h3>
-          <div className="space-y-6">
-            {ranking.length === 0 ? (
-              <p className="text-slate-500 text-sm text-center py-8">Sin datos de zonas.</p>
-            ) : ranking.map((z, idx) => (
-              <div key={idx} className="space-y-2">
-                <div className="flex justify-between items-end">
-                  <span className="text-[11px] font-black text-white uppercase tracking-tighter">{z.nombre}</span>
-                  <span className="text-[10px] font-black text-admin-gold">{z.conversion}%</span>
+          <div className="space-y-5">
+            {[
+              { label: 'Aceptadas', value: extended.invAceptadas, total: extended.totalInvitaciones, color: 'bg-green-500', textColor: 'text-green-400' },
+              { label: 'Pendientes', value: extended.invPendientes, total: extended.totalInvitaciones, color: 'bg-yellow-500', textColor: 'text-yellow-400' },
+              { label: 'Rechazadas', value: extended.invRechazadas, total: extended.totalInvitaciones, color: 'bg-red-500', textColor: 'text-red-400' },
+              { label: 'Asistencias (QR)', value: extended.asistencias, total: extended.invAceptadas || 1, color: 'bg-emerald-500', textColor: 'text-emerald-400' },
+            ].map((item, idx) => {
+              const pct = item.total > 0 ? ((item.value / item.total) * 100).toFixed(1) : '0.0';
+              return (
+                <div key={idx} className="space-y-2">
+                  <div className="flex justify-between items-end">
+                    <span className="text-[11px] font-black text-white uppercase tracking-tighter">{item.label}</span>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[10px] font-black ${item.textColor}`}>{item.value.toLocaleString()}</span>
+                      <span className="text-[9px] text-slate-600">({pct}%)</span>
+                    </div>
+                  </div>
+                  <div className="w-full h-1.5 bg-slate-950 rounded-full overflow-hidden shadow-inner">
+                    <div className={`h-full ${item.color} rounded-full transition-all`} style={{ width: `${Math.min(100, parseFloat(pct))}%` }} />
+                  </div>
                 </div>
-                <div className="w-full h-1.5 bg-slate-950 rounded-full overflow-hidden flex shadow-inner">
-                  <div className="h-full bg-admin-blue/40" style={{ width: `${Math.min(100, (z.activadas / (total || 1)) * 100)}%` }} />
-                  <div className="h-full bg-admin-green shadow-lg shadow-green-500/50" style={{ width: `${z.conversion}%` }} />
-                </div>
-                <div className="flex justify-between text-[9px] font-bold text-slate-600 uppercase tracking-widest">
-                  <span>{z.activadas} Activas</span>
-                  <span>{z.registradas} Reg</span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 

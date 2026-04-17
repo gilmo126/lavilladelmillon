@@ -375,6 +375,7 @@ export default function InvitacionesClient({
   isDist,
   isAdmin,
   userId,
+  initialTab,
 }: {
   initialItems: InvitacionItem[];
   initialTotal: number;
@@ -384,8 +385,9 @@ export default function InvitacionesClient({
   isDist: boolean;
   isAdmin: boolean;
   userId: string;
+  initialTab?: 'todas' | 'aceptada' | 'pendiente';
 }) {
-  const [tab, setTab] = useState<'todas' | 'aceptada' | 'pendiente'>('todas');
+  const [tab, setTab] = useState<'todas' | 'aceptada' | 'pendiente'>(initialTab || 'todas');
   const [data, setData] = useState<InvitacionItem[]>(initialItems);
   const [total, setTotal] = useState<number>(initialTotal);
   const [loading, setLoading] = useState(false);

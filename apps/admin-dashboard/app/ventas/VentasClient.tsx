@@ -3,8 +3,10 @@
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { getPackDetail } from '../../lib/actions';
-import { confirmarPagoAction, actualizarDatosPackAction } from '../activar/actions';
+import { confirmarPagoAction, actualizarDatosPackAction, marcarPagoVerificadoAction } from '../activar/actions';
 import { marcarPackPruebaAction } from './actions';
+import ComprobanteUploader, { type ComprobanteEstado } from '../activar/ComprobanteUploader';
+import ComprobanteViewer from './ComprobanteViewer';
 
 const LANDING_URL = process.env.NEXT_PUBLIC_LANDING_URL || 'https://landing-page.guillaumer-orion.workers.dev';
 const ADMIN_URL = process.env.NEXT_PUBLIC_ADMIN_URL || 'https://lavilladelmillon-admin.guillaumer-orion.workers.dev';
@@ -37,7 +39,10 @@ function PackDetailDrawer({ packId, isAdmin, onClose, onChanged }: { packId: str
   const [markingPrueba, setMarkingPrueba] = useState(false);
   const [markError, setMarkError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [detail, setDetail] = useState<{ pack: any; boletas: any[] } | null>(null);
+  const [detail, setDetail] = useState<{ pack: any; boletas: any[]; comprobanteSignedUrl?: string | null } | null>(null);
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [verificandoPago, setVerificandoPago] = useState(false);
+  const [verificacionError, setVerificacionError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [confirmando, setConfirmando] = useState(false);
@@ -110,6 +115,7 @@ function PackDetailDrawer({ packId, isAdmin, onClose, onChanged }: { packId: str
     if (res.success) {
       setFormInitialized(false);
       reloadDetail();
+      onChanged();
     } else {
       setConfirmError(res.error);
     }
@@ -122,6 +128,19 @@ function PackDetailDrawer({ packId, isAdmin, onClose, onChanged }: { packId: str
       setTimeout(() => setCopied(false), 2000);
     });
   };
+
+  async function handleMarcarVerificado() {
+    setVerificandoPago(true);
+    setVerificacionError(null);
+    const res = await marcarPagoVerificadoAction(packId, true);
+    setVerificandoPago(false);
+    if (!res.success) {
+      setVerificacionError(res.error || 'Error al verificar');
+    } else {
+      reloadDetail();
+      onChanged();
+    }
+  }
 
   if (loading) {
     return (
@@ -315,6 +334,102 @@ function PackDetailDrawer({ packId, isAdmin, onClose, onChanged }: { packId: str
             </div>
           </section>
 
+          {/* Soporte de Pago */}
+          <section className="bg-slate-950 border border-white/5 rounded-2xl p-5 space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="w-1 h-4 bg-admin-gold rounded-full" />
+              <h4 className="text-xs font-black text-white uppercase tracking-wider">Soporte de Pago</h4>
+              {p.pago_verificado ? (
+                <span className="ml-auto inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-black bg-green-500/10 border border-green-500/30 text-green-400">✅ Verificado</span>
+              ) : p.comprobante_path ? (
+                <span className="ml-auto inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-black bg-admin-blue/10 border border-admin-blue/30 text-admin-blue">📎 Pendiente verificar</span>
+              ) : (
+                <span className="ml-auto inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-black bg-yellow-500/10 border border-yellow-500/30 text-yellow-400">⚠️ Sin comprobante</span>
+              )}
+            </div>
+
+            {/* Miniatura si hay comprobante */}
+            {detail?.comprobanteSignedUrl && (
+              <div className="bg-slate-900 border border-white/5 rounded-2xl p-3 flex items-center gap-3">
+                <button
+                  onClick={() => setViewerOpen(true)}
+                  className="w-20 h-20 bg-slate-950 rounded-xl overflow-hidden flex-shrink-0 border border-white/10 hover:border-admin-gold/40 transition-all cursor-zoom-in group"
+                >
+                  {detail.comprobanteSignedUrl.toLowerCase().includes('.pdf') ? (
+                    <div className="w-full h-full flex items-center justify-center text-3xl">📄</div>
+                  ) : (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={detail.comprobanteSignedUrl} alt="Comprobante" className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
+                  )}
+                </button>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Comprobante subido</p>
+                  {p.comprobante_subido_at && (
+                    <p className="text-slate-300 text-xs">{new Date(p.comprobante_subido_at).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+                  )}
+                  <button
+                    onClick={() => setViewerOpen(true)}
+                    className="mt-1 text-admin-blue hover:text-blue-300 text-[10px] font-bold underline underline-offset-2"
+                  >
+                    🔍 Ver completo
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Uploader (reemplazar o inicial). Oculto si ya está verificado. */}
+            {!p.pago_verificado && (
+              <ComprobanteUploader
+                packId={packId}
+                estadoInicial={
+                  p.comprobante_path
+                    ? { tipo: 'subido', url: detail?.comprobanteSignedUrl || '', subidoAt: p.comprobante_subido_at || '' }
+                    : { tipo: 'sin_subir' }
+                }
+                variant="inline"
+                onUploaded={() => { reloadDetail(); onChanged(); }}
+              />
+            )}
+
+            {/* Botón admin: marcar pago verificado.
+                Solo cuando el pack ya tiene números (estado=pagado) — en flujo pendiente
+                el botón del footer "Confirmar pago y generar números" ya marca verificado. */}
+            {isAdmin && p.estado_pago === 'pagado' && p.comprobante_path && !p.pago_verificado && (
+              <button
+                onClick={handleMarcarVerificado}
+                disabled={verificandoPago}
+                className="w-full py-3 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white font-black rounded-xl text-xs uppercase tracking-widest transition-all shadow-lg shadow-green-500/20"
+              >
+                {verificandoPago ? 'Verificando…' : '✅ Marcar pago verificado (arqueo)'}
+              </button>
+            )}
+
+            {/* Nota contextual para flujo pendiente con comprobante */}
+            {p.estado_pago === 'comprobante_enviado' && (
+              <p className="text-[10px] text-admin-gold text-center font-bold">
+                💡 Usa el botón <span className="underline">Confirmar pago y generar números</span> abajo. La verificación queda automática.
+              </p>
+            )}
+
+            {verificacionError && <p className="text-red-400 text-xs font-bold">❌ {verificacionError}</p>}
+
+            {/* Historial */}
+            {(p.comprobante_subido_at || p.pago_verificado_at) && (
+              <div className="bg-slate-900 border border-white/5 rounded-xl p-3 space-y-1">
+                {p.comprobante_subido_at && (
+                  <p className="text-[10px] text-slate-400">
+                    <span className="font-black text-slate-500 uppercase tracking-widest">Subido:</span> {new Date(p.comprobante_subido_at).toLocaleString('es-CO', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                )}
+                {p.pago_verificado_at && p.verificador?.nombre && (
+                  <p className="text-[10px] text-slate-400">
+                    <span className="font-black text-green-400 uppercase tracking-widest">Verificado:</span> por {p.verificador.nombre} el {new Date(p.pago_verificado_at).toLocaleString('es-CO', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                )}
+              </div>
+            )}
+          </section>
+
           {/* Link del comerciante */}
           <section className="bg-slate-950 border border-white/5 rounded-2xl p-5">
             <div className="flex items-center gap-2 mb-3">
@@ -471,10 +586,15 @@ function PackDetailDrawer({ packId, isAdmin, onClose, onChanged }: { packId: str
 
         {/* Footer */}
         <div className="p-6 border-t border-white/10 bg-slate-950/80 space-y-3">
-          {p.estado_pago === 'pendiente' && (
+          {(p.estado_pago === 'pendiente' || p.estado_pago === 'comprobante_enviado') && (
             <>
               {confirmError && (
                 <p className="text-red-400 text-xs font-bold text-center">{confirmError}</p>
+              )}
+              {!p.comprobante_path && p.estado_pago === 'pendiente' && (
+                <p className="text-[10px] text-yellow-400 text-center font-bold">
+                  ⚠️ No hay comprobante. Se sugiere subir uno antes de confirmar.
+                </p>
               )}
               <button
                 onClick={handleConfirmarPago}
@@ -486,6 +606,8 @@ function PackDetailDrawer({ packId, isAdmin, onClose, onChanged }: { packId: str
                     <div className="w-5 h-5 border-2 border-slate-900/30 border-t-slate-900 rounded-full animate-spin" />
                     Generando números...
                   </>
+                ) : p.estado_pago === 'comprobante_enviado' ? (
+                  '✅ Confirmar pago y generar números'
                 ) : (
                   'Confirmar Pago y Generar Pack'
                 )}
@@ -497,6 +619,10 @@ function PackDetailDrawer({ packId, isAdmin, onClose, onChanged }: { packId: str
           </button>
         </div>
       </div>
+
+      {viewerOpen && detail?.comprobanteSignedUrl && (
+        <ComprobanteViewer url={detail.comprobanteSignedUrl} onClose={() => setViewerOpen(false)} />
+      )}
     </div>
   );
 }

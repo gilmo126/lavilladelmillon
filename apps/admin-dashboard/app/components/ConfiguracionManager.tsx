@@ -30,6 +30,9 @@ export default function ConfiguracionManager() {
   const [formJornadas, setFormJornadas] = useState<Array<{ id: string; fecha: string; hora: string; label: string }>>([]);
   const [formUbicacionEvento, setFormUbicacionEvento] = useState('');
   const [formUbicacionMapsUrl, setFormUbicacionMapsUrl] = useState('');
+  const [formNequiLlave, setFormNequiLlave] = useState('');
+  const [formMontoPack, setFormMontoPack] = useState(0);
+  const [formInstruccionesPago, setFormInstruccionesPago] = useState('');
 
   const loadData = async () => {
     setLoading(true);
@@ -55,6 +58,9 @@ export default function ConfiguracionManager() {
         setFormJornadas(data.jornadas_evento || []);
         setFormUbicacionEvento(data.ubicacion_evento || '');
         setFormUbicacionMapsUrl(data.ubicacion_maps_url || '');
+        setFormNequiLlave(data.nequi_llave || '');
+        setFormMontoPack(data.monto_pack ?? 0);
+        setFormInstruccionesPago(data.instrucciones_pago || '');
       }
     } catch (e) {
       console.error(e);
@@ -120,6 +126,9 @@ export default function ConfiguracionManager() {
         jornadas_evento: formJornadas,
         ubicacion_evento: formUbicacionEvento,
         ubicacion_maps_url: formUbicacionMapsUrl,
+        nequi_llave: formNequiLlave.trim() || null,
+        monto_pack: formMontoPack,
+        instrucciones_pago: formInstruccionesPago.trim() || null,
       });
       alert('Configuración guardada exitosamente.');
       loadData();
@@ -271,6 +280,54 @@ export default function ConfiguracionManager() {
                      </div>
                      <p className="text-[10px] text-slate-600">Cierra la sesión automáticamente tras X minutos sin actividad. Aviso 60s antes.</p>
                    </div>
+                 </div>
+               </section>
+
+               <section className="space-y-6">
+                 <h3 className="text-xl font-bold text-white border-l-4 border-pink-500 pl-4">Pagos (Nequi)</h3>
+                 <p className="text-[11px] text-slate-500">Estos datos se muestran al comerciante en el landing cuando su pack está pendiente de pago.</p>
+
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                   <div className="bg-slate-900/50 rounded-xl border border-admin-border p-5 space-y-3">
+                     <label className="block text-sm text-slate-400">Llave Nequi para pagos</label>
+                     <input
+                       type="text"
+                       value={formNequiLlave}
+                       onChange={e => setFormNequiLlave(e.target.value)}
+                       placeholder="Ej: 3001234567 o @lavilla"
+                       className="w-full bg-slate-900 border border-admin-border rounded-lg px-3 py-2.5 text-white font-mono text-sm focus:border-pink-500 outline-none"
+                     />
+                     <p className="text-[10px] text-slate-600">Número o alias que el comerciante usará para transferir.</p>
+                   </div>
+
+                   <div className="bg-slate-900/50 rounded-xl border border-admin-border p-5 space-y-3">
+                     <label className="block text-sm text-slate-400">Monto del pack (COP)</label>
+                     <div className="flex items-center gap-3">
+                       <span className="text-pink-400 font-bold">$</span>
+                       <input
+                         type="number"
+                         min={0}
+                         step={1000}
+                         value={formMontoPack}
+                         onChange={e => setFormMontoPack(parseInt(e.target.value) || 0)}
+                         placeholder="25000"
+                         className="flex-1 bg-slate-900 border border-admin-border rounded-lg px-3 py-2.5 text-white font-mono text-sm focus:border-pink-500 outline-none"
+                       />
+                     </div>
+                     <p className="text-[10px] text-slate-600">Se muestra formateado al comerciante (ej: $25.000).</p>
+                   </div>
+                 </div>
+
+                 <div>
+                   <label className="block text-sm text-slate-400 mb-1">Instrucciones de pago personalizadas</label>
+                   <textarea
+                     rows={4}
+                     value={formInstruccionesPago}
+                     onChange={e => setFormInstruccionesPago(e.target.value)}
+                     placeholder="Opcional. Ej: Realiza la transferencia por Nequi y sube el comprobante. El pago se verifica en 24 horas hábiles."
+                     className="w-full bg-slate-900 border border-admin-border rounded-md px-4 py-3 text-white focus:border-pink-500 outline-none text-sm leading-relaxed"
+                   />
+                   <p className="text-[10px] text-slate-600 mt-1">Texto libre multi-línea. Aparece arriba del botón de subir comprobante en el landing.</p>
                  </div>
                </section>
 

@@ -217,7 +217,11 @@ export async function confirmarPagoAction(packId: string, datosActualizados?: {
     .single();
 
   if (packErr || !pack) return { success: false, error: 'Pack no encontrado.' };
-  if (pack.estado_pago !== 'pendiente') return { success: false, error: 'Este pack ya fue pagado.' };
+  if (pack.estado_pago === 'pagado') return { success: false, error: 'Este pack ya tiene los números generados.' };
+  if (pack.estado_pago === 'vencido') return { success: false, error: 'El plazo de pago de este pack venció.' };
+  if (pack.estado_pago !== 'pendiente' && pack.estado_pago !== 'comprobante_enviado') {
+    return { success: false, error: `Estado no válido para generar números: ${pack.estado_pago}` };
+  }
 
   // Distribuidor solo puede confirmar sus propios packs
   if (profile.rol === 'distribuidor' && pack.distribuidor_id !== user.id) {
@@ -313,23 +317,70 @@ export async function confirmarPagoAction(packId: string, datosActualizados?: {
     ? new Date(Date.now() + config.dias_validez_qr * 24 * 60 * 60 * 1000).toISOString()
     : null;
 
+  // Confirmar pago implica verificación: deja traza de quién y cuándo
   const { error: updateErr } = await supabaseAdmin
     .from('packs')
     .update({
       tipo_pago: 'inmediato',
       estado_pago: 'pagado',
       qr_valido_hasta: qrValidoHasta,
+      pago_verificado: true,
+      pago_verificado_at: new Date().toISOString(),
+      pago_verificado_por: user.id,
     })
     .eq('id', packId);
 
   if (updateErr) return { success: false, error: updateErr.message };
 
-  // Leer tokens
+  // Leer tokens + datos del comerciante para el email
   const { data: updatedPack } = await supabaseAdmin
     .from('packs')
-    .select('token_pagina, token_qr, qr_valido_hasta')
+    .select('token_pagina, token_qr, qr_valido_hasta, comerciante_nombre, comerciante_email')
     .eq('id', packId)
     .single();
+
+  // Best-effort: avisar al comerciante que sus números ya están listos
+  if (updatedPack?.comerciante_email && updatedPack?.token_pagina) {
+    try {
+      const { data: campana } = await supabaseAdmin
+        .from('configuracion_campana')
+        .select('nombre_campana')
+        .eq('activa', true)
+        .maybeSingle();
+      const nombreCampana = campana?.nombre_campana || 'La Villa del Millón';
+      const packUrl = `${LANDING_URL}/pack/${updatedPack.token_pagina}`;
+      await sendMail(
+        updatedPack.comerciante_email,
+        `✅ Tus números ya están listos — ${nombreCampana}`,
+        `
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#0a0e1a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <div style="max-width:520px;margin:0 auto;padding:32px 20px;">
+    <div style="text-align:center;margin-bottom:32px;">
+      <h1 style="color:#facc15;font-size:22px;font-weight:900;margin:0 0 4px;">${nombreCampana}</h1>
+      <p style="color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:2px;margin:0;">Tu pago fue verificado</p>
+    </div>
+    <div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:24px;margin-bottom:24px;">
+      <p style="color:#e2e8f0;font-size:15px;margin:0 0 12px;">Hola <strong style="color:#fff;">${updatedPack.comerciante_nombre}</strong>,</p>
+      <p style="color:#94a3b8;font-size:14px;line-height:1.6;margin:0 0 12px;">
+        ✅ Verificamos tu pago y <strong style="color:#facc15;">tus 25 números ya están disponibles</strong>.
+      </p>
+      <p style="color:#94a3b8;font-size:14px;line-height:1.6;margin:0;">
+        Abre tu link de comerciante para ver y compartir los números con tus clientes.
+      </p>
+    </div>
+    <div style="text-align:center;margin-bottom:16px;">
+      <a href="${packUrl}" style="display:inline-block;background:#facc15;color:#0f172a;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:900;font-size:13px;text-transform:uppercase;letter-spacing:1px;">Ver mis números</a>
+    </div>
+    <p style="color:#475569;font-size:11px;text-align:center;margin:24px 0 0;">${nombreCampana} · Verificación de pagos</p>
+  </div>
+</body></html>`.trim()
+      );
+    } catch {
+      /* best-effort: si falla email no rompemos flujo */
+    }
+  }
 
   return {
     success: true,
@@ -338,6 +389,94 @@ export async function confirmarPagoAction(packId: string, datosActualizados?: {
     tokenQr: updatedPack?.token_qr || '',
     qrValidoHasta: updatedPack?.qr_valido_hasta || null,
   };
+}
+
+// ── SUBIR COMPROBANTE DE PAGO ────────────────────────────────────────
+
+export type SubirComprobanteResult =
+  | { success: false; error: string }
+  | { success: true; signedUrl: string; path: string };
+
+export async function subirComprobantePackAction(formData: FormData): Promise<SubirComprobanteResult> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { success: false, error: 'Sesión no válida.' };
+
+  const { data: profile } = await supabaseAdmin.from('perfiles').select('rol').eq('id', user.id).single();
+  if (!profile || !['distribuidor', 'admin'].includes(profile.rol)) {
+    return { success: false, error: 'Sin permisos.' };
+  }
+
+  const archivo = formData.get('archivo') as File | null;
+  const packId = formData.get('packId') as string | null;
+  if (!archivo || !packId) return { success: false, error: 'Faltan datos.' };
+
+  const { validarArchivoComprobante, subirComprobanteStorage } = await import('../../lib/comprobantes');
+  const valid = validarArchivoComprobante(archivo);
+  if (!valid.ok) return { success: false, error: valid.error };
+
+  const { data: pack } = await supabaseAdmin
+    .from('packs')
+    .select('id, distribuidor_id, estado_pago, comprobante_path')
+    .eq('id', packId)
+    .single();
+  if (!pack) return { success: false, error: 'Pack no encontrado.' };
+
+  if (profile.rol === 'distribuidor' && pack.distribuidor_id !== user.id) {
+    return { success: false, error: 'No puedes subir comprobantes a packs de otro distribuidor.' };
+  }
+
+  // Si ya había un comprobante previo, borrarlo del storage (evita basura)
+  if (pack.comprobante_path) {
+    await supabaseAdmin.storage.from('comprobantes-pago').remove([pack.comprobante_path]);
+  }
+
+  const upload = await subirComprobanteStorage(archivo, packId, archivo.name);
+  if ('error' in upload) return { success: false, error: upload.error };
+
+  // Actualizar pack con nueva URL y metadatos
+  const updatePayload: Record<string, any> = {
+    comprobante_url: upload.signedUrl,
+    comprobante_path: upload.path,
+    comprobante_subido_at: new Date().toISOString(),
+    comprobante_subido_por: user.id,
+  };
+
+  // Si el pack estaba pendiente, pasa a 'comprobante_enviado' (notifica a distribuidor)
+  if (pack.estado_pago === 'pendiente') {
+    updatePayload.estado_pago = 'comprobante_enviado';
+  }
+
+  const { error: updErr } = await supabaseAdmin.from('packs').update(updatePayload).eq('id', packId);
+  if (updErr) return { success: false, error: updErr.message };
+
+  return { success: true, signedUrl: upload.signedUrl, path: upload.path };
+}
+
+// ── MARCAR PAGO VERIFICADO (solo admin) ──────────────────────────────
+
+export async function marcarPagoVerificadoAction(
+  packId: string,
+  verificado: boolean = true,
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { success: false, error: 'Sesión no válida.' };
+
+  const { data: profile } = await supabaseAdmin.from('perfiles').select('rol').eq('id', user.id).single();
+  if (!profile || profile.rol !== 'admin') {
+    return { success: false, error: 'Solo el administrador puede verificar pagos.' };
+  }
+
+  const payload: Record<string, any> = {
+    pago_verificado: verificado,
+    pago_verificado_at: verificado ? new Date().toISOString() : null,
+    pago_verificado_por: verificado ? user.id : null,
+  };
+
+  const { error } = await supabaseAdmin.from('packs').update(payload).eq('id', packId);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
 }
 
 // ── ACTUALIZAR DATOS COMERCIANTE EN PACK ────────────────────────────

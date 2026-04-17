@@ -118,6 +118,7 @@ export async function validarQrInlineAction(tokenQr: string): Promise<ValidarQrR
 
 export type PackCedulaItem = {
   id: string;
+  numero_pack: number | null;
   comerciante_nombre: string;
   comerciante_nombre_comercial: string | null;
   comerciante_ciudad: string | null;
@@ -138,11 +139,11 @@ export async function buscarPacksPorCedulaAction(cedula: string): Promise<PackCe
 
   const { data, error } = await supabaseAdmin
     .from('packs')
-    .select('id, comerciante_nombre, comerciante_nombre_comercial, comerciante_ciudad, fecha_venta, token_qr, qr_usado_at, qr_valido_hasta, qr_usos')
+    .select('id, numero_pack, comerciante_nombre, comerciante_nombre_comercial, comerciante_ciudad, fecha_venta, token_qr, qr_usado_at, qr_valido_hasta, qr_usos')
     .eq('comerciante_identificacion', cleaned)
     .eq('estado_pago', 'pagado')
     .eq('es_prueba', false)
-    .order('fecha_venta', { ascending: false });
+    .order('numero_pack', { ascending: true });
 
   if (error || !data) return [];
 

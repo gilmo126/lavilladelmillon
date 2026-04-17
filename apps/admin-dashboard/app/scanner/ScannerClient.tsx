@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   validarQrInlineAction,
   getAsistenciaAction,
@@ -13,17 +13,77 @@ import {
 
 const ITEMS_PER_PAGE = 10;
 
-function QrEstado({ pack }: { pack: PackCedulaItem }) {
+type GrupoComerciante = {
+  key: string;
+  nombre: string;
+  nombreComercial: string | null;
+  ciudad: string | null;
+  packs: PackCedulaItem[];
+  cuposUsados: number;
+  cuposTotales: number;
+  fechaVenceMin: string | null;
+  siguientePack: PackCedulaItem | null;
+  agotado: boolean;
+  vencido: boolean;
+};
+
+function agruparPorComerciante(packs: PackCedulaItem[]): GrupoComerciante[] {
   const ahora = new Date();
-  const agotado = pack.max_usos > 0 && pack.qr_usos >= pack.max_usos;
-  const vencido = pack.qr_valido_hasta ? new Date(pack.qr_valido_hasta) < ahora : false;
-  if (agotado) {
-    return <span className="text-[10px] font-bold text-red-400 bg-red-500/10 px-2 py-1 rounded-lg">Agotado {pack.qr_usos}/{pack.max_usos}</span>;
+  const mapa = new Map<string, PackCedulaItem[]>();
+  for (const p of packs) {
+    const key = (p.comerciante_nombre || '').trim().toLowerCase() || p.id;
+    const arr = mapa.get(key) || [];
+    arr.push(p);
+    mapa.set(key, arr);
   }
-  if (vencido) {
+  const grupos: GrupoComerciante[] = [];
+  for (const lista of Array.from(mapa.values())) {
+    const ordenados = [...lista].sort((a, b) => (a.numero_pack ?? 0) - (b.numero_pack ?? 0));
+    const primero = ordenados[0];
+    const grupoKey = (primero.comerciante_nombre || '').trim().toLowerCase() || primero.id;
+    let cuposUsados = 0;
+    let cuposTotales = 0;
+    let fechaVenceMin: string | null = null;
+    let siguientePack: PackCedulaItem | null = null;
+    let algunoVigente = false;
+    for (const p of ordenados) {
+      const vencido = p.qr_valido_hasta ? new Date(p.qr_valido_hasta) < ahora : false;
+      const agotado = p.max_usos > 0 && p.qr_usos >= p.max_usos;
+      if (!vencido) {
+        cuposUsados += p.qr_usos || 0;
+        cuposTotales += p.max_usos || 0;
+        if (!agotado && !siguientePack) siguientePack = p;
+        algunoVigente = true;
+      }
+      if (p.qr_valido_hasta && (!fechaVenceMin || p.qr_valido_hasta < fechaVenceMin)) {
+        fechaVenceMin = p.qr_valido_hasta;
+      }
+    }
+    grupos.push({
+      key: grupoKey,
+      nombre: primero.comerciante_nombre,
+      nombreComercial: primero.comerciante_nombre_comercial,
+      ciudad: primero.comerciante_ciudad,
+      packs: ordenados,
+      cuposUsados,
+      cuposTotales,
+      fechaVenceMin,
+      siguientePack,
+      agotado: algunoVigente && cuposUsados >= cuposTotales && cuposTotales > 0,
+      vencido: !algunoVigente,
+    });
+  }
+  return grupos;
+}
+
+function BadgeCupos({ grupo }: { grupo: GrupoComerciante }) {
+  if (grupo.vencido) {
     return <span className="text-[10px] font-bold text-yellow-400 bg-yellow-500/10 px-2 py-1 rounded-lg">QR Vencido</span>;
   }
-  return <span className="text-[10px] font-bold text-green-400 bg-green-500/10 px-2 py-1 rounded-lg">Vigente {pack.qr_usos}/{pack.max_usos || '?'}</span>;
+  if (grupo.agotado) {
+    return <span className="text-[10px] font-bold text-red-400 bg-red-500/10 px-2 py-1 rounded-lg">Agotado {grupo.cuposUsados}/{grupo.cuposTotales}</span>;
+  }
+  return <span className="text-[10px] font-bold text-green-400 bg-green-500/10 px-2 py-1 rounded-lg">Vigente {grupo.cuposUsados}/{grupo.cuposTotales || '?'}</span>;
 }
 
 function Paginador({ page, totalPages, onChange }: { page: number; totalPages: number; onChange: (p: number) => void }) {
@@ -63,6 +123,7 @@ export default function ScannerClient({
   const totalPagesInv = Math.ceil(invitaciones.length / ITEMS_PER_PAGE);
   const pagedAsist = asistencia.slice((pageAsist - 1) * ITEMS_PER_PAGE, pageAsist * ITEMS_PER_PAGE);
   const pagedInv = invitaciones.slice((pageInv - 1) * ITEMS_PER_PAGE, pageInv * ITEMS_PER_PAGE);
+  const grupos = useMemo(() => agruparPorComerciante(resultados), [resultados]);
 
   async function reloadLists() {
     const [a, i] = await Promise.all([getAsistenciaAction(), getInvitacionesAsistenciaAction()]);
@@ -160,29 +221,46 @@ export default function ScannerClient({
             <div className="bg-admin-card border border-admin-border rounded-3xl overflow-hidden">
               <div className="p-5 border-b border-admin-border flex items-center justify-between">
                 <h3 className="text-xs font-black text-white uppercase tracking-wider">Resultados</h3>
-                <span className="text-[10px] font-bold text-slate-500 bg-slate-800 px-2 py-1 rounded-lg">{resultados.length} pack{resultados.length !== 1 ? 's' : ''}</span>
+                <span className="text-[10px] font-bold text-slate-500 bg-slate-800 px-2 py-1 rounded-lg">
+                  {grupos.length} comerciante{grupos.length !== 1 ? 's' : ''} · {resultados.length} pack{resultados.length !== 1 ? 's' : ''}
+                </span>
               </div>
-              {resultados.length === 0 ? (
+              {grupos.length === 0 ? (
                 <div className="p-8 text-center text-slate-600 text-sm">Sin packs pagados con esa identificación.</div>
               ) : (
                 <div className="divide-y divide-admin-border">
-                  {resultados.map((p) => {
-                    const agotado = p.max_usos > 0 && p.qr_usos >= p.max_usos;
-                    const vencido = p.qr_valido_hasta ? new Date(p.qr_valido_hasta) < new Date() : false;
-                    const vigente = !agotado && !vencido;
+                  {grupos.map((g) => {
+                    const packsLabel = g.packs
+                      .map((p) => (p.numero_pack ? `PACK-${String(p.numero_pack).padStart(3, '0')}` : ''))
+                      .filter(Boolean)
+                      .join(' + ');
+                    const venceStr = g.fechaVenceMin
+                      ? new Date(g.fechaVenceMin).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })
+                      : null;
+                    const puedeUsar = !!g.siguientePack;
                     return (
-                      <div key={p.id} className="p-4 space-y-3">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <p className="text-white font-bold text-sm">{p.comerciante_nombre}</p>
-                            {p.comerciante_nombre_comercial && <p className="text-[10px] text-admin-gold font-bold mt-0.5">{p.comerciante_nombre_comercial}</p>}
-                            <p className="text-[10px] text-slate-500 mt-0.5">{[p.comerciante_ciudad, p.fecha_venta ? new Date(p.fecha_venta).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' }) : null].filter(Boolean).join(' · ')}</p>
+                      <div key={g.key} className="p-4 space-y-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-white font-bold text-sm">{g.nombre}</p>
+                            {g.nombreComercial && <p className="text-[10px] text-admin-gold font-bold mt-0.5">{g.nombreComercial}</p>}
+                            <p className="text-[10px] text-slate-500 mt-0.5 break-words">
+                              {[g.ciudad, packsLabel, venceStr ? `Vence ${venceStr}` : null].filter(Boolean).join(' · ')}
+                            </p>
                           </div>
-                          <QrEstado pack={p} />
+                          <BadgeCupos grupo={g} />
                         </div>
-                        {vigente && (
-                          <button onClick={() => handleUsarQr(p.token_qr)} disabled={loading} className="w-full py-3 bg-admin-gold hover:bg-yellow-500 disabled:opacity-40 text-slate-900 font-black rounded-xl transition-all text-xs uppercase tracking-widest active:scale-95">
-                            {loading ? 'Procesando...' : 'Usar este QR'}
+                        {puedeUsar && g.siguientePack && (
+                          <button
+                            onClick={() => handleUsarQr(g.siguientePack!.token_qr)}
+                            disabled={loading}
+                            className="w-full py-3 bg-admin-gold hover:bg-yellow-500 disabled:opacity-40 text-slate-900 font-black rounded-xl transition-all text-xs uppercase tracking-widest active:scale-95"
+                          >
+                            {loading
+                              ? 'Procesando...'
+                              : g.packs.length > 1
+                                ? `Usar siguiente cupo · PACK-${String(g.siguientePack.numero_pack || 0).padStart(3, '0')}`
+                                : 'Usar este QR'}
                           </button>
                         )}
                       </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Search } from 'lucide-react';
 import { buscarTrazabilidadAction } from './actions';
 
@@ -112,11 +112,15 @@ function ResultCard({ r }: { r: TrackResult }) {
   );
 }
 
+const MIN_QUERY_LENGTH = 2;
+
 export default function TrazabilidadClient({ userProfile }: { userProfile: any }) {
+  const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<TrackResult[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
+  const reqIdRef = useRef(0);
 
   // Paginación
   const [currentPage, setCurrentPage] = useState(1);
@@ -127,51 +131,60 @@ export default function TrazabilidadClient({ userProfile }: { userProfile: any }
 
   const isDist = userProfile?.rol === 'distribuidor';
 
-  async function handleSearch(formData: FormData) {
+  useEffect(() => {
+    const trimmed = query.trim();
+    if (trimmed.length < MIN_QUERY_LENGTH) {
+      setResults([]);
+      setSearched(false);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+    const myReqId = ++reqIdRef.current;
     setLoading(true);
     setError(null);
-    setSearched(false);
-    setCurrentPage(1); // Reset a primera página en cada búsqueda
-
-    const resp = await buscarTrazabilidadAction(formData);
-    setLoading(false);
-    setSearched(true);
-
-    if (resp.success) {
-      setResults(resp.results as TrackResult[]);
-    } else {
-      setError(resp.error || 'Error desconocido.');
-      setResults([]);
-    }
-  }
+    const handle = setTimeout(async () => {
+      const fd = new FormData();
+      fd.set('query', trimmed);
+      const resp = await buscarTrazabilidadAction(fd);
+      if (reqIdRef.current !== myReqId) return; // resultado obsoleto
+      setLoading(false);
+      setSearched(true);
+      setCurrentPage(1);
+      if (resp.success) {
+        setResults(resp.results as TrackResult[]);
+      } else {
+        setError(resp.error || 'Error desconocido.');
+        setResults([]);
+      }
+    }, 400);
+    return () => clearTimeout(handle);
+  }, [query]);
 
   return (
     <div>
       {/* Buscador */}
       <div className="bg-admin-card rounded-2xl border border-admin-border p-6 mb-8">
-        <form action={handleSearch} className="flex gap-3">
+        <div className="relative">
+          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
           <input
             name="query"
             type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
             placeholder="Número de boleta (ej: 5005)..."
-            className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono"
+            className="w-full bg-slate-900 border border-slate-700 rounded-lg pl-10 pr-20 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono"
             autoComplete="off"
+            autoFocus
           />
-          <button
-            type="submit"
-            disabled={loading}
-            className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white px-6 py-3 rounded-lg font-bold flex items-center gap-2 transition-all shadow-lg shadow-blue-900/20"
-          >
-            {loading ? 'Buscando...' : (
-              <>
-                <Search size={18} />
-                Buscar
-              </>
-            )}
-          </button>
-        </form>
+          {loading && (
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-blue-400 uppercase tracking-widest">
+              Buscando…
+            </span>
+          )}
+        </div>
         <p className="mt-4 text-xs text-slate-500">
-          Puedes buscar por el <strong>número numérico</strong> de la boleta o por el token de integridad.
+          Búsqueda automática mientras escribes (mínimo {MIN_QUERY_LENGTH} caracteres). Número o token de integridad.
         </p>
       </div>
 

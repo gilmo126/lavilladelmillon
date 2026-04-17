@@ -21,6 +21,7 @@ export type AsistenciaItem = {
   comerciante_tel: string | null;
   comerciante_whatsapp: string | null;
   qr_usado_at: string;
+  qr_usos: number;
   distribuidor: { nombre: string } | null;
 };
 
@@ -30,7 +31,7 @@ export async function getAsistenciaAction(): Promise<AsistenciaItem[]> {
 
   const { data, error } = await supabaseAdmin
     .from('packs')
-    .select('id, numero_pack, comerciante_nombre, comerciante_nombre_comercial, comerciante_ciudad, comerciante_tel, comerciante_whatsapp, qr_usado_at, distribuidor:perfiles!distribuidor_id(nombre)')
+    .select('id, numero_pack, comerciante_nombre, comerciante_nombre_comercial, comerciante_ciudad, comerciante_tel, comerciante_whatsapp, qr_usado_at, qr_usos, distribuidor:perfiles!distribuidor_id(nombre)')
     .eq('es_prueba', false)
     .not('qr_usado_at', 'is', null)
     .order('qr_usado_at', { ascending: false })
@@ -54,7 +55,7 @@ export async function validarQrInlineAction(tokenQr: string): Promise<ValidarQrR
   // Buscar primero en packs (QR de beneficio recreativo)
   const { data: pack } = await supabaseAdmin
     .from('packs')
-    .select('id, comerciante_nombre, qr_usado_at, qr_valido_hasta, estado_pago, es_prueba')
+    .select('id, comerciante_nombre, qr_usado_at, qr_valido_hasta, estado_pago, es_prueba, qr_usos')
     .eq('token_qr', tokenQr)
     .maybeSingle();
 
@@ -62,21 +63,28 @@ export async function validarQrInlineAction(tokenQr: string): Promise<ValidarQrR
     if (pack.es_prueba) {
       return { success: false, error: 'Este pack está marcado como prueba y no puede canjearse.' };
     }
-    if (pack.qr_usado_at) {
-      return { success: false, error: `QR ya canjeado el ${new Date(pack.qr_usado_at).toLocaleString('es-CO')}.` };
-    }
     if (pack.qr_valido_hasta && new Date(pack.qr_valido_hasta) < new Date()) {
       return { success: false, error: 'El plazo de validez de este QR ha vencido.' };
     }
     if (pack.estado_pago !== 'pagado') {
       return { success: false, error: 'Pago no confirmado. El QR se activa al confirmar el pago.' };
     }
+    // Contar boletas del pack para determinar maximo de usos
+    const { count: totalBoletas } = await supabaseAdmin
+      .from('boletas')
+      .select('*', { count: 'exact', head: true })
+      .eq('pack_id', pack.id);
+    const maxUsos = totalBoletas || 25;
+    const usosActuales = pack.qr_usos || 0;
+    if (usosActuales >= maxUsos) {
+      return { success: false, error: `QR agotado: ${usosActuales}/${maxUsos} usos completados.` };
+    }
     const { error: updateError } = await supabaseAdmin
       .from('packs')
-      .update({ qr_usado_at: new Date().toISOString() })
+      .update({ qr_usos: usosActuales + 1, qr_usado_at: new Date().toISOString() })
       .eq('id', pack.id);
     if (updateError) return { success: false, error: updateError.message };
-    return { success: true, comercianteNombre: pack.comerciante_nombre };
+    return { success: true, comercianteNombre: `${pack.comerciante_nombre} (${usosActuales + 1}/${maxUsos})` };
   }
 
   // Si no está en packs, buscar en invitaciones
@@ -117,6 +125,7 @@ export type PackCedulaItem = {
   token_qr: string;
   qr_usado_at: string | null;
   qr_valido_hasta: string | null;
+  qr_usos: number;
 };
 
 export async function buscarPacksPorCedulaAction(cedula: string): Promise<PackCedulaItem[]> {
@@ -128,7 +137,7 @@ export async function buscarPacksPorCedulaAction(cedula: string): Promise<PackCe
 
   const { data, error } = await supabaseAdmin
     .from('packs')
-    .select('id, comerciante_nombre, comerciante_nombre_comercial, comerciante_ciudad, fecha_venta, token_qr, qr_usado_at, qr_valido_hasta')
+    .select('id, comerciante_nombre, comerciante_nombre_comercial, comerciante_ciudad, fecha_venta, token_qr, qr_usado_at, qr_valido_hasta, qr_usos')
     .eq('comerciante_identificacion', cleaned)
     .eq('estado_pago', 'pagado')
     .eq('es_prueba', false)

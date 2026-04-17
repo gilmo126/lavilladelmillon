@@ -10,7 +10,9 @@ type Props = {
   qrValidoHasta: string | null;
   tipoPago: string;
   estadoPago: string;
-  yaUsado: boolean;
+  qrUsos: number;
+  maxUsos: number;
+  agotado: boolean;
 };
 
 export default function ValidarQrClient({
@@ -20,10 +22,13 @@ export default function ValidarQrClient({
   qrValidoHasta,
   tipoPago,
   estadoPago,
-  yaUsado,
+  qrUsos,
+  maxUsos,
+  agotado,
 }: Props) {
+  const [usos, setUsos] = useState(qrUsos);
   const [status, setStatus] = useState<'idle' | 'confirming' | 'processing' | 'done' | 'error'>(
-    yaUsado ? 'done' : 'idle'
+    agotado ? 'done' : 'idle'
   );
   const [error, setError] = useState<string | null>(null);
 
@@ -41,17 +46,26 @@ export default function ValidarQrClient({
       })
     : null;
 
-  async function handleAnular() {
+  async function handleRegistrar() {
     setStatus('processing');
     setError(null);
     const res = await anularQrAction(tokenQr);
     if (res.success) {
-      setStatus('done');
+      const nuevosUsos = usos + 1;
+      setUsos(nuevosUsos);
+      if (nuevosUsos >= maxUsos) {
+        setStatus('done');
+      } else {
+        setStatus('idle');
+      }
     } else {
       setStatus('error');
       setError(res.error || 'Error desconocido');
     }
   }
+
+  const pctUsado = maxUsos > 0 ? Math.min(100, (usos / maxUsos) * 100) : 0;
+  const restantes = maxUsos - usos;
 
   return (
     <div className="min-h-screen bg-admin-dark flex items-center justify-center p-6">
@@ -59,13 +73,34 @@ export default function ValidarQrClient({
         {/* Header */}
         <div className="text-center">
           <div className="w-16 h-16 bg-admin-gold/10 border border-admin-gold/20 rounded-3xl flex items-center justify-center text-3xl mx-auto mb-4">
-            {status === 'done' ? '✅' : '🎟️'}
+            {agotado || usos >= maxUsos ? '✅' : '🎟️'}
           </div>
           <h1 className="text-2xl font-black text-white tracking-tight">
-            {status === 'done' ? 'QR Canjeado' : 'Validar QR de Beneficio'}
+            {usos >= maxUsos ? 'QR Agotado' : 'Validar QR de Beneficio'}
           </h1>
           <p className="text-[10px] font-bold text-admin-gold uppercase tracking-widest mt-2">
             Beneficio recreativo
+          </p>
+        </div>
+
+        {/* Contador de usos */}
+        <div className="bg-admin-card border border-admin-border rounded-3xl p-6">
+          <div className="flex justify-between items-center mb-3">
+            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Usos del QR</span>
+            <span className={`text-lg font-black ${usos >= maxUsos ? 'text-red-400' : 'text-admin-gold'}`}>
+              {usos} / {maxUsos}
+            </span>
+          </div>
+          <div className="w-full h-3 bg-slate-950 rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all ${usos >= maxUsos ? 'bg-red-500' : usos > maxUsos * 0.8 ? 'bg-yellow-500' : 'bg-admin-green'}`}
+              style={{ width: `${pctUsado}%` }}
+            />
+          </div>
+          <p className="text-[10px] text-slate-500 mt-2 text-center">
+            {usos >= maxUsos
+              ? 'Todos los usos han sido consumidos'
+              : `${restantes} uso${restantes !== 1 ? 's' : ''} restante${restantes !== 1 ? 's' : ''}`}
           </p>
         </div>
 
@@ -80,73 +115,53 @@ export default function ValidarQrClient({
 
           <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                Nombre
-              </span>
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Nombre</span>
               <span className="text-white font-bold text-sm">{comercianteNombre}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                Fecha de compra
-              </span>
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Fecha de compra</span>
               <span className="text-slate-300 text-sm">{fechaVentaStr}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                Tipo de pago
-              </span>
-              <span
-                className={`text-sm font-bold ${
-                  tipoPago === 'inmediato' ? 'text-green-400' : 'text-yellow-400'
-                }`}
-              >
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Tipo de pago</span>
+              <span className={`text-sm font-bold ${tipoPago === 'inmediato' ? 'text-green-400' : 'text-yellow-400'}`}>
                 {tipoPago === 'inmediato' ? '✅ Inmediato' : '⏳ Pendiente'}
               </span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                Estado pago
-              </span>
-              <span
-                className={`px-3 py-1 rounded-full text-[10px] font-black border ${
-                  estadoPago === 'pagado'
-                    ? 'bg-green-500/10 border-green-500/20 text-green-400'
-                    : estadoPago === 'pendiente'
-                    ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400'
-                    : 'bg-red-500/10 border-red-500/20 text-red-400'
-                }`}
-              >
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Estado pago</span>
+              <span className={`px-3 py-1 rounded-full text-[10px] font-black border ${
+                estadoPago === 'pagado' ? 'bg-green-500/10 border-green-500/20 text-green-400'
+                : estadoPago === 'pendiente' ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400'
+                : 'bg-red-500/10 border-red-500/20 text-red-400'
+              }`}>
                 {estadoPago.toUpperCase()}
               </span>
             </div>
             {qrValidoStr && (
               <div className="flex justify-between items-center">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                  QR válido hasta
-                </span>
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">QR valido hasta</span>
                 <span className="text-admin-gold text-sm font-bold">{qrValidoStr}</span>
               </div>
             )}
           </div>
         </div>
 
-        {/* Acción */}
-        {status === 'done' ? (
+        {/* Accion */}
+        {usos >= maxUsos ? (
           <div className="bg-green-500/10 border border-green-500/20 rounded-3xl p-6 text-center">
-            <p className="text-green-400 font-black text-lg">Asistencia Registrada</p>
+            <p className="text-green-400 font-black text-lg">QR Completado</p>
             <p className="text-slate-400 text-sm mt-2">
-              {yaUsado
-                ? 'Este QR ya fue canjeado anteriormente.'
-                : 'El beneficio recreativo ha sido registrado exitosamente.'}
+              Se han registrado los {maxUsos} usos de este pack.
             </p>
           </div>
         ) : status === 'error' ? (
           <div className="space-y-3">
             <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4">
-              <p className="text-red-400 font-bold text-sm">❌ {error}</p>
+              <p className="text-red-400 font-bold text-sm">{error}</p>
             </div>
             <button
-              onClick={handleAnular}
+              onClick={handleRegistrar}
               className="w-full py-4 bg-admin-gold hover:bg-yellow-500 text-slate-900 font-black rounded-2xl transition-all text-sm uppercase tracking-widest"
             >
               Reintentar
@@ -156,7 +171,7 @@ export default function ValidarQrClient({
           <div className="space-y-3">
             <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-2xl p-4">
               <p className="text-yellow-400 font-bold text-sm">
-                ¿Confirmas registrar la asistencia y anular este QR? Esta accion es irreversible.
+                Registrar uso {usos + 1} de {maxUsos}?
               </p>
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -167,7 +182,7 @@ export default function ValidarQrClient({
                 Cancelar
               </button>
               <button
-                onClick={handleAnular}
+                onClick={handleRegistrar}
                 className="py-4 bg-admin-gold hover:bg-yellow-500 text-slate-900 font-black rounded-2xl transition-all text-sm uppercase tracking-widest"
               >
                 Confirmar
@@ -183,7 +198,7 @@ export default function ValidarQrClient({
             onClick={() => setStatus('confirming')}
             className="w-full py-5 bg-admin-gold hover:bg-yellow-500 text-slate-900 font-black rounded-2xl transition-all text-sm uppercase tracking-widest shadow-xl shadow-admin-gold/20 active:scale-[0.99]"
           >
-            Registrar Asistencia y Anular QR
+            Registrar Asistencia ({usos + 1}/{maxUsos})
           </button>
         )}
       </div>

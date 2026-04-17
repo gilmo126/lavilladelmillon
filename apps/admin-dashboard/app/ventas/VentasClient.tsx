@@ -153,7 +153,9 @@ function PackDetailDrawer({ packId, isAdmin, onClose, onChanged }: { packId: str
   const packUrl = `${LANDING_URL}/pack/${p.token_pagina}`;
   const qrDataUrl = `${ADMIN_URL}/validar-qr/${p.token_qr}`;
   const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrDataUrl)}`;
-  const qrUsado = !!p.qr_usado_at;
+  const qrUsos = p.qr_usos || 0;
+  const totalBoletas = detail.boletas?.length || 25;
+  const qrAgotado = qrUsos >= totalBoletas;
 
   const waNumber = p.comerciante_whatsapp || p.comerciante_tel || '';
   const waQrText = encodeURIComponent(
@@ -338,20 +340,37 @@ function PackDetailDrawer({ packId, isAdmin, onClose, onChanged }: { packId: str
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-1 h-4 bg-admin-gold rounded-full" />
                 <h4 className="text-xs font-black text-white uppercase tracking-wider">QR de Beneficio</h4>
-                {qrUsado ? (
+                {qrAgotado ? (
                   <span className="ml-auto text-[10px] font-bold text-red-400 bg-red-500/10 px-2 py-1 rounded-lg">
-                    Canjeado {new Date(p.qr_usado_at).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    Agotado {qrUsos}/{totalBoletas}
                   </span>
                 ) : p.qr_valido_hasta ? (
                   <span className="ml-auto text-[10px] font-bold text-admin-gold bg-admin-gold/10 px-2 py-1 rounded-lg">
-                    Válido hasta {new Date(p.qr_valido_hasta).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    Valido hasta {new Date(p.qr_valido_hasta).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })}
                   </span>
                 ) : null}
               </div>
 
-              {qrUsado ? (
+              {/* Barra de usos */}
+              {qrUsos > 0 && (
+                <div className="mb-4 bg-slate-900 border border-white/5 rounded-xl p-3">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-[10px] font-black text-slate-500 uppercase">Usos del QR</span>
+                    <span className={`text-sm font-black ${qrAgotado ? 'text-red-400' : 'text-admin-gold'}`}>{qrUsos} / {totalBoletas}</span>
+                  </div>
+                  <div className="w-full h-2 bg-slate-950 rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full transition-all ${qrAgotado ? 'bg-red-500' : qrUsos > totalBoletas * 0.8 ? 'bg-yellow-500' : 'bg-admin-green'}`}
+                      style={{ width: `${Math.min(100, (qrUsos / totalBoletas) * 100)}%` }} />
+                  </div>
+                  {p.qr_usado_at && (
+                    <p className="text-[10px] text-slate-500 mt-1">Ultimo uso: {new Date(p.qr_usado_at).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+                  )}
+                </div>
+              )}
+
+              {qrAgotado ? (
                 <div className="bg-red-500/5 border border-red-500/10 rounded-xl p-4 text-center">
-                  <p className="text-red-400 text-sm font-bold">QR ya utilizado el {new Date(p.qr_usado_at).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+                  <p className="text-red-400 text-sm font-bold">QR agotado — {qrUsos}/{totalBoletas} usos completados</p>
                 </div>
               ) : (
                 <>

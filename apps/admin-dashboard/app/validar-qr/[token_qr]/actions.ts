@@ -17,7 +17,7 @@ export async function anularQrAction(tokenQr: string): Promise<AnularQrResult> {
 
   const { data: pack, error: fetchError } = await supabaseAdmin
     .from('packs')
-    .select('id, qr_usado_at')
+    .select('id, qr_usado_at, qr_usos, qr_valido_hasta, estado_pago, es_prueba')
     .eq('token_qr', tokenQr)
     .single();
 
@@ -25,13 +25,30 @@ export async function anularQrAction(tokenQr: string): Promise<AnularQrResult> {
     return { success: false, error: 'QR no encontrado.' };
   }
 
-  if (pack.qr_usado_at) {
-    return { success: false, error: 'Este QR ya fue canjeado anteriormente.' };
+  if (pack.es_prueba) {
+    return { success: false, error: 'Pack de prueba, no canjeable.' };
+  }
+  if (pack.estado_pago !== 'pagado') {
+    return { success: false, error: 'Pago no confirmado.' };
+  }
+  if (pack.qr_valido_hasta && new Date(pack.qr_valido_hasta) < new Date()) {
+    return { success: false, error: 'El plazo de validez de este QR ha vencido.' };
+  }
+
+  const { count: totalBoletas } = await supabaseAdmin
+    .from('boletas')
+    .select('*', { count: 'exact', head: true })
+    .eq('pack_id', pack.id);
+  const maxUsos = totalBoletas || 25;
+  const usosActuales = pack.qr_usos || 0;
+
+  if (usosActuales >= maxUsos) {
+    return { success: false, error: `QR agotado: ${usosActuales}/${maxUsos} usos completados.` };
   }
 
   const { error: updateError } = await supabaseAdmin
     .from('packs')
-    .update({ qr_usado_at: new Date().toISOString() })
+    .update({ qr_usos: usosActuales + 1, qr_usado_at: new Date().toISOString() })
     .eq('id', pack.id);
 
   if (updateError) {

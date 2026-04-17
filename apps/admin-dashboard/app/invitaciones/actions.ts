@@ -108,6 +108,12 @@ export async function crearInvitacionAction(formData: FormData): Promise<CrearIn
     .single();
 
   if (insertErr || !inv) {
+    if ((insertErr as any)?.code === '23505') {
+      return {
+        success: false,
+        error: `Ya existe una invitación activa para el WhatsApp ${whatsapp || '(sin WhatsApp)'}.`,
+      };
+    }
     return { success: false, error: insertErr?.message || 'Error al crear invitación.' };
   }
 

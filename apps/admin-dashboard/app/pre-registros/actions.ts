@@ -114,6 +114,31 @@ export async function aprobarPreRegistroAction(id: string): Promise<{ success: b
   if (lockErr || !locked) return { success: false, error: 'Este pre-registro ya fue procesado o no existe.' };
   const reg = locked;
 
+  // Rollback helper: si algo falla después del lock, devolvemos el pre-registro a pendiente
+  const rollbackPreRegistro = async () => {
+    await supabaseAdmin.from('pre_registros').update({ estado: 'pendiente' }).eq('id', id);
+  };
+
+  // Verificar duplicado por WhatsApp (misma regla que crearInvitacionAction)
+  if (reg.whatsapp) {
+    const { data: existente } = await supabaseAdmin
+      .from('invitaciones')
+      .select('id, comerciante_nombre, estado')
+      .eq('comerciante_whatsapp', reg.whatsapp)
+      .eq('es_prueba', false)
+      .in('estado', ['pendiente', 'aceptada'])
+      .limit(1)
+      .maybeSingle();
+
+    if (existente) {
+      await rollbackPreRegistro();
+      return {
+        success: false,
+        error: `Ya existe una invitación activa para el WhatsApp ${reg.whatsapp} (${existente.comerciante_nombre} — ${existente.estado}).`,
+      };
+    }
+  }
+
   const { data: config } = await supabaseAdmin
     .from('configuracion_campana')
     .select('id, evento_titulo, evento_subtitulo, evento_mensaje, evento_auspiciantes, evento_logo_url, ubicacion_evento, ubicacion_maps_url')
@@ -150,6 +175,14 @@ export async function aprobarPreRegistroAction(id: string): Promise<{ success: b
     .single();
 
   if (insertErr || !inv) {
+    await rollbackPreRegistro();
+    // Postgres unique_violation desde el indice parcial uq_invitacion_activa_whatsapp
+    if ((insertErr as any)?.code === '23505') {
+      return {
+        success: false,
+        error: `Ya existe una invitación activa para el WhatsApp ${reg.whatsapp || '(sin WhatsApp)'}.`,
+      };
+    }
     return { success: false, error: insertErr?.message || 'Error al crear invitación.' };
   }
 

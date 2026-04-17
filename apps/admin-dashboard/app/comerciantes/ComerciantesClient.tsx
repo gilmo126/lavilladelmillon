@@ -316,10 +316,14 @@ export default function ComerciantesClient({ initialData }: { initialData: Comer
               Página {page} de {totalPages} · {filtered.length} comerciantes
             </span>
             <div className="flex gap-2">
+              <button disabled={page <= 1} onClick={() => setPage(1)}
+                className="px-3 py-1.5 bg-slate-800 text-white text-xs font-bold rounded-lg disabled:opacity-30 hover:bg-slate-700" title="Primera página">⏮ Primero</button>
               <button disabled={page <= 1} onClick={() => setPage(p => p - 1)}
                 className="px-3 py-1.5 bg-slate-800 text-white text-xs font-bold rounded-lg disabled:opacity-30 hover:bg-slate-700">← Anterior</button>
               <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}
                 className="px-3 py-1.5 bg-slate-800 text-white text-xs font-bold rounded-lg disabled:opacity-30 hover:bg-slate-700">Siguiente →</button>
+              <button disabled={page >= totalPages} onClick={() => setPage(totalPages)}
+                className="px-3 py-1.5 bg-slate-800 text-white text-xs font-bold rounded-lg disabled:opacity-30 hover:bg-slate-700" title="Última página">Último ⏭</button>
             </div>
           </div>
         )}

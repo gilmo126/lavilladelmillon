@@ -474,7 +474,10 @@ export default function InvitacionesClient({
     setLoading(false);
   }
 
+  const creandoRef = useRef(false);
   async function handleCrear(formData: FormData) {
+    if (creandoRef.current) return;
+    creandoRef.current = true;
     setFormLoading(true);
     setFormMsg(null);
     const res = await crearInvitacionAction(formData);
@@ -490,6 +493,7 @@ export default function InvitacionesClient({
       setFormMsg({ type: 'error', text: res.error });
     }
     setFormLoading(false);
+    creandoRef.current = false;
   }
 
   async function handleReenviar(id: string) {

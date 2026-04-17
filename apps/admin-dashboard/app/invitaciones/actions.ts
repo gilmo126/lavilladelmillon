@@ -60,6 +60,22 @@ export async function crearInvitacionAction(formData: FormData): Promise<CrearIn
     return { success: false, error: 'Teléfono debe ser un celular colombiano de 10 dígitos que inicie con 3.' };
   }
 
+  // Verificar duplicado: si ya existe una invitacion activa con el mismo WhatsApp
+  if (whatsapp) {
+    const { data: existente } = await supabaseAdmin
+      .from('invitaciones')
+      .select('id, comerciante_nombre, estado')
+      .eq('comerciante_whatsapp', whatsapp)
+      .eq('es_prueba', false)
+      .in('estado', ['pendiente', 'aceptada'])
+      .limit(1)
+      .maybeSingle();
+
+    if (existente) {
+      return { success: false, error: `Ya existe una invitacion activa para el WhatsApp ${whatsapp} (${existente.comerciante_nombre} — ${existente.estado}). Si necesitas crear otra, primero verifica en la lista.` };
+    }
+  }
+
   const { data: config } = await supabaseAdmin
     .from('configuracion_campana')
     .select('id, evento_titulo, evento_subtitulo, evento_mensaje, evento_auspiciantes, evento_logo_url, ubicacion_evento, ubicacion_maps_url')

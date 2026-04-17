@@ -80,14 +80,17 @@ export async function aprobarPreRegistroAction(id: string): Promise<{ success: b
   const guard = await verificarAdmin();
   if (!guard.ok) return { success: false, error: guard.error };
 
-  const { data: reg } = await supabaseAdmin
+  // Update atomico: solo cambia si aun esta pendiente (previene race condition)
+  const { data: locked, error: lockErr } = await supabaseAdmin
     .from('pre_registros')
-    .select('*')
+    .update({ estado: 'aprobado' })
     .eq('id', id)
-    .single();
+    .eq('estado', 'pendiente')
+    .select('*')
+    .maybeSingle();
 
-  if (!reg) return { success: false, error: 'Pre-registro no encontrado.' };
-  if (reg.estado !== 'pendiente') return { success: false, error: 'Este pre-registro ya fue procesado.' };
+  if (lockErr || !locked) return { success: false, error: 'Este pre-registro ya fue procesado o no existe.' };
+  const reg = locked;
 
   const { data: config } = await supabaseAdmin
     .from('configuracion_campana')

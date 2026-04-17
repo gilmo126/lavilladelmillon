@@ -41,6 +41,13 @@ export async function getPreRegistrosAction(
   const guard = await verificarAdmin();
   if (!guard.ok) return { items: [], total: 0 };
 
+  // Obtener IDs de invitaciones marcadas como prueba para excluir sus pre-registros
+  const { data: invsPrueba } = await supabaseAdmin
+    .from('invitaciones')
+    .select('id')
+    .eq('es_prueba', true);
+  const idsPrueba = (invsPrueba || []).map((i: any) => i.id);
+
   const page = Math.max(1, params.page || 1);
   const pageSize = Math.max(1, Math.min(100, params.pageSize || 10));
   const from = (page - 1) * pageSize;
@@ -50,6 +57,10 @@ export async function getPreRegistrosAction(
     .from('pre_registros')
     .select('*', { count: 'exact' })
     .order('created_at', { ascending: false });
+
+  if (idsPrueba.length > 0) {
+    query = query.not('invitacion_id', 'in', `(${idsPrueba.join(',')})`);
+  }
 
   if (params.estado && params.estado !== 'todos') {
     query = query.eq('estado', params.estado);
@@ -67,11 +78,22 @@ export async function getPreRegistrosAction(
 }
 
 export async function getPreRegistrosPendientesCount(): Promise<number> {
-  const { count, error } = await supabaseAdmin
+  const { data: invsPrueba } = await supabaseAdmin
+    .from('invitaciones')
+    .select('id')
+    .eq('es_prueba', true);
+  const idsPrueba = (invsPrueba || []).map((i: any) => i.id);
+
+  let query = supabaseAdmin
     .from('pre_registros')
     .select('*', { count: 'exact', head: true })
     .eq('estado', 'pendiente');
 
+  if (idsPrueba.length > 0) {
+    query = query.not('invitacion_id', 'in', `(${idsPrueba.join(',')})`);
+  }
+
+  const { count, error } = await query;
   if (error) return 0;
   return count || 0;
 }
@@ -213,10 +235,20 @@ export async function exportarPreRegistrosCsvAction(
   const guard = await verificarAdmin();
   if (!guard.ok) return { success: false, error: guard.error };
 
+  const { data: invsPrueba } = await supabaseAdmin
+    .from('invitaciones')
+    .select('id')
+    .eq('es_prueba', true);
+  const idsPrueba = (invsPrueba || []).map((i: any) => i.id);
+
   let query = supabaseAdmin
     .from('pre_registros')
     .select('*')
     .order('created_at', { ascending: false });
+
+  if (idsPrueba.length > 0) {
+    query = query.not('invitacion_id', 'in', `(${idsPrueba.join(',')})`);
+  }
 
   if (params.estado && params.estado !== 'todos') {
     query = query.eq('estado', params.estado);

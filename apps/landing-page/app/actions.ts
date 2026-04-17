@@ -219,3 +219,110 @@ export async function registrarBoletaAction(data: {
     },
   };
 }
+
+// ── CONSULTA LIGERA DE ESTADO (para polling en ConfirmarPagoClient) ─
+
+export async function getEstadoPackAction(
+  token: string
+): Promise<{ estado_pago: string | null } | null> {
+  if (!token) return null;
+  const { data } = await supabaseAdmin
+    .from('packs')
+    .select('estado_pago')
+    .eq('token_pagina', token)
+    .maybeSingle();
+  return data ? { estado_pago: data.estado_pago } : null;
+}
+
+// ── SUBIR COMPROBANTE DE PAGO DESDE LANDING ─────────────────────────
+
+export type SubirComprobanteLandingResult =
+  | { success: false; error: string }
+  | { success: true; signedUrl: string };
+
+export async function subirComprobanteLandingAction(formData: FormData): Promise<SubirComprobanteLandingResult> {
+  const archivo = formData.get('archivo') as File | null;
+  const token = formData.get('token') as string | null;
+  if (!archivo || !token) return { success: false, error: 'Faltan datos.' };
+
+  const { validarArchivoComprobante, subirComprobanteStorage } = await import('../lib/comprobantes');
+  const valid = validarArchivoComprobante(archivo);
+  if (!valid.ok) return { success: false, error: valid.error };
+
+  // Validar que el pack exista por token_pagina y no sea de prueba
+  const { data: pack } = await supabaseAdmin
+    .from('packs')
+    .select('id, es_prueba, estado_pago, comprobante_path, comerciante_nombre, distribuidor_id')
+    .eq('token_pagina', token)
+    .maybeSingle();
+
+  if (!pack) return { success: false, error: 'Link no válido.' };
+  if (pack.es_prueba) return { success: false, error: 'Link no válido.' };
+  if (pack.estado_pago === 'pagado') return { success: false, error: 'Este pack ya fue verificado. No requiere comprobante.' };
+  if (pack.estado_pago === 'vencido') return { success: false, error: 'El plazo de pago venció. Contacta a tu distribuidor.' };
+
+  // Si ya había un comprobante previo, borrarlo (evita basura acumulada)
+  if (pack.comprobante_path) {
+    await supabaseAdmin.storage.from('comprobantes-pago').remove([pack.comprobante_path]);
+  }
+
+  const upload = await subirComprobanteStorage(archivo, pack.id, archivo.name);
+  if ('error' in upload) return { success: false, error: upload.error };
+
+  const { error: updErr } = await supabaseAdmin
+    .from('packs')
+    .update({
+      comprobante_url: upload.signedUrl,
+      comprobante_path: upload.path,
+      comprobante_subido_at: new Date().toISOString(),
+      estado_pago: 'comprobante_enviado',
+    })
+    .eq('id', pack.id);
+
+  if (updErr) return { success: false, error: updErr.message };
+
+  // Notificar al distribuidor vía email (best-effort)
+  try {
+    const { data: dist } = await supabaseAdmin
+      .from('perfiles')
+      .select('nombre, email')
+      .eq('id', pack.distribuidor_id)
+      .maybeSingle();
+
+    if (dist?.email) {
+      const adminUrl = process.env.NEXT_PUBLIC_ADMIN_URL || 'https://lavilladelmillon-admin.guillaumer-orion.workers.dev';
+      await sendMail(
+        dist.email,
+        `Comprobante de pago — ${pack.comerciante_nombre}`,
+        `
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#0a0e1a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <div style="max-width:520px;margin:0 auto;padding:32px 20px;">
+    <div style="text-align:center;margin-bottom:32px;">
+      <h1 style="color:#facc15;font-size:22px;font-weight:900;margin:0 0 4px;">La Villa del Millón</h1>
+      <p style="color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:2px;margin:0;">Comprobante recibido</p>
+    </div>
+    <div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:24px;margin-bottom:24px;">
+      <p style="color:#e2e8f0;font-size:15px;margin:0 0 12px;">Hola <strong style="color:#fff;">${dist.nombre}</strong>,</p>
+      <p style="color:#94a3b8;font-size:14px;line-height:1.6;margin:0 0 12px;">
+        El comerciante <strong style="color:#fff;">${pack.comerciante_nombre}</strong> subió su comprobante de pago.
+      </p>
+      <p style="color:#94a3b8;font-size:14px;line-height:1.6;margin:0;">
+        Verifica el soporte y confirma el pago para activar sus números.
+      </p>
+    </div>
+    <div style="text-align:center;">
+      <a href="${adminUrl}/ventas" style="display:inline-block;background:#facc15;color:#0f172a;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:900;font-size:13px;text-transform:uppercase;letter-spacing:1px;">Abrir módulo de ventas</a>
+    </div>
+    <p style="color:#475569;font-size:11px;text-align:center;margin:24px 0 0;">La Villa del Millón · Verificación de pagos</p>
+  </div>
+</body></html>`.trim()
+      );
+    }
+  } catch {
+    /* best-effort: si falla email no rompemos flujo */
+  }
+
+  return { success: true, signedUrl: upload.signedUrl };
+}

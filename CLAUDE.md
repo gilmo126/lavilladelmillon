@@ -260,6 +260,60 @@ Flag `es_prueba boolean default false` en `packs`, `invitaciones` y `boletas`. S
 - **RPCs pendientes:** `buscar_trazabilidad` aún no filtra por `es_prueba`. Si se marcan packs viejos, sus boletas pueden aparecer en trazabilidad hasta que la RPC se recree con el filtro. Incluido como paso manual en `supabase/migrations/add_es_prueba_soft_delete.sql`.
 - **Actions admin-only:** `marcarPackPruebaAction` (`app/ventas/actions.ts`) y `marcarInvitacionPruebaAction` (`app/invitaciones/actions.ts`) con guard estricto `rol === 'admin'`.
 
+## VERIFICACIÓN DE PAGOS CON COMPROBANTES
+
+Los pagos son por Nequi, sin pasarela automática. El soporte fotográfico se sube al bucket privado `comprobantes-pago` de Supabase Storage.
+
+### Columnas nuevas en `packs`
+- `comprobante_url` (signed URL de último upload — referencial, no se usa para acceso)
+- `comprobante_path` (path interno en Storage; con este se genera signed URL fresca en server)
+- `comprobante_subido_at`, `comprobante_subido_por` (FK a `perfiles`)
+- `pago_verificado boolean DEFAULT false`, `pago_verificado_at`, `pago_verificado_por` (FK a `perfiles`)
+
+### Columnas nuevas en `configuracion_campana`
+- `nequi_llave text` · `monto_pack integer` · `instrucciones_pago text`
+
+Editables desde `/configuracion` → sección "Pagos (Nequi)".
+
+### Enum
+`estado_pago_pack` amplía con `comprobante_enviado` (entre `pendiente` y `pagado`).
+
+### Bucket `comprobantes-pago`
+- Privado, 5MB máximo, mime types `image/jpeg|png|webp|application/pdf`.
+- No tiene políticas RLS explícitas — toda lectura/escritura pasa por server actions con `supabaseAdmin` (service role).
+- Acceso a archivos vía signed URLs válidas 10 min (constante `SIGNED_URL_TTL_SEG`).
+
+### Helpers compartidos
+- `apps/admin-dashboard/lib/comprobantes.ts` y `apps/landing-page/lib/comprobantes.ts` (contratos idénticos): `validarArchivoComprobante`, `comprimirImagenCliente` (Canvas API, 1920px máx, JPEG quality 0.82), `subirComprobanteStorage`, `getSignedUrlComprobante` (solo admin).
+
+### Flujo 1 — Pago inmediato (distribuidor sube post-venta)
+1. `venderPackAction` crea pack `pagado` y genera 25 números inmediatamente (sin cambios).
+2. En la pantalla de confirmación de `VenderPackForm`, un `ComprobanteUploader` permite subir el comprobante Nequi por pack.
+3. `subirComprobantePackAction` comprime client-side + sube + actualiza `comprobante_url/path/subido_at/subido_por`. No bloquea nada.
+4. Estado `pago_verificado` queda `false` hasta que admin lo marque en arqueo.
+
+### Flujo 2 — Pago pendiente (comerciante sube desde landing)
+1. Distribuidor crea pack `pendiente` (sin números todavía).
+2. Comerciante abre `/pack/[token]` → `page.tsx` detecta estado no-pagado y renderiza `ConfirmarPagoClient` con llave Nequi + monto + instrucciones.
+3. Comerciante sube comprobante → `subirComprobanteLandingAction` valida token, sube archivo, cambia `estado_pago='comprobante_enviado'`, y envía email (best-effort) al distribuidor.
+4. Distribuidor abre el drawer en `/ventas` → ve miniatura + modal de zoom → click "Confirmar pago y generar números" → `confirmarPagoAction` genera los 25 números y marca `pago_verificado=true` con su id.
+5. Admin puede adicionalmente marcar/desmarcar `pago_verificado` via `marcarPagoVerificadoAction` en cualquier estado posterior.
+
+### Permisos
+- Subir comprobante: admin a cualquier pack; distribuidor solo a sus packs.
+- Confirmar pago (generar números): admin o distribuidor dueño.
+- Marcar pago verificado (arqueo): **solo admin**.
+- Landing: subida sin auth, validada por `token_pagina` único.
+
+### Componentes clave
+- `app/activar/ComprobanteUploader.tsx` (client, admin) — upload reutilizable.
+- `app/ventas/ComprobanteViewer.tsx` (client, admin) — modal fullscreen con zoom (mouse wheel + pinch mobile + teclado).
+- `apps/landing-page/app/pack/[token]/ConfirmarPagoClient.tsx` — landing del flujo de pago pendiente.
+- `getPackDetail` (`lib/actions.ts`) retorna adicionalmente `comprobanteSignedUrl` (fresca) y `pack.verificador.nombre` para el drawer.
+
+### View auxiliar
+`vw_packs_pendientes_verificacion` lista packs con comprobante sin verificar. Útil para arqueo rápido.
+
 ## PENDIENTES ACTIVOS
 
 Mejoras de seguridad futuras (ver contexto en `CHANGELOG.md`):

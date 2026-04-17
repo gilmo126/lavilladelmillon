@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { createClient } from '@supabase/supabase-js';
 import { supabaseAdmin } from '../../../lib/supabaseAdmin';
 import PackPageClient from './PackPageClient';
+import ConfirmarPagoClient from './ConfirmarPagoClient';
 
 export type NumeroDetalle = {
   numero: number;
@@ -53,6 +54,75 @@ export default async function PackPage({
     );
   }
 
+  // 1) Obtener el pack directamente para validar estado y decidir qué renderizar
+  const { data: packDirecto } = await supabaseAdmin
+    .from('packs')
+    .select('id, es_prueba, estado_pago, comerciante_nombre, comprobante_path, comprobante_subido_at')
+    .eq('token_pagina', token)
+    .maybeSingle();
+
+  if (!packDirecto) {
+    return (
+      <PaginaError
+        titulo="Link no disponible"
+        mensaje="Este link no existe o ha sido eliminado. Consulta con tu distribuidor."
+      />
+    );
+  }
+
+  if (packDirecto.es_prueba) {
+    return (
+      <PaginaError
+        titulo="Link no disponible"
+        mensaje="Este link no existe o ha sido eliminado. Consulta con tu distribuidor."
+      />
+    );
+  }
+
+  // 2) Config de campaña (nombre + datos de pago) — usado por ambas ramas
+  const { data: config } = await supabaseAdmin
+    .from('configuracion_campana')
+    .select('nombre_campana, nequi_llave, monto_pack, instrucciones_pago')
+    .eq('activa', true)
+    .maybeSingle();
+
+  const nombreCampana = config?.nombre_campana || 'La Villa del Millón';
+
+  // 3) Si el pack está pendiente o con comprobante enviado: flujo de confirmación de pago
+  if (packDirecto.estado_pago === 'pendiente' || packDirecto.estado_pago === 'comprobante_enviado') {
+    let comprobanteSignedUrl: string | null = null;
+    if (packDirecto.comprobante_path) {
+      const { data: signed } = await supabaseAdmin.storage
+        .from('comprobantes-pago')
+        .createSignedUrl(packDirecto.comprobante_path, 600);
+      comprobanteSignedUrl = signed?.signedUrl || null;
+    }
+
+    return (
+      <ConfirmarPagoClient
+        token={token}
+        comercianteNombre={packDirecto.comerciante_nombre || 'comerciante'}
+        nombreCampana={nombreCampana}
+        nequiLlave={config?.nequi_llave || null}
+        montoPack={config?.monto_pack || 0}
+        instruccionesPago={config?.instrucciones_pago || null}
+        estadoPago={packDirecto.estado_pago as 'pendiente' | 'comprobante_enviado'}
+        comprobanteSignedUrl={comprobanteSignedUrl}
+        comprobanteSubidoAt={packDirecto.comprobante_subido_at || null}
+      />
+    );
+  }
+
+  if (packDirecto.estado_pago === 'vencido') {
+    return (
+      <PaginaError
+        titulo="Pago vencido"
+        mensaje="El plazo para completar el pago venció. Consulta con tu distribuidor."
+      />
+    );
+  }
+
+  // 4) Pack pagado: flujo habitual (numeros + QR multiuso)
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -70,26 +140,9 @@ export default async function PackPage({
     );
   }
 
-  // La RPC retorna jsonb — puede venir como objeto directo o envuelto
   const pack = (typeof data === 'string' ? JSON.parse(data) : data) as PackData;
 
   if (!pack?.found) {
-    return (
-      <PaginaError
-        titulo="Link no disponible"
-        mensaje="Este link no existe o ha sido eliminado. Consulta con tu distribuidor."
-      />
-    );
-  }
-
-  // Validar que el pack no esté marcado como prueba
-  const { data: packFlag } = await supabaseAdmin
-    .from('packs')
-    .select('es_prueba')
-    .eq('token_pagina', token)
-    .single();
-
-  if (packFlag?.es_prueba) {
     return (
       <PaginaError
         titulo="Link no disponible"

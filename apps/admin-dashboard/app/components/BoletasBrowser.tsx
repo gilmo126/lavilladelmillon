@@ -391,7 +391,7 @@ export default function BoletasBrowser({ userProfile }: { userProfile: any }) {
                   className="hover:bg-admin-blue/5 transition-all group cursor-pointer"
                   onClick={() => setSelectedBoleta(b)}
                 >
-                  <td className="p-3 pl-8 text-white font-bold font-mono">{String(b.id_boleta).padStart(6, '0')}</td>
+                  <td className="p-3 pl-8 text-white font-bold font-mono">{b.id_boleta < 1_000_000 ? String(b.id_boleta).padStart(6, '0') : String(b.id_boleta)}</td>
                   <td className="p-3 text-admin-gold font-black text-[10px]">{b.pack?.numero_pack ? `PACK-${String(b.pack.numero_pack).padStart(3, '0')}` : '—'}</td>
                   <td className="p-3">
                     <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black border tracking-tighter ${

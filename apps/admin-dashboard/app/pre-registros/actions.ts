@@ -59,7 +59,7 @@ export async function getPreRegistrosAction(
     .order('created_at', { ascending: false });
 
   if (idsPrueba.length > 0) {
-    query = query.not('invitacion_id', 'in', `(${idsPrueba.join(',')})`);
+    query = query.or(`invitacion_id.is.null,invitacion_id.not.in.(${idsPrueba.join(',')})`);
   }
 
   if (params.estado && params.estado !== 'todos') {
@@ -90,7 +90,7 @@ export async function getPreRegistrosPendientesCount(): Promise<number> {
     .eq('estado', 'pendiente');
 
   if (idsPrueba.length > 0) {
-    query = query.not('invitacion_id', 'in', `(${idsPrueba.join(',')})`);
+    query = query.or(`invitacion_id.is.null,invitacion_id.not.in.(${idsPrueba.join(',')})`);
   }
 
   const { count, error } = await query;
@@ -247,7 +247,7 @@ export async function exportarPreRegistrosCsvAction(
     .order('created_at', { ascending: false });
 
   if (idsPrueba.length > 0) {
-    query = query.not('invitacion_id', 'in', `(${idsPrueba.join(',')})`);
+    query = query.or(`invitacion_id.is.null,invitacion_id.not.in.(${idsPrueba.join(',')})`);
   }
 
   if (params.estado && params.estado !== 'todos') {

@@ -246,15 +246,28 @@ export async function confirmarPagoAction(packId: string, datosActualizados?: {
     .eq('activa', true)
     .single();
 
-  // Generar 25 números aleatorios únicos (100000-999999)
+  // Pre-check de ocupación: si el rango numérico está sobre el 80%, abortar
+  // antes de entrar al loop de generación (evita fallas silenciosas por colisiones).
+  const { RANGO_TOTAL_CAPACIDAD, UMBRAL_BLOQUEO_GENERACION, generarCandidatoAleatorio } = await import('../../lib/numeroBoleta');
+  const { count: ocupacion } = await supabaseAdmin
+    .from('boletas')
+    .select('*', { count: 'exact', head: true });
+  if ((ocupacion || 0) >= RANGO_TOTAL_CAPACIDAD * UMBRAL_BLOQUEO_GENERACION) {
+    return {
+      success: false,
+      error: `Rango numérico agotado (${ocupacion}/${RANGO_TOTAL_CAPACIDAD}). Inicie una nueva campaña para liberar espacio de boletas.`,
+    };
+  }
+
+  // Generar 25 números aleatorios únicos (rango nuevo 1.000.000-9.999.999)
   const numerosGenerados: number[] = [];
-  const maxIntentos = 100;
+  const maxIntentos = 200;
   let intentos = 0;
 
   while (numerosGenerados.length < 25 && intentos < maxIntentos) {
     const candidatos: number[] = [];
     for (let i = 0; i < 25 - numerosGenerados.length; i++) {
-      candidatos.push(Math.floor(Math.random() * 900000) + 100000);
+      candidatos.push(generarCandidatoAleatorio());
     }
 
     // Verificar que no existan en BD
@@ -274,15 +287,19 @@ export async function confirmarPagoAction(packId: string, datosActualizados?: {
   }
 
   if (numerosGenerados.length < 25) {
-    return { success: false, error: 'No se pudieron generar suficientes números únicos.' };
+    return {
+      success: false,
+      error: `No se pudieron generar 25 números únicos tras ${maxIntentos} intentos (ocupación ≈${ocupacion}/${RANGO_TOTAL_CAPACIDAD}). Contacte soporte.`,
+    };
   }
 
-  // Insertar boletas
+  // Insertar boletas (token_integridad sigue el formato del número: 6 o 7 dígitos)
+  const { formatearNumeroBoleta } = await import('../../lib/numeroBoleta');
   const boletasPayload = numerosGenerados.map((n) => ({
     id_boleta: n,
     campana_id: pack.campana_id,
     estado: 0,
-    token_integridad: `TKN-${String(n).padStart(6, '0')}`,
+    token_integridad: `TKN-${formatearNumeroBoleta(n)}`,
     pack_id: pack.id,
     token_link: crypto.randomUUID(),
     distribuidor_id: pack.distribuidor_id,
@@ -405,9 +422,10 @@ export async function enviarEmailPackAction(data: {
   if (!user) return { success: false, error: 'Sesión no válida.' };
 
   const packUrl = `${LANDING_URL}/pack/${data.tokenPagina}`;
+  const { formatearNumeroBoleta: formatearN } = await import('../../lib/numeroBoleta');
   const numerosHtml = data.numeros
     .map((n) => {
-      const s = String(n).padStart(6, '0');
+      const s = formatearN(n);
       return `<td style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:8px 4px;text-align:center;font-family:monospace;font-weight:900;font-size:14px;color:#fff;">${s}</td>`;
     })
     .reduce<string[][]>((rows, cell, i) => {

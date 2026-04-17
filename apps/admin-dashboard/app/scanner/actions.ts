@@ -118,6 +118,7 @@ export async function validarQrInlineAction(tokenQr: string): Promise<ValidarQrR
 
 export type PackCedulaItem = {
   id: string;
+  numero_pack: number | null;
   comerciante_nombre: string;
   comerciante_nombre_comercial: string | null;
   comerciante_ciudad: string | null;
@@ -126,6 +127,7 @@ export type PackCedulaItem = {
   qr_usado_at: string | null;
   qr_valido_hasta: string | null;
   qr_usos: number;
+  max_usos: number;
 };
 
 export async function buscarPacksPorCedulaAction(cedula: string): Promise<PackCedulaItem[]> {
@@ -137,14 +139,30 @@ export async function buscarPacksPorCedulaAction(cedula: string): Promise<PackCe
 
   const { data, error } = await supabaseAdmin
     .from('packs')
-    .select('id, comerciante_nombre, comerciante_nombre_comercial, comerciante_ciudad, fecha_venta, token_qr, qr_usado_at, qr_valido_hasta, qr_usos')
+    .select('id, numero_pack, comerciante_nombre, comerciante_nombre_comercial, comerciante_ciudad, fecha_venta, token_qr, qr_usado_at, qr_valido_hasta, qr_usos')
     .eq('comerciante_identificacion', cleaned)
     .eq('estado_pago', 'pagado')
     .eq('es_prueba', false)
-    .order('fecha_venta', { ascending: false });
+    .order('numero_pack', { ascending: true });
 
-  if (error) return [];
-  return (data || []) as PackCedulaItem[];
+  if (error || !data) return [];
+
+  const packIds = (data as any[]).map((p) => p.id);
+  const countsByPack = new Map<string, number>();
+  if (packIds.length > 0) {
+    const { data: boletasRows } = await supabaseAdmin
+      .from('boletas')
+      .select('pack_id')
+      .in('pack_id', packIds);
+    for (const b of (boletasRows || []) as any[]) {
+      countsByPack.set(b.pack_id, (countsByPack.get(b.pack_id) || 0) + 1);
+    }
+  }
+
+  return (data as any[]).map((p) => ({
+    ...p,
+    max_usos: countsByPack.get(p.id) || 0,
+  })) as PackCedulaItem[];
 }
 
 // ── ASISTENCIA DE INVITACIONES A EVENTOS ────────────────────────────

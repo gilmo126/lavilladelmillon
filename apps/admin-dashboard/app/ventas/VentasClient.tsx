@@ -416,7 +416,7 @@ function PackDetailDrawer({ packId, isAdmin, onClose, onChanged }: { packId: str
                 return (
                   <div key={b.id_boleta} className="flex flex-col items-center gap-1">
                     <div className="w-full bg-slate-900 border border-white/5 rounded-lg p-2 text-center font-mono font-black text-white text-xs">
-                      {String(b.id_boleta).padStart(6, '0')}
+                      {b.id_boleta < 1_000_000 ? String(b.id_boleta).padStart(6, '0') : String(b.id_boleta)}
                     </div>
                     <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full border ${badge.cls}`}>
                       {badge.label}
@@ -524,16 +524,19 @@ export default function VentasClient({
   const [search, setSearch] = useState(query);
   const [selectedPackId, setSelectedPackId] = useState<string | null>(null);
 
-  function handleSearch(e: React.FormEvent) {
-    e.preventDefault();
-    const p = incluirPruebas ? '&pruebas=1' : '';
-    router.push(`/ventas?query=${search}&page=1${p}`);
-  }
+  useEffect(() => {
+    if (search === query) return;
+    const handle = setTimeout(() => {
+      const p = incluirPruebas ? '&pruebas=1' : '';
+      router.replace(`/ventas?query=${encodeURIComponent(search)}&page=1${p}`);
+    }, 500);
+    return () => clearTimeout(handle);
+  }, [search, query, incluirPruebas, router]);
 
   function togglePruebas() {
     const next = !incluirPruebas;
     const p = next ? '&pruebas=1' : '';
-    router.push(`/ventas?query=${query}&page=1${p}`);
+    router.replace(`/ventas?query=${encodeURIComponent(query)}&page=1${p}`);
   }
 
   return (
@@ -563,25 +566,18 @@ export default function VentasClient({
 
       {/* Search Header */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end bg-admin-card p-6 rounded-2xl border border-admin-border">
-        <form onSubmit={handleSearch} className="md:col-span-3">
+        <div className="md:col-span-3">
           <label className="block text-xs font-bold text-slate-500 uppercase mb-2">
-            Buscar Comerciante (Nombre o Teléfono)
+            Buscar por Nombre, Negocio, WhatsApp o Identificación
           </label>
-          <div className="flex gap-2">
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Ej: Tienda El Progreso..."
-              className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white outline-none focus:border-admin-blue transition-colors text-sm"
-            />
-            <button
-              type="submit"
-              className="bg-admin-blue text-white px-6 py-2.5 rounded-xl font-bold hover:bg-blue-600 transition-colors text-sm"
-            >
-              Buscar
-            </button>
-          </div>
-        </form>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Ej: nombre, cédula o celular"
+            className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white outline-none focus:border-admin-blue transition-colors text-sm"
+            autoComplete="off"
+          />
+        </div>
         <div className="md:col-span-1 text-right pb-1">
           <p className="text-xs text-slate-500 uppercase font-bold">Total Packs</p>
           <p className="text-2xl font-black text-white">{total}</p>

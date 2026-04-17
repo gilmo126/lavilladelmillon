@@ -216,7 +216,7 @@ export default function VenderPackForm({ diasVencimientoPago }: Props) {
               <div className="grid grid-cols-5 gap-2">
                 {r.numeros.map((n) => (
                   <div key={n} className="bg-slate-950 border border-admin-border rounded-xl p-2.5 text-center font-mono font-black text-white text-sm hover:border-admin-gold/40 transition-all">
-                    {String(n).padStart(6, '0')}
+                    {n < 1_000_000 ? String(n).padStart(6, '0') : String(n)}
                   </div>
                 ))}
               </div>
@@ -278,7 +278,7 @@ export default function VenderPackForm({ diasVencimientoPago }: Props) {
                 (resultados.length > 1 ? resultados : [result])
                   .filter((r) => r.tokenPagina && r.numeros)
                   .map((r) => {
-                    const nums = (r.numeros || []).map((n) => String(n).padStart(6, '0')).join(' · ');
+                    const nums = (r.numeros || []).map((n) => n < 1_000_000 ? String(n).padStart(6, '0') : String(n)).join(' · ');
                     return `📦 PACK-${String(r.numeroPack).padStart(3, '0')}:\n${nums}\n🔗 ${LANDING_URL}/pack/${r.tokenPagina}`;
                   })
                   .join('\n\n')

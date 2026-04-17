@@ -15,6 +15,7 @@ interface ExtendedCounts {
   asistencias: number;
   preRegistrosPendientes: number;
   personalActivo: number;
+  comerciantesCount: number;
 }
 
 interface RealtimeDashboardProps {
@@ -58,6 +59,7 @@ export default function RealtimeDashboard({ initialConfig, initialCounts, initia
       .on('postgres_changes', { event: '*', schema: 'public', table: 'boletas' }, () => refreshCounts())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'packs' }, () => refreshCounts())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'invitaciones' }, () => refreshCounts())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'pre_registros' }, () => refreshCounts())
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
@@ -92,7 +94,7 @@ export default function RealtimeDashboard({ initialConfig, initialCounts, initia
   ] : [];
 
   const row4: KpiCard[] = isAdmin ? [
-    { label: 'Comerciantes', value: '—', color: 'text-cyan-400', href: '/comerciantes', emoji: '🏪' },
+    { label: 'Comerciantes', value: extended.comerciantesCount.toLocaleString(), color: 'text-cyan-400', href: '/comerciantes', emoji: '🏪' },
     { label: 'Personal Activo', value: extended.personalActivo.toLocaleString(), color: 'text-slate-300', href: '/distribuidores', emoji: '👥' },
   ] : [];
 

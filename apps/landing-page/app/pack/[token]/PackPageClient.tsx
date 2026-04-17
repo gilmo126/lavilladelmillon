@@ -1,6 +1,7 @@
 'use client';
 
 import type { PackData, NumeroDetalle } from './page';
+import { formatearNumeroBoleta } from '../../../lib/numeroBoleta';
 
 const LANDING_URL = process.env.NEXT_PUBLIC_LANDING_URL || 'https://landing-page.guillaumer-orion.workers.dev';
 
@@ -11,7 +12,7 @@ function NumeroCard({
   detalle: NumeroDetalle;
   nombreCampana: string;
 }) {
-  const numStr = String(detalle.numero).padStart(6, '0');
+  const numStr = formatearNumeroBoleta(detalle.numero);
   const registrado = detalle.estado >= 2;
 
   const registroUrl = `${LANDING_URL}?numero=${detalle.numero}`;
@@ -50,7 +51,15 @@ function NumeroCard({
   );
 }
 
-export default function PackPageClient({ pack }: { pack: PackData }) {
+export default function PackPageClient({
+  pack,
+  qrUsos,
+  qrMaxUsos,
+}: {
+  pack: PackData;
+  qrUsos: number;
+  qrMaxUsos: number;
+}) {
   const fechaVencimiento = new Date(pack.fecha_vencimiento).toLocaleDateString(
     'es-CO',
     { day: '2-digit', month: 'long', year: 'numeric' }
@@ -59,12 +68,17 @@ export default function PackPageClient({ pack }: { pack: PackData }) {
   const totalRegistrados = pack.numeros.filter((n) => n.estado >= 2).length;
 
   const ADMIN_URL = process.env.NEXT_PUBLIC_ADMIN_URL || 'https://lavilladelmillon-admin.guillaumer-orion.workers.dev';
-  const tieneQr = pack.tipo_pago === 'inmediato' && pack.token_qr && !pack.qr_usado_at;
+  const qrExpirado = pack.qr_valido_hasta ? new Date(pack.qr_valido_hasta).getTime() < Date.now() : false;
+  const qrAgotado = qrMaxUsos > 0 && qrUsos >= qrMaxUsos;
+  const tieneQr = pack.tipo_pago === 'inmediato' && !!pack.token_qr && !qrExpirado && !qrAgotado;
   const qrDataUrl = pack.token_qr ? `${ADMIN_URL}/validar-qr/${pack.token_qr}` : '';
   const qrImageUrl = qrDataUrl ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrDataUrl)}` : '';
   const qrValidoHastaStr = pack.qr_valido_hasta
     ? new Date(pack.qr_valido_hasta).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })
     : null;
+  const pctUsado = qrMaxUsos > 0 ? Math.min(100, (qrUsos / qrMaxUsos) * 100) : 0;
+  const restantes = Math.max(0, qrMaxUsos - qrUsos);
+  const progressColor = qrAgotado ? 'bg-red-500' : qrUsos > qrMaxUsos * 0.8 ? 'bg-yellow-500' : 'bg-green-500';
 
   return (
     <main className="min-h-screen bg-marca-darker text-white">
@@ -110,6 +124,24 @@ export default function PackPageClient({ pack }: { pack: PackData }) {
             <h2 className="font-black text-marca-gold text-sm uppercase tracking-widest">
               🎟️ Tu QR de Beneficio Recreativo
             </h2>
+
+            {qrMaxUsos > 0 && (
+              <div className="bg-slate-950/40 border border-white/5 rounded-xl p-4 text-left">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Usos del QR</span>
+                  <span className={`text-sm font-black ${qrAgotado ? 'text-red-400' : 'text-marca-gold'}`}>
+                    {qrUsos} / {qrMaxUsos}
+                  </span>
+                </div>
+                <div className="w-full h-2.5 bg-slate-900 rounded-full overflow-hidden">
+                  <div className={`h-full rounded-full transition-all ${progressColor}`} style={{ width: `${pctUsado}%` }} />
+                </div>
+                <p className="text-[10px] text-slate-500 mt-2 text-center">
+                  {restantes} uso{restantes !== 1 ? 's' : ''} restante{restantes !== 1 ? 's' : ''}
+                </p>
+              </div>
+            )}
+
             <div className="flex justify-center">
               <div className="bg-white p-3 rounded-2xl shadow-xl">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -125,11 +157,21 @@ export default function PackPageClient({ pack }: { pack: PackData }) {
           </div>
         )}
 
-        {pack.qr_usado_at && pack.tipo_pago === 'inmediato' && (
-          <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-5 text-center">
-            <p className="text-slate-400 text-sm">
-              QR utilizado el {new Date(pack.qr_usado_at).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })}
+        {qrAgotado && pack.tipo_pago === 'inmediato' && (
+          <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-5 text-center space-y-2">
+            <p className="text-slate-200 font-black text-sm">QR agotado</p>
+            <p className="text-slate-400 text-xs">
+              Se completaron los {qrMaxUsos} usos disponibles.
             </p>
+          </div>
+        )}
+
+        {!qrAgotado && qrExpirado && pack.tipo_pago === 'inmediato' && (
+          <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-5 text-center space-y-2">
+            <p className="text-slate-200 font-black text-sm">QR vencido</p>
+            {qrValidoHastaStr && (
+              <p className="text-slate-400 text-xs">Venció el {qrValidoHastaStr}.</p>
+            )}
           </div>
         )}
 

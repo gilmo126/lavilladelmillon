@@ -49,7 +49,8 @@ export async function getBoletasPaged(page: number, limit: number, query: string
     }
 
     if (isNum) {
-      const paddedId = query.padStart(6, '0');
+      const numQ = Number(query);
+      const paddedId = numQ < 1_000_000 ? query.padStart(6, '0') : query;
       queryBuilder = queryBuilder.or(`id_boleta.eq.${query},identificacion_usuario.ilike.%${query}%,token_integridad.eq.TKN-${paddedId}${extraFilters}`);
     } else {
       queryBuilder = queryBuilder.or(`token_integridad.ilike.%${query}%,identificacion_usuario.ilike.%${query}%${extraFilters}`);
@@ -130,7 +131,7 @@ export async function exportarParticipantesAction(distribuidorId?: string) {
   }
 
   return data.map((b: any) => ({
-    numero: String(b.id_boleta).padStart(6, '0'),
+    numero: b.id_boleta < 1_000_000 ? String(b.id_boleta).padStart(6, '0') : String(b.id_boleta),
     nombre: b.nombre_usuario || '',
     identificacion: b.identificacion_usuario || '',
     celular: b.celular_usuario || '',
@@ -312,7 +313,10 @@ export async function getPacksPaged(page: number, limit: number, query: string, 
   }
 
   if (query) {
-    queryBuilder = queryBuilder.or(`comerciante_nombre.ilike.%${query}%,comerciante_tel.ilike.%${query}%`);
+    const q = query.replace(/[,()]/g, '');
+    queryBuilder = queryBuilder.or(
+      `comerciante_nombre.ilike.%${q}%,comerciante_nombre_comercial.ilike.%${q}%,comerciante_whatsapp.ilike.%${q}%,comerciante_tel.ilike.%${q}%,comerciante_identificacion.ilike.%${q}%`
+    );
   }
 
   const { data, count, error } = await queryBuilder
@@ -406,27 +410,40 @@ export async function upsertSorteo(payload: { id?: string, premio_id: string, fe
   }
 }
 
-export async function cerrarSorteoAction(adminId: string, campanaId: string) {
+export async function cerrarSorteoAction(adminId: string, campanaId: string, premioId?: string) {
   try {
-    // 1. Auditamos cuántas boletas pasarán a Estado 4 (Sorteado)
-    const { count, error: cError } = await supabaseAdmin
+    // 1. Auditar cuántas boletas pasarán a estado 4 (Sorteado) — solo las del premio indicado
+    let countQuery = supabaseAdmin
       .from('boletas')
       .select('*', { count: 'exact', head: true })
       .eq('campana_id', campanaId)
       .eq('estado', 2)
-      .eq('es_prueba', false); // Registradas reales
+      .eq('es_prueba', false);
+    if (premioId) countQuery = countQuery.eq('premio_seleccionado', premioId);
 
+    const { count, error: cError } = await countQuery;
     if (cError) throw cError;
 
-    // 2. Ejecutar actualización masiva
-    const { error: uError } = await supabaseAdmin
+    // 2. Actualización masiva filtrada por premio
+    let updateQuery = supabaseAdmin
       .from('boletas')
       .update({ estado: 4, updated_at: new Date().toISOString() })
       .eq('campana_id', campanaId)
       .eq('estado', 2)
       .eq('es_prueba', false);
-    
+    if (premioId) updateQuery = updateQuery.eq('premio_seleccionado', premioId);
+
+    const { error: uError } = await updateQuery;
     if (uError) throw uError;
+
+    // 3. Marcar el sorteo asociado como finalizado
+    if (premioId) {
+      await supabaseAdmin
+        .from('sorteos')
+        .update({ estado: 'finalizado', updated_at: new Date().toISOString() })
+        .eq('premio_id', premioId)
+        .eq('estado', 'programado');
+    }
 
     return { success: true, count: count || 0 };
   } catch (error: any) {
@@ -455,11 +472,40 @@ export async function getDashboardCounts(distribuidorId?: string) {
 export async function getDashboardExtendedCounts(distribuidorId?: string) {
   const distFilter = distribuidorId ? { distribuidor_id: distribuidorId } : {};
 
+  const { data: invsPrueba } = await supabaseAdmin
+    .from('invitaciones')
+    .select('id')
+    .eq('es_prueba', true);
+  const idsPrueba = (invsPrueba || []).map((i: any) => i.id);
+
+  let preRegPendientesQuery = supabaseAdmin
+    .from('pre_registros')
+    .select('*', { count: 'exact', head: true })
+    .eq('estado', 'pendiente');
+  if (idsPrueba.length > 0) {
+    preRegPendientesQuery = preRegPendientesQuery.or(
+      `invitacion_id.is.null,invitacion_id.not.in.(${idsPrueba.join(',')})`
+    );
+  }
+
+  let packsWaQuery = supabaseAdmin
+    .from('packs')
+    .select('comerciante_whatsapp, comerciante_identificacion')
+    .eq('es_prueba', false);
+  if (distribuidorId) packsWaQuery = packsWaQuery.eq('distribuidor_id', distribuidorId);
+
+  let invsWaQuery = supabaseAdmin
+    .from('invitaciones')
+    .select('comerciante_whatsapp')
+    .eq('es_prueba', false);
+  if (distribuidorId) invsWaQuery = invsWaQuery.eq('distribuidor_id', distribuidorId);
+
   const [
     packs, packsPendientes,
     invitaciones, invAceptadas, invPendientes, invRechazadas, asistencias,
     preRegistros,
     personal,
+    packsWa, invsWa, preRegWa,
   ] = await Promise.all([
     supabaseAdmin.from('packs').select('*', { count: 'exact', head: true }).eq('es_prueba', false).match(distFilter),
     supabaseAdmin.from('packs').select('*', { count: 'exact', head: true }).eq('es_prueba', false).eq('estado_pago', 'pendiente').match(distFilter),
@@ -468,9 +514,23 @@ export async function getDashboardExtendedCounts(distribuidorId?: string) {
     supabaseAdmin.from('invitaciones').select('*', { count: 'exact', head: true }).eq('es_prueba', false).eq('estado', 'pendiente').match(distFilter),
     supabaseAdmin.from('invitaciones').select('*', { count: 'exact', head: true }).eq('es_prueba', false).eq('estado', 'rechazada').match(distFilter),
     supabaseAdmin.from('invitaciones').select('*', { count: 'exact', head: true }).eq('es_prueba', false).not('qr_escaneado_at', 'is', null).match(distFilter),
-    supabaseAdmin.from('pre_registros').select('*', { count: 'exact', head: true }).eq('estado', 'pendiente'),
+    preRegPendientesQuery,
     supabaseAdmin.from('perfiles').select('*', { count: 'exact', head: true }).in('rol', ['distribuidor', 'asistente']),
+    packsWaQuery,
+    invsWaQuery,
+    distribuidorId
+      ? Promise.resolve({ data: [] as any[] })
+      : supabaseAdmin.from('pre_registros').select('whatsapp, identificacion'),
   ]);
+
+  const comerciantesSet = new Set<string>();
+  const addKey = (wa: string | null | undefined, id: string | null | undefined) => {
+    if (wa && wa.trim()) comerciantesSet.add(`wa:${wa.trim()}`);
+    else if (id && id.trim()) comerciantesSet.add(`id:${id.trim()}`);
+  };
+  for (const p of ((packsWa as any).data || []) as any[]) addKey(p.comerciante_whatsapp, p.comerciante_identificacion);
+  for (const i of ((invsWa as any).data || []) as any[]) addKey(i.comerciante_whatsapp, null);
+  for (const pr of ((preRegWa as any).data || []) as any[]) addKey(pr.whatsapp, pr.identificacion);
 
   return {
     totalPacks: packs.count || 0,
@@ -482,5 +542,6 @@ export async function getDashboardExtendedCounts(distribuidorId?: string) {
     asistencias: asistencias.count || 0,
     preRegistrosPendientes: preRegistros.count || 0,
     personalActivo: personal.count || 0,
+    comerciantesCount: comerciantesSet.size,
   };
 }

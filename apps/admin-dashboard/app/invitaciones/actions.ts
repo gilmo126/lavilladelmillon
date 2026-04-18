@@ -611,3 +611,58 @@ export async function actualizarInvitacionAction(
   if (error) return { success: false, error: error.message };
   return { success: true };
 }
+
+// ── ENVÍO MASIVO WHATSAPP (cola secuencial) ─────────────────────────
+
+export type InvitacionEnvioItem = {
+  id: string;
+  token: string;
+  tipo_evento: string;
+  comerciante_nombre: string;
+  comerciante_whatsapp: string;
+  comerciante_nombre_comercial: string | null;
+  comerciante_ciudad: string | null;
+  distribuidor_nombre: string | null;
+};
+
+export async function getPendientesEnvioWhatsappAction(): Promise<InvitacionEnvioItem[]> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data: profile } = await supabaseAdmin
+    .from('perfiles')
+    .select('rol')
+    .eq('id', user.id)
+    .single();
+  if (!profile || !['admin', 'distribuidor'].includes(profile.rol)) return [];
+
+  let query = supabaseAdmin
+    .from('invitaciones')
+    .select('id, token, tipo_evento, comerciante_nombre, comerciante_nombre_comercial, comerciante_whatsapp, comerciante_ciudad, distribuidor:perfiles!distribuidor_id(nombre)')
+    .eq('estado', 'pendiente')
+    .eq('es_prueba', false)
+    .eq('whatsapp_confirmado', false)
+    .not('comerciante_whatsapp', 'is', null)
+    .order('created_at', { ascending: true });
+
+  if (profile.rol === 'distribuidor') {
+    query = query.eq('distribuidor_id', user.id);
+  }
+
+  const { data, error } = await query;
+  if (error || !data) return [];
+
+  return (data as any[])
+    .filter((i) => i.comerciante_whatsapp && /^3[0-9]{9}$/.test(i.comerciante_whatsapp))
+    .map((i) => ({
+      id: i.id,
+      token: i.token,
+      tipo_evento: i.tipo_evento,
+      comerciante_nombre: i.comerciante_nombre,
+      comerciante_nombre_comercial: i.comerciante_nombre_comercial,
+      comerciante_whatsapp: i.comerciante_whatsapp,
+      comerciante_ciudad: i.comerciante_ciudad,
+      distribuidor_nombre: Array.isArray(i.distribuidor) ? i.distribuidor[0]?.nombre || null : i.distribuidor?.nombre || null,
+    }));
+}

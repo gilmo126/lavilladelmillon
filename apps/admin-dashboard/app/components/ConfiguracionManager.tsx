@@ -439,54 +439,72 @@ export default function ConfiguracionManager() {
                    <label className="block text-sm text-slate-400 mb-2">Jornadas del evento (el comerciante elige a cuáles asistir)</label>
                    <div className="space-y-3">
                      {formJornadas.map((j, idx) => (
-                       <div key={idx} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_1.5fr_auto] gap-2 items-center bg-slate-900/50 border border-admin-border rounded-lg p-3">
-                         <input
-                           placeholder="id (ej: sabado_manana)"
-                           value={j.id}
-                           onChange={e => {
-                             const updated = [...formJornadas];
-                             updated[idx] = { ...updated[idx], id: e.target.value };
-                             setFormJornadas(updated);
-                           }}
-                           className="bg-slate-900 border border-admin-border rounded px-2 py-2 text-white text-xs font-mono outline-none focus:border-emerald-500"
-                         />
-                         <input
-                           placeholder="Fecha"
-                           value={j.fecha}
-                           onChange={e => {
-                             const updated = [...formJornadas];
-                             updated[idx] = { ...updated[idx], fecha: e.target.value };
-                             setFormJornadas(updated);
-                           }}
-                           className="bg-slate-900 border border-admin-border rounded px-2 py-2 text-white text-xs outline-none focus:border-emerald-500"
-                         />
-                         <input
-                           placeholder="Hora"
-                           value={j.hora}
-                           onChange={e => {
-                             const updated = [...formJornadas];
-                             updated[idx] = { ...updated[idx], hora: e.target.value };
-                             setFormJornadas(updated);
-                           }}
-                           className="bg-slate-900 border border-admin-border rounded px-2 py-2 text-white text-xs outline-none focus:border-emerald-500"
-                         />
-                         <input
-                           placeholder="Label visible"
-                           value={j.label}
-                           onChange={e => {
-                             const updated = [...formJornadas];
-                             updated[idx] = { ...updated[idx], label: e.target.value };
-                             setFormJornadas(updated);
-                           }}
-                           className="bg-slate-900 border border-admin-border rounded px-2 py-2 text-white text-xs outline-none focus:border-emerald-500"
-                         />
-                         <button
-                           type="button"
-                           onClick={() => setFormJornadas(formJornadas.filter((_, i) => i !== idx))}
-                           className="text-red-400 hover:text-red-300 text-sm font-bold px-2"
-                         >
-                           ✕
-                         </button>
+                       <div key={idx} className="bg-slate-900/50 border border-admin-border rounded-lg p-3 space-y-2 min-w-0">
+                         {/* Fila superior: id + fecha + hora + boton borrar */}
+                         <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_auto] gap-2 items-center min-w-0">
+                           <div className="min-w-0">
+                             <p className="text-[9px] text-slate-500 uppercase font-bold tracking-widest mb-1">ID (slug)</p>
+                             <input
+                               placeholder="ej: sabado_manana"
+                               value={j.id}
+                               onChange={e => {
+                                 const updated = [...formJornadas];
+                                 updated[idx] = { ...updated[idx], id: e.target.value };
+                                 setFormJornadas(updated);
+                               }}
+                               className="w-full min-w-0 bg-slate-900 border border-admin-border rounded px-2 py-2 text-white text-xs font-mono outline-none focus:border-emerald-500"
+                             />
+                           </div>
+                           <div className="min-w-0">
+                             <p className="text-[9px] text-slate-500 uppercase font-bold tracking-widest mb-1">Fecha</p>
+                             <input
+                               placeholder="Sábado 25 oct"
+                               value={j.fecha}
+                               onChange={e => {
+                                 const updated = [...formJornadas];
+                                 updated[idx] = { ...updated[idx], fecha: e.target.value };
+                                 setFormJornadas(updated);
+                               }}
+                               className="w-full min-w-0 bg-slate-900 border border-admin-border rounded px-2 py-2 text-white text-xs outline-none focus:border-emerald-500"
+                             />
+                           </div>
+                           <div className="min-w-0">
+                             <p className="text-[9px] text-slate-500 uppercase font-bold tracking-widest mb-1">Hora</p>
+                             <input
+                               placeholder="9:00 AM"
+                               value={j.hora}
+                               onChange={e => {
+                                 const updated = [...formJornadas];
+                                 updated[idx] = { ...updated[idx], hora: e.target.value };
+                                 setFormJornadas(updated);
+                               }}
+                               className="w-full min-w-0 bg-slate-900 border border-admin-border rounded px-2 py-2 text-white text-xs outline-none focus:border-emerald-500"
+                             />
+                           </div>
+                           <button
+                             type="button"
+                             onClick={() => setFormJornadas(formJornadas.filter((_, i) => i !== idx))}
+                             className="text-red-400 hover:text-red-300 hover:bg-red-500/10 text-sm font-bold px-3 py-2 rounded transition-colors md:self-end"
+                             title="Eliminar jornada"
+                           >
+                             ✕
+                           </button>
+                         </div>
+
+                         {/* Fila inferior: label visible (campo largo, ancho completo) */}
+                         <div className="min-w-0">
+                           <p className="text-[9px] text-slate-500 uppercase font-bold tracking-widest mb-1">Label visible al comerciante</p>
+                           <input
+                             placeholder="Ej: Sábado 25 de octubre en la noche"
+                             value={j.label}
+                             onChange={e => {
+                               const updated = [...formJornadas];
+                               updated[idx] = { ...updated[idx], label: e.target.value };
+                               setFormJornadas(updated);
+                             }}
+                             className="w-full min-w-0 bg-slate-900 border border-admin-border rounded px-2 py-2 text-white text-xs outline-none focus:border-emerald-500"
+                           />
+                         </div>
                        </div>
                      ))}
                      <button

@@ -191,6 +191,7 @@ Directorio unificado de comerciantes consolidando 3 fuentes: packs, invitaciones
 - Retrofit: invitaciones aceptadas pre-feature sin jornadas muestran pantalla de confirmación de jornadas (`actualizarJornadasAction`) sin regenerar QR.
 - Editor contenido landing en `/configuracion`: logo, título, subtítulo, mensaje (auspiciantes resaltados en dorado), ubicación + maps URL.
 - QRs de invitación con `qr_escaneado_at` — uso único.
+- **Envío masivo WhatsApp** (botón verde en `/invitaciones`, modal `EnvioMasivoWhatsApp.tsx`): fase de selección con checkboxes + buscador → cola secuencial que abre `wa.me` uno por uno y marca `whatsapp_confirmado=true` al confirmar. Filtra por `estado=pendiente`, `whatsapp_confirmado=false`, WhatsApp 10-dígitos válido. Admin ve todas; distribuidor solo las suyas. No modifica `estado` (sigue dependiendo de la respuesta del comerciante en la landing). Uso de emergencia; los WhatsApp Web/Desktop aún requieren tap manual de "enviar" por mensaje.
 
 ### Pre-registros virtuales (`/registro-evento` — landing, `/pre-registros` — admin)
 

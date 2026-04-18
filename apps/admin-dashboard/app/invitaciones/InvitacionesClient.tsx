@@ -7,6 +7,7 @@ import {
   confirmarWhatsappInvitacionAction,
   type InvitacionItem, type InvitacionDetail,
 } from './actions';
+import EnvioMasivoWhatsApp from './EnvioMasivoWhatsApp';
 
 const CELULAR_REGEX = /^3[0-9]{9}$/;
 
@@ -270,7 +271,7 @@ function InvitacionDrawer({ invId, jornadasEvento, isAdmin, onClose, onUpdated }
                 {copied ? '✓' : 'Copiar'}
               </button>
             </div>
-            <a href={`https://wa.me/?text=${waShareText}`} target="_blank" rel="noopener noreferrer"
+            <a href={`https://wa.me/${wa || tel || ''}?text=${waShareText}`} target="_blank" rel="noopener noreferrer"
               className="w-full flex items-center justify-center gap-2 py-3 bg-green-600 hover:bg-green-500 text-white font-black rounded-xl transition-all text-[10px] uppercase tracking-widest active:scale-95">
               📲 Compartir por WhatsApp
             </a>
@@ -341,6 +342,7 @@ function InvitacionDrawer({ invId, jornadasEvento, isAdmin, onClose, onUpdated }
               </button>
             </section>
           )}
+
         </div>
 
         {/* Footer */}
@@ -402,6 +404,7 @@ export default function InvitacionesClient({
   const [waConfirmado, setWaConfirmado] = useState(false);
   const [waConfirmando, setWaConfirmando] = useState(false);
   const [busqueda, setBusqueda] = useState('');
+  const [envioMasivoOpen, setEnvioMasivoOpen] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const busquedaRef = useRef(busqueda);
   busquedaRef.current = busqueda;
@@ -515,8 +518,20 @@ export default function InvitacionesClient({
       )}
       {/* Lista */}
       <div className="lg:col-span-2 space-y-4">
-        {isAdmin && (
-          <div className="flex items-center justify-end">
+        {envioMasivoOpen && (
+          <EnvioMasivoWhatsApp
+            onClose={() => setEnvioMasivoOpen(false)}
+            onDone={reloadList}
+          />
+        )}
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <button
+            onClick={() => setEnvioMasivoOpen(true)}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-500 text-white font-black rounded-xl text-[10px] uppercase tracking-widest transition-all active:scale-95"
+          >
+            📲 Envío masivo WhatsApp
+          </button>
+          {isAdmin && (
             <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-400 uppercase tracking-widest">
               <input
                 type="checkbox"
@@ -526,8 +541,8 @@ export default function InvitacionesClient({
               />
               Incluir invitaciones de prueba
             </label>
-          </div>
-        )}
+          )}
+        </div>
         {/* Tabs */}
         <div className="flex border border-admin-border rounded-2xl overflow-hidden">
           {[

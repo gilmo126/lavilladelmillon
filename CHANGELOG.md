@@ -171,6 +171,13 @@ Acceso solo a `/scanner` y `/validar-qr/[token_qr]`. Admin lo crea desde `/distr
 - Scanner sin invitaciones → dos listas: Evento Recreativo (verde) + Invitaciones (purple), paginadas 10
 - Asistencia admin con filtro fecha → removido, todos paginados 10
 
+### 2026-04-17
+
+- Botón "Compartir por WhatsApp" en drawer de invitación abría selector de contactos → agregado `comerciante_whatsapp || comerciante_tel` al `wa.me` (`InvitacionesClient.tsx:273`).
+- Feature emergencia: envío masivo WhatsApp en cola secuencial (`/invitaciones`). Dos fases — selección con checkboxes + buscador → cola con abrir `wa.me`/confirmar enviado/saltar. Reutiliza flag existente `whatsapp_confirmado` para no duplicar entre sesiones. No altera `estado` de la invitación (sigue dependiendo de la respuesta del comerciante en la landing).
+- Action `getPendientesEnvioWhatsappAction` filtra por `estado=pendiente`, `whatsapp_confirmado=false`, `es_prueba=false` y WhatsApp válido 10 dígitos. Admin ve todas; distribuidor solo las suyas.
+- Componente `EnvioMasivoWhatsApp.tsx` reusa helper `formatWhatsAppNumber` (prefijo 57).
+
 ---
 
 ## Auditoría de Seguridad Pre-Merge (2026-04-11)

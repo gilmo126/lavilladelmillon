@@ -178,6 +178,13 @@ Acceso solo a `/scanner` y `/validar-qr/[token_qr]`. Admin lo crea desde `/distr
 - Action `getPendientesEnvioWhatsappAction` filtra por `estado=pendiente`, `whatsapp_confirmado=false`, `es_prueba=false` y WhatsApp válido 10 dígitos. Admin ve todas; distribuidor solo las suyas.
 - Componente `EnvioMasivoWhatsApp.tsx` reusa helper `formatWhatsAppNumber` (prefijo 57).
 
+### 2026-04-20
+
+- Reporte listado detallado de invitaciones en `/invitaciones/reporte` (nueva tab "Listado Detallado" junto a la existente "Por Distribuidor"). Una fila por invitación con todos los campos de contacto del comerciante: nombre, nombre comercial, cédula (tipo_doc + identificación), teléfono, WhatsApp, dirección, ciudad, email, origen, distribuidor y estado. Buscador texto + filtros por origen (todos/distribuidor/pre_registro) y estado.
+- Action `getReporteDetalladoInvitacionesAction` (solo admin). Como la tabla `invitaciones` no almacena cédula, se enriquece: prioridad 1 = LEFT JOIN lógico con `pre_registros.invitacion_id` (cubre invitaciones virtuales con origen `pre_registro`); fallback = match por WhatsApp en `packs` (marcado con `↻` en UI). Invitaciones manuales sin pack asociado quedan con cédula vacía.
+- Export CSV completo con 16 columnas: nombre, comercial, tipo_doc, identificacion, teléfono, whatsapp, dirección, ciudad, email, origen, distribuidor, tipo_evento, estado, whatsapp_confirmado, jornadas, creada.
+- Distinción clara vs `/comerciantes`: ese directorio agrupa por persona (una fila aunque tenga varias invitaciones); el nuevo reporte es una fila por invitación con datos de contacto completos y estado operativo.
+
 ---
 
 ## Auditoría de Seguridad Pre-Merge (2026-04-11)

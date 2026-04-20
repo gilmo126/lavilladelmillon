@@ -1,9 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   getReporteInvitacionesAction, getInvitacionesPorDistribuidorAction,
+  getReporteDetalladoInvitacionesAction,
   type ReporteDistribuidorItem, type AlertaItem, type InvitacionDistribuidorItem,
+  type ReporteDetalladoInvitacionItem,
 } from '../actions';
 
 type JornadaConfig = { id: string; fecha: string; hora: string; label: string };
@@ -25,10 +27,12 @@ export default function ReporteClient({
   initial,
   jornadasEvento,
   alertas,
+  detallado,
 }: {
   initial: ReporteDistribuidorItem[];
   jornadasEvento: JornadaConfig[];
   alertas: AlertaItem[];
+  detallado: ReporteDetalladoInvitacionItem[];
 }) {
   const [alertasOpen, setAlertasOpen] = useState(alertas.length > 0);
   const [reporte, setReporte] = useState<ReporteDistribuidorItem[]>(initial);
@@ -36,12 +40,90 @@ export default function ReporteClient({
   const [drawerDist, setDrawerDist] = useState<ReporteDistribuidorItem | null>(null);
   const [drawerItems, setDrawerItems] = useState<InvitacionDistribuidorItem[]>([]);
   const [drawerLoading, setDrawerLoading] = useState(false);
+  const [tab, setTab] = useState<'distribuidor' | 'listado'>('distribuidor');
+  const [detalle, setDetalle] = useState<ReporteDetalladoInvitacionItem[]>(detallado);
+  const [detalleLoading, setDetalleLoading] = useState(false);
+  const [search, setSearch] = useState('');
+  const [filtroOrigen, setFiltroOrigen] = useState<'todos' | 'distribuidor' | 'pre_registro'>('todos');
+  const [filtroEstado, setFiltroEstado] = useState<'todos' | 'pendiente' | 'aceptada' | 'rechazada'>('todos');
 
   async function refresh() {
     setLoading(true);
     const res = await getReporteInvitacionesAction();
     setReporte(res);
     setLoading(false);
+  }
+
+  async function refreshDetalle() {
+    setDetalleLoading(true);
+    const res = await getReporteDetalladoInvitacionesAction();
+    setDetalle(res);
+    setDetalleLoading(false);
+  }
+
+  const detalleFiltrado = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return detalle.filter((i) => {
+      if (filtroOrigen !== 'todos' && (i.origen || 'distribuidor') !== filtroOrigen) return false;
+      if (filtroEstado !== 'todos' && i.estado !== filtroEstado) return false;
+      if (!q) return true;
+      return [
+        i.comerciante_nombre,
+        i.comerciante_nombre_comercial,
+        i.identificacion,
+        i.comerciante_tel,
+        i.comerciante_whatsapp,
+        i.comerciante_email,
+        i.comerciante_direccion,
+        i.comerciante_ciudad,
+        i.distribuidor_nombre,
+      ].some((v) => v && v.toLowerCase().includes(q));
+    });
+  }, [detalle, search, filtroOrigen, filtroEstado]);
+
+  function exportCSVDetalle() {
+    const header = [
+      'Nombre', 'Nombre Comercial', 'Tipo Doc', 'Identificacion',
+      'Telefono', 'WhatsApp', 'Direccion', 'Ciudad', 'Email',
+      'Origen', 'Distribuidor', 'Tipo Evento', 'Estado',
+      'WhatsApp Confirmado', 'Jornadas', 'Creada',
+    ];
+    const esc = (v: string | number | null | undefined) => {
+      const s = v == null ? '' : String(v);
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const fmtJornadas = (ids: string[] | null) => {
+      if (!ids || ids.length === 0) return '';
+      return ids.map((id) => jornadasEvento.find((j) => j.id === id)?.label || id).join(' | ');
+    };
+    const rows = detalleFiltrado.map((i) => [
+      i.comerciante_nombre,
+      i.comerciante_nombre_comercial || '',
+      i.tipo_doc || '',
+      i.identificacion || '',
+      i.comerciante_tel || '',
+      i.comerciante_whatsapp || '',
+      i.comerciante_direccion || '',
+      i.comerciante_ciudad || '',
+      i.comerciante_email || '',
+      i.origen === 'pre_registro' ? 'Virtual (Pre-registro)' : 'Distribuidor',
+      i.distribuidor_nombre,
+      i.tipo_evento,
+      i.estado,
+      i.whatsapp_confirmado ? 'Si' : 'No',
+      fmtJornadas(i.jornadas_seleccionadas),
+      new Date(i.created_at).toISOString(),
+    ].map(esc).join(','));
+    const csv = '\ufeff' + [header.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `invitaciones_detallado_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
   async function openDrawer(dist: ReporteDistribuidorItem) {
@@ -179,8 +261,29 @@ export default function ReporteClient({
       </div>
     )}
 
+    {/* Tabs */}
+    <div className="flex gap-2 border-b border-admin-border">
+      <button
+        onClick={() => setTab('distribuidor')}
+        className={`px-4 py-3 text-[11px] font-black uppercase tracking-widest transition-colors border-b-2 ${
+          tab === 'distribuidor' ? 'text-admin-gold border-admin-gold' : 'text-slate-500 border-transparent hover:text-slate-300'
+        }`}
+      >
+        Por Distribuidor
+      </button>
+      <button
+        onClick={() => setTab('listado')}
+        className={`px-4 py-3 text-[11px] font-black uppercase tracking-widest transition-colors border-b-2 ${
+          tab === 'listado' ? 'text-admin-gold border-admin-gold' : 'text-slate-500 border-transparent hover:text-slate-300'
+        }`}
+      >
+        Listado Detallado
+        <span className="ml-2 px-2 py-0.5 rounded-full text-[10px] font-black bg-admin-gold/10 border border-admin-gold/30 text-admin-gold">{detalle.length}</span>
+      </button>
+    </div>
+
     {/* Alertas */}
-    {alertas.length > 0 && (
+    {tab === 'distribuidor' && alertas.length > 0 && (
       <section className="bg-admin-card rounded-2xl border border-red-500/20 overflow-hidden">
         <button
           onClick={() => setAlertasOpen(!alertasOpen)}
@@ -212,6 +315,7 @@ export default function ReporteClient({
       </section>
     )}
 
+    {tab === 'distribuidor' && (
     <section className="bg-admin-card rounded-2xl border border-admin-border overflow-hidden">
       <div className="flex items-center justify-between gap-4 p-5 border-b border-admin-border">
         <div className="flex items-center gap-3">
@@ -294,6 +398,138 @@ export default function ReporteClient({
         </div>
       )}
     </section>
+    )}
+
+    {tab === 'listado' && (
+    <section className="bg-admin-card rounded-2xl border border-admin-border overflow-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-4 p-5 border-b border-admin-border">
+        <div className="flex items-center gap-3">
+          <div className="w-1 h-5 bg-admin-gold rounded-full" />
+          <h2 className="text-white text-sm font-black uppercase tracking-widest">Listado Detallado</h2>
+          {detalleLoading && <div className="w-4 h-4 border-2 border-admin-gold/20 border-t-admin-gold rounded-full animate-spin" />}
+          <span className="text-slate-500 text-xs">
+            {detalleFiltrado.length} de {detalle.length}
+          </span>
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          <button
+            onClick={refreshDetalle}
+            disabled={detalleLoading}
+            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-white border border-admin-border font-black rounded-xl transition-all text-[10px] uppercase tracking-widest"
+          >
+            🔄 Actualizar
+          </button>
+          <button
+            onClick={exportCSVDetalle}
+            disabled={detalleFiltrado.length === 0}
+            className="px-4 py-2 bg-admin-blue/10 hover:bg-admin-blue/20 disabled:opacity-40 text-admin-blue border border-admin-blue/20 font-black rounded-xl transition-all text-[10px] uppercase tracking-widest"
+          >
+            📥 Exportar CSV
+          </button>
+        </div>
+      </div>
+
+      {/* Filtros */}
+      <div className="p-5 border-b border-admin-border flex flex-wrap gap-3 bg-slate-900/30">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Buscar por nombre, cédula, WhatsApp, email…"
+          className="flex-1 min-w-[240px] bg-slate-950 border border-admin-border rounded-xl px-4 py-2 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-admin-gold/50"
+        />
+        <select
+          value={filtroOrigen}
+          onChange={(e) => setFiltroOrigen(e.target.value as any)}
+          className="bg-slate-950 border border-admin-border rounded-xl px-3 py-2 text-xs text-white font-bold focus:outline-none focus:border-admin-gold/50"
+        >
+          <option value="todos">Todos los orígenes</option>
+          <option value="distribuidor">Solo Distribuidor</option>
+          <option value="pre_registro">Solo Virtual (Pre-registro)</option>
+        </select>
+        <select
+          value={filtroEstado}
+          onChange={(e) => setFiltroEstado(e.target.value as any)}
+          className="bg-slate-950 border border-admin-border rounded-xl px-3 py-2 text-xs text-white font-bold focus:outline-none focus:border-admin-gold/50"
+        >
+          <option value="todos">Todos los estados</option>
+          <option value="pendiente">Pendiente</option>
+          <option value="aceptada">Aceptada</option>
+          <option value="rechazada">Rechazada</option>
+        </select>
+      </div>
+
+      {detalleFiltrado.length === 0 && !detalleLoading ? (
+        <div className="p-10 text-center text-slate-500 text-sm">Sin invitaciones que coincidan con los filtros.</div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-left min-w-[1200px]">
+            <thead>
+              <tr className="border-b border-admin-border text-[10px] uppercase text-slate-500 bg-slate-900/50">
+                <th className="p-3 font-bold">Comerciante</th>
+                <th className="p-3 font-bold">Comercio</th>
+                <th className="p-3 font-bold">Cédula</th>
+                <th className="p-3 font-bold">Teléfono</th>
+                <th className="p-3 font-bold">WhatsApp</th>
+                <th className="p-3 font-bold">Dirección</th>
+                <th className="p-3 font-bold">Ciudad</th>
+                <th className="p-3 font-bold">Email</th>
+                <th className="p-3 font-bold">Origen</th>
+                <th className="p-3 font-bold">Distribuidor</th>
+                <th className="p-3 font-bold">Estado</th>
+                <th className="p-3 font-bold">Creada</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-admin-border">
+              {detalleFiltrado.map((i) => (
+                <tr key={i.id} className="hover:bg-slate-800/30 transition-colors text-xs">
+                  <td className="p-3 text-white font-bold">{i.comerciante_nombre}</td>
+                  <td className="p-3 text-admin-gold">{i.comerciante_nombre_comercial || '—'}</td>
+                  <td className="p-3 text-slate-300 font-mono">
+                    {i.identificacion ? (
+                      <span className="flex items-center gap-1">
+                        {i.tipo_doc ? `${i.tipo_doc} ` : ''}{i.identificacion}
+                        {i.identificacion_fuente === 'pack' && (
+                          <span title="Obtenida desde un pack con el mismo WhatsApp" className="text-[9px] text-slate-500">↻</span>
+                        )}
+                      </span>
+                    ) : '—'}
+                  </td>
+                  <td className="p-3 text-slate-300 font-mono">{i.comerciante_tel || '—'}</td>
+                  <td className="p-3 text-slate-300 font-mono">{i.comerciante_whatsapp || '—'}</td>
+                  <td className="p-3 text-slate-300 max-w-[200px] truncate" title={i.comerciante_direccion || ''}>
+                    {i.comerciante_direccion || '—'}
+                  </td>
+                  <td className="p-3 text-slate-300">{i.comerciante_ciudad || '—'}</td>
+                  <td className="p-3 text-slate-300 max-w-[180px] truncate" title={i.comerciante_email || ''}>
+                    {i.comerciante_email || '—'}
+                  </td>
+                  <td className="p-3">
+                    <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-black uppercase border ${
+                      i.origen === 'pre_registro'
+                        ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400'
+                        : 'bg-slate-500/10 border-slate-500/30 text-slate-400'
+                    }`}>
+                      {i.origen === 'pre_registro' ? 'Virtual' : 'Distribuidor'}
+                    </span>
+                  </td>
+                  <td className="p-3 text-slate-300">{i.distribuidor_nombre}</td>
+                  <td className="p-3">
+                    <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-black uppercase border ${estadoInvBadge(i.estado)}`}>
+                      {estadoInvLabel(i.estado)}
+                    </span>
+                  </td>
+                  <td className="p-3 text-slate-500 text-[10px]">
+                    {new Date(i.created_at).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: '2-digit' })}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+    )}
     </div>
   );
 }

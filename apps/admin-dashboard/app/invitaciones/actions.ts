@@ -576,6 +576,143 @@ export async function getInvitacionesPorDistribuidorAction(
   return data as InvitacionDistribuidorItem[];
 }
 
+// ── REPORTE DETALLADO: LISTADO DE INVITACIONES (solo admin) ─────────
+
+export type ReporteDetalladoInvitacionItem = {
+  id: string;
+  distribuidor_id: string | null;
+  distribuidor_nombre: string;
+  origen: 'distribuidor' | 'pre_registro' | string;
+  tipo_evento: string;
+  estado: string;
+  comerciante_nombre: string;
+  comerciante_nombre_comercial: string | null;
+  tipo_doc: string | null;
+  identificacion: string | null;
+  identificacion_fuente: 'pre_registro' | 'pack' | null;
+  comerciante_tel: string | null;
+  comerciante_whatsapp: string | null;
+  comerciante_direccion: string | null;
+  comerciante_ciudad: string | null;
+  comerciante_email: string | null;
+  jornadas_seleccionadas: string[] | null;
+  whatsapp_confirmado: boolean;
+  created_at: string;
+};
+
+export async function getReporteDetalladoInvitacionesAction(): Promise<ReporteDetalladoInvitacionItem[]> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data: profile } = await supabaseAdmin.from('perfiles').select('rol').eq('id', user.id).single();
+  if (!profile || profile.rol !== 'admin') return [];
+
+  const { data: invs, error } = await supabaseAdmin
+    .from('invitaciones')
+    .select(`
+      id, distribuidor_id, tipo_evento, estado, origen,
+      comerciante_nombre, comerciante_nombre_comercial, comerciante_ciudad,
+      comerciante_direccion, comerciante_tel, comerciante_whatsapp, comerciante_email,
+      jornadas_seleccionadas, whatsapp_confirmado, created_at,
+      distribuidor:perfiles!distribuidor_id(nombre)
+    `)
+    .eq('es_prueba', false)
+    .order('created_at', { ascending: false });
+
+  if (error || !invs) return [];
+
+  const invIds = (invs as any[]).map((i) => i.id);
+  const whatsapps = Array.from(
+    new Set(
+      (invs as any[])
+        .map((i) => (i.comerciante_whatsapp || '').trim())
+        .filter((w) => w.length > 0)
+    )
+  );
+
+  // Cédulas desde pre_registros (fuente primaria para origen='pre_registro')
+  const preRegByInv = new Map<string, { tipo_doc: string | null; identificacion: string | null }>();
+  if (invIds.length > 0) {
+    const { data: preRegs } = await supabaseAdmin
+      .from('pre_registros')
+      .select('invitacion_id, tipo_doc, identificacion')
+      .in('invitacion_id', invIds);
+    for (const pr of (preRegs as any[]) || []) {
+      if (pr.invitacion_id) {
+        preRegByInv.set(pr.invitacion_id, {
+          tipo_doc: pr.tipo_doc || null,
+          identificacion: pr.identificacion || null,
+        });
+      }
+    }
+  }
+
+  // Fallback: cédula desde packs (match por WhatsApp) — útil para invitaciones manuales
+  const packByWhatsapp = new Map<string, { tipo_doc: string | null; identificacion: string | null }>();
+  if (whatsapps.length > 0) {
+    const { data: packs } = await supabaseAdmin
+      .from('packs')
+      .select('comerciante_whatsapp, comerciante_tipo_id, comerciante_identificacion')
+      .in('comerciante_whatsapp', whatsapps)
+      .eq('es_prueba', false);
+    for (const p of (packs as any[]) || []) {
+      const w = (p.comerciante_whatsapp || '').trim();
+      if (w && !packByWhatsapp.has(w) && p.comerciante_identificacion) {
+        packByWhatsapp.set(w, {
+          tipo_doc: p.comerciante_tipo_id || null,
+          identificacion: p.comerciante_identificacion || null,
+        });
+      }
+    }
+  }
+
+  return (invs as any[]).map((i) => {
+    const distNombre = Array.isArray(i.distribuidor) ? i.distribuidor[0]?.nombre : i.distribuidor?.nombre;
+    const whatsapp = (i.comerciante_whatsapp || '').trim() || null;
+
+    let tipoDoc: string | null = null;
+    let ident: string | null = null;
+    let fuente: 'pre_registro' | 'pack' | null = null;
+
+    const pr = preRegByInv.get(i.id);
+    if (pr && pr.identificacion) {
+      tipoDoc = pr.tipo_doc;
+      ident = pr.identificacion;
+      fuente = 'pre_registro';
+    } else if (whatsapp) {
+      const pk = packByWhatsapp.get(whatsapp);
+      if (pk && pk.identificacion) {
+        tipoDoc = pk.tipo_doc;
+        ident = pk.identificacion;
+        fuente = 'pack';
+      }
+    }
+
+    return {
+      id: i.id,
+      distribuidor_id: i.distribuidor_id || null,
+      distribuidor_nombre: distNombre || 'Sin distribuidor',
+      origen: i.origen || 'distribuidor',
+      tipo_evento: i.tipo_evento || '',
+      estado: i.estado,
+      comerciante_nombre: i.comerciante_nombre,
+      comerciante_nombre_comercial: i.comerciante_nombre_comercial,
+      tipo_doc: tipoDoc,
+      identificacion: ident,
+      identificacion_fuente: fuente,
+      comerciante_tel: i.comerciante_tel,
+      comerciante_whatsapp: whatsapp,
+      comerciante_direccion: i.comerciante_direccion,
+      comerciante_ciudad: i.comerciante_ciudad,
+      comerciante_email: i.comerciante_email,
+      jornadas_seleccionadas: Array.isArray(i.jornadas_seleccionadas) ? i.jornadas_seleccionadas : null,
+      whatsapp_confirmado: !!i.whatsapp_confirmado,
+      created_at: i.created_at,
+    };
+  });
+}
+
 // ── ACTUALIZAR DATOS DEL COMERCIANTE ────────────────────────────────
 
 export async function actualizarInvitacionAction(

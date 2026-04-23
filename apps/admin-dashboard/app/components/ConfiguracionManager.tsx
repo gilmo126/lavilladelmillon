@@ -39,6 +39,7 @@ export default function ConfiguracionManager() {
   const [formBienvenidaPagoMensaje, setFormBienvenidaPagoMensaje] = useState('');
   const [formBienvenidaPagoAuspiciantes, setFormBienvenidaPagoAuspiciantes] = useState<string[]>([]);
   const [uploadingBienvenidaPago, setUploadingBienvenidaPago] = useState(false);
+  const [formWhatsappPagoTemplate, setFormWhatsappPagoTemplate] = useState('');
 
   const loadData = async () => {
     setLoading(true);
@@ -72,6 +73,7 @@ export default function ConfiguracionManager() {
         setFormBienvenidaPagoSubtitulo(data.bienvenida_pago_subtitulo || '');
         setFormBienvenidaPagoMensaje(data.bienvenida_pago_mensaje || '');
         setFormBienvenidaPagoAuspiciantes(data.bienvenida_pago_auspiciantes || []);
+        setFormWhatsappPagoTemplate(data.whatsapp_pago_pendiente_template || '');
       }
     } catch (e) {
       console.error(e);
@@ -145,6 +147,7 @@ export default function ConfiguracionManager() {
         bienvenida_pago_subtitulo: formBienvenidaPagoSubtitulo,
         bienvenida_pago_mensaje: formBienvenidaPagoMensaje,
         bienvenida_pago_auspiciantes: formBienvenidaPagoAuspiciantes,
+        whatsapp_pago_pendiente_template: formWhatsappPagoTemplate.trim() || null,
       });
       alert('Configuración guardada exitosamente.');
       loadData();
@@ -413,6 +416,20 @@ export default function ConfiguracionManager() {
                        <button type="button" onClick={() => setFormBienvenidaPagoAuspiciantes([...formBienvenidaPagoAuspiciantes, ''])}
                          className="text-pink-400 hover:text-pink-300 text-xs font-bold uppercase tracking-widest">+ Agregar auspiciante</button>
                      </div>
+                   </div>
+
+                   <div className="pt-4 border-t border-admin-border/50">
+                     <label className="block text-sm text-slate-400 mb-1">Mensaje de WhatsApp al comerciante</label>
+                     <p className="text-[10px] text-slate-500 mb-2">
+                       Texto que se envía por WhatsApp después de crear un pack pendiente. Placeholders disponibles: <code className="text-pink-300">{'{nombre}'}</code>, <code className="text-pink-300">{'{link}'}</code>, <code className="text-pink-300">{'{fecha}'}</code>. Si lo dejas vacío se usa el texto por defecto.
+                     </p>
+                     <textarea
+                       rows={5}
+                       value={formWhatsappPagoTemplate}
+                       onChange={e => setFormWhatsappPagoTemplate(e.target.value)}
+                       placeholder={'Hola {nombre}, te damos la bienvenida a La Villa del Millón. Aquí están los detalles de tu reserva y los pasos para confirmar tu pago: {link} — Tienes hasta el {fecha}.'}
+                       className="w-full bg-slate-900 border border-admin-border rounded-md px-4 py-3 text-white focus:border-pink-500 outline-none text-sm leading-relaxed font-mono"
+                     />
                    </div>
                  </div>
                </section>

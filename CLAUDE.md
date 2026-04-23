@@ -274,6 +274,7 @@ Los pagos son por Nequi, sin pasarela automática. El soporte fotográfico se su
 ### Columnas nuevas en `configuracion_campana`
 - `nequi_llave text` · `monto_pack integer` · `instrucciones_pago text`
 - `bienvenida_pago_logo_url text` · `bienvenida_pago_titulo text` · `bienvenida_pago_subtitulo text` · `bienvenida_pago_mensaje text` · `bienvenida_pago_auspiciantes jsonb`
+- `whatsapp_pago_pendiente_template text` — template editable del mensaje WhatsApp post-venta de pago pendiente. Placeholders: `{nombre}`, `{link}`, `{fecha}`. Si está vacío se usa el texto por defecto en `VenderPackForm` (`WA_TEMPLATE_DEFAULT`).
 
 Editables desde `/configuracion` → sección "Pagos (Nequi)" y nueva sección "Bienvenida Pago Pendiente".
 

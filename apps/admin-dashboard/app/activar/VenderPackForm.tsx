@@ -18,11 +18,24 @@ function formatWhatsAppNumber(num: string | null | undefined): string {
 
 type Props = {
   diasVencimientoPago: number;
+  whatsappPagoTemplate?: string | null;
 };
+
+const WA_TEMPLATE_DEFAULT =
+  'Hola {nombre}, te damos la bienvenida a La Villa del Millón. ' +
+  'Aquí están los detalles de tu reserva y los pasos para confirmar tu pago: {link}' +
+  ' — Tienes hasta el {fecha}.';
+
+function renderTemplate(tpl: string, vars: { nombre: string; link: string; fecha: string }): string {
+  return tpl
+    .replace(/\{nombre\}/g, vars.nombre)
+    .replace(/\{link\}/g, vars.link)
+    .replace(/\{fecha\}/g, vars.fecha);
+}
 
 type SuccessData = Extract<VenderPackResult, { success: true }>;
 
-export default function VenderPackForm({ diasVencimientoPago }: Props) {
+export default function VenderPackForm({ diasVencimientoPago, whatsappPagoTemplate }: Props) {
   const [tipoPago, setTipoPago]   = useState<'inmediato' | 'pendiente'>('inmediato');
   const [cantidadPacks, setCantidadPacks] = useState(1);
   const [loading, setLoading]     = useState(false);
@@ -113,10 +126,13 @@ export default function VenderPackForm({ diasVencimientoPago }: Props) {
         ? new Date(result.fechaVencimientoPago).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })
         : '';
       const linkBienvenida = result.tokenPagina ? `${LANDING_URL}/pack/${result.tokenPagina}` : '';
+      const tpl = (whatsappPagoTemplate && whatsappPagoTemplate.trim()) || WA_TEMPLATE_DEFAULT;
       const waPendienteText = encodeURIComponent(
-        `Hola ${result.comercianteNombre}, te damos la bienvenida a La Villa del Millón. ` +
-        `Aquí están los detalles de tu reserva y los pasos para confirmar tu pago: ${linkBienvenida}` +
-        (fechaVenc ? ` — Tienes hasta el ${fechaVenc}.` : '')
+        renderTemplate(tpl, {
+          nombre: result.comercianteNombre,
+          link: linkBienvenida,
+          fecha: fechaVenc,
+        })
       );
 
       return (

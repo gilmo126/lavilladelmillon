@@ -33,6 +33,12 @@ export default function ConfiguracionManager() {
   const [formNequiLlave, setFormNequiLlave] = useState('');
   const [formMontoPack, setFormMontoPack] = useState(0);
   const [formInstruccionesPago, setFormInstruccionesPago] = useState('');
+  const [formBienvenidaPagoLogoUrl, setFormBienvenidaPagoLogoUrl] = useState<string | null>(null);
+  const [formBienvenidaPagoTitulo, setFormBienvenidaPagoTitulo] = useState('');
+  const [formBienvenidaPagoSubtitulo, setFormBienvenidaPagoSubtitulo] = useState('');
+  const [formBienvenidaPagoMensaje, setFormBienvenidaPagoMensaje] = useState('');
+  const [formBienvenidaPagoAuspiciantes, setFormBienvenidaPagoAuspiciantes] = useState<string[]>([]);
+  const [uploadingBienvenidaPago, setUploadingBienvenidaPago] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -61,6 +67,11 @@ export default function ConfiguracionManager() {
         setFormNequiLlave(data.nequi_llave || '');
         setFormMontoPack(data.monto_pack ?? 0);
         setFormInstruccionesPago(data.instrucciones_pago || '');
+        setFormBienvenidaPagoLogoUrl(data.bienvenida_pago_logo_url || null);
+        setFormBienvenidaPagoTitulo(data.bienvenida_pago_titulo || '');
+        setFormBienvenidaPagoSubtitulo(data.bienvenida_pago_subtitulo || '');
+        setFormBienvenidaPagoMensaje(data.bienvenida_pago_mensaje || '');
+        setFormBienvenidaPagoAuspiciantes(data.bienvenida_pago_auspiciantes || []);
       }
     } catch (e) {
       console.error(e);
@@ -129,6 +140,11 @@ export default function ConfiguracionManager() {
         nequi_llave: formNequiLlave.trim() || null,
         monto_pack: formMontoPack,
         instrucciones_pago: formInstruccionesPago.trim() || null,
+        bienvenida_pago_logo_url: formBienvenidaPagoLogoUrl,
+        bienvenida_pago_titulo: formBienvenidaPagoTitulo,
+        bienvenida_pago_subtitulo: formBienvenidaPagoSubtitulo,
+        bienvenida_pago_mensaje: formBienvenidaPagoMensaje,
+        bienvenida_pago_auspiciantes: formBienvenidaPagoAuspiciantes,
       });
       alert('Configuración guardada exitosamente.');
       loadData();
@@ -328,6 +344,76 @@ export default function ConfiguracionManager() {
                      className="w-full bg-slate-900 border border-admin-border rounded-md px-4 py-3 text-white focus:border-pink-500 outline-none text-sm leading-relaxed"
                    />
                    <p className="text-[10px] text-slate-600 mt-1">Texto libre multi-línea. Aparece arriba del botón de subir comprobante en el landing.</p>
+                 </div>
+               </section>
+
+               <section className="space-y-6">
+                 <h3 className="text-xl font-bold text-white border-l-4 border-pink-500 pl-4">Bienvenida Pago Pendiente</h3>
+                 <p className="text-[11px] text-slate-500">Contenido que verá el comerciante al abrir el link <code>/pack/[token]</code> mientras su pack está pendiente de pago. Independiente del contenido de eventos.</p>
+
+                 <div className="space-y-4">
+                   <div>
+                     <label className="block text-sm text-slate-400 mb-1">Logo de la Bienvenida</label>
+                     <div className="flex items-center gap-4 p-4 bg-slate-900/50 rounded-xl border border-admin-border">
+                       <div className="w-16 h-16 rounded-lg border border-admin-border flex items-center justify-center bg-admin-dark overflow-hidden">
+                         {formBienvenidaPagoLogoUrl ? (
+                           <img src={formBienvenidaPagoLogoUrl} alt="Logo bienvenida" className="w-full h-full object-contain p-1" />
+                         ) : (
+                           <span className="text-xl">🎁</span>
+                         )}
+                       </div>
+                       <input type="file" accept="image/*" onChange={async (e) => {
+                         if (!e.target.files?.[0]) return;
+                         setUploadingBienvenidaPago(true);
+                         const fd = new FormData();
+                         fd.append('file', e.target.files[0]);
+                         const resp = await uploadPublicImagenAction(fd, 'brand');
+                         if (resp.success) setFormBienvenidaPagoLogoUrl(resp.url || null);
+                         setUploadingBienvenidaPago(false);
+                       }} className="text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-pink-500/10 file:text-pink-400 hover:file:bg-pink-500/20 cursor-pointer" />
+                       {uploadingBienvenidaPago && <span className="text-xs text-pink-400 animate-pulse">Subiendo...</span>}
+                     </div>
+                   </div>
+
+                   <div>
+                     <label className="block text-sm text-slate-400 mb-1">Título Principal</label>
+                     <input value={formBienvenidaPagoTitulo} onChange={e => setFormBienvenidaPagoTitulo(e.target.value)}
+                       placeholder="Ej: ¡Bienvenido a La Villa del Millón!"
+                       className="w-full bg-slate-900 border border-admin-border rounded-md px-4 py-3 text-white focus:border-pink-500 outline-none" />
+                   </div>
+
+                   <div>
+                     <label className="block text-sm text-slate-400 mb-1">Subtítulo</label>
+                     <input value={formBienvenidaPagoSubtitulo} onChange={e => setFormBienvenidaPagoSubtitulo(e.target.value)}
+                       placeholder="Ej: Tu reserva está casi lista. Solo falta confirmar el pago."
+                       className="w-full bg-slate-900 border border-admin-border rounded-md px-4 py-3 text-white focus:border-pink-500 outline-none" />
+                   </div>
+
+                   <div>
+                     <label className="block text-sm text-slate-400 mb-1">Mensaje de Bienvenida (texto completo)</label>
+                     <textarea rows={8} value={formBienvenidaPagoMensaje} onChange={e => setFormBienvenidaPagoMensaje(e.target.value)}
+                       placeholder="Texto completo que verá el comerciante arriba de los datos de pago. Los nombres de auspiciantes se resaltan automáticamente en dorado."
+                       className="w-full bg-slate-900 border border-admin-border rounded-md px-4 py-3 text-white focus:border-pink-500 outline-none text-sm leading-relaxed" />
+                   </div>
+
+                   <div>
+                     <label className="block text-sm text-slate-400 mb-2">Auspiciantes (se resaltan en dorado)</label>
+                     <div className="space-y-2">
+                       {formBienvenidaPagoAuspiciantes.map((a, idx) => (
+                         <div key={idx} className="flex items-center gap-2">
+                           <input value={a} onChange={(e) => {
+                             const updated = [...formBienvenidaPagoAuspiciantes];
+                             updated[idx] = e.target.value;
+                             setFormBienvenidaPagoAuspiciantes(updated);
+                           }} className="flex-1 bg-slate-900 border border-admin-border rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-pink-500" />
+                           <button type="button" onClick={() => setFormBienvenidaPagoAuspiciantes(formBienvenidaPagoAuspiciantes.filter((_, i) => i !== idx))}
+                             className="text-red-400 hover:text-red-300 text-sm font-bold px-2">✕</button>
+                         </div>
+                       ))}
+                       <button type="button" onClick={() => setFormBienvenidaPagoAuspiciantes([...formBienvenidaPagoAuspiciantes, ''])}
+                         className="text-pink-400 hover:text-pink-300 text-xs font-bold uppercase tracking-widest">+ Agregar auspiciante</button>
+                     </div>
+                   </div>
                  </div>
                </section>
 
@@ -542,7 +628,7 @@ export default function ConfiguracionManager() {
                </section>
 
                <div className="pt-6 border-t border-admin-border flex justify-end">
-                  <button type="submit" disabled={saving || uploading || uploadingEvento} className="bg-admin-gold text-admin-dark font-bold px-10 py-4 rounded-xl shadow-[0_0_20px_rgba(245,158,11,0.4)] hover:shadow-[0_0_30px_rgba(245,158,11,0.6)] hover:scale-105 transition-all disabled:opacity-50">
+                  <button type="submit" disabled={saving || uploading || uploadingEvento || uploadingBienvenidaPago} className="bg-admin-gold text-admin-dark font-bold px-10 py-4 rounded-xl shadow-[0_0_20px_rgba(245,158,11,0.4)] hover:shadow-[0_0_30px_rgba(245,158,11,0.6)] hover:scale-105 transition-all disabled:opacity-50">
                     {saving ? 'Guardando Cambios...' : 'Guardar Configuración Maestra'}
                   </button>
                </div>

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { aceptarInvitacionAction, rechazarInvitacionAction, actualizarJornadasAction } from './actions';
+import BienvenidaLanding from '../../components/BienvenidaLanding';
 
 type Jornada = { id: string; fecha: string; hora: string; label: string };
 
@@ -27,17 +28,6 @@ type Props = {
 };
 
 const ADMIN_URL = process.env.NEXT_PUBLIC_ADMIN_URL || 'https://lavilladelmillon-admin.guillaumer-orion.workers.dev';
-
-function resaltarAuspiciantes(texto: string, auspiciantes: string[]) {
-  if (!texto || auspiciantes.length === 0) return texto;
-  let result = texto;
-  for (const a of auspiciantes) {
-    if (a.trim()) {
-      result = result.replace(new RegExp(a.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), `**${a}**`);
-    }
-  }
-  return result;
-}
 
 function LocationCard({ ubicacion, mapsUrl }: { ubicacion: string; mapsUrl: string }) {
   if (!ubicacion) return null;
@@ -266,21 +256,15 @@ export default function InvitacionClient({
   // Estado normal: pendiente
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-gradient-to-b from-marca-gold/10 to-transparent rounded-3xl p-8 text-center space-y-4 border border-marca-gold/20">
-        {evento.logoUrl && (
-          <div className="flex justify-center mb-2">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={evento.logoUrl} alt="Logo evento" className="h-20 w-auto object-contain" />
-          </div>
-        )}
-        <h2 className="text-2xl font-black text-white leading-tight">
-          {evento.titulo.split('\n').map((line, i) => <span key={i}>{line}<br /></span>)}
-        </h2>
-        <p className="text-marca-gold/80 text-sm font-bold italic">
-          {evento.subtitulo}
-        </p>
-      </div>
+      <BienvenidaLanding
+        logoUrl={evento.logoUrl}
+        titulo={evento.titulo}
+        subtitulo={evento.subtitulo}
+        mensaje={evento.mensaje}
+        auspiciantes={evento.auspiciantes}
+        ubicacion={evento.ubicacion}
+        ubicacionMapsUrl={evento.ubicacionMapsUrl}
+      />
 
       {/* Invitado */}
       <div className="bg-slate-800/50 border border-marca-gold/20 rounded-2xl p-6 text-center">
@@ -288,35 +272,6 @@ export default function InvitacionClient({
         <p className="text-xl font-black text-white">{comercianteNombre}</p>
         <p className="text-[10px] text-marca-gold font-bold uppercase tracking-widest mt-2">{tipoEvento}</p>
       </div>
-
-      {/* Mensaje dinámico */}
-      {evento.mensaje && (
-        <div className="bg-slate-900/50 border border-white/5 rounded-3xl p-6 space-y-4">
-          {resaltarAuspiciantes(evento.mensaje, evento.auspiciantes).split('\n').filter(Boolean).map((parrafo, i) => (
-            <p key={i} className="text-slate-300 text-sm leading-relaxed">
-              {parrafo.split(/\*\*(.*?)\*\*/g).map((part, j) =>
-                j % 2 === 1
-                  ? <strong key={j} className="text-marca-gold font-black">{part}</strong>
-                  : part
-              )}
-            </p>
-          ))}
-        </div>
-      )}
-
-      {/* Auspiciantes */}
-      {evento.auspiciantes.length > 0 && (
-        <div className="flex flex-wrap justify-center gap-3">
-          {evento.auspiciantes.filter(Boolean).map((a) => (
-            <span key={a} className="bg-marca-gold/10 border border-marca-gold/30 px-5 py-2.5 rounded-full text-sm font-black text-marca-gold uppercase tracking-wider">
-              {a}
-            </span>
-          ))}
-        </div>
-      )}
-
-      {/* Ubicación */}
-      <LocationCard ubicacion={evento.ubicacion} mapsUrl={evento.ubicacionMapsUrl} />
 
       {/* Selector de jornadas */}
       {evento.jornadas.length > 0 && (

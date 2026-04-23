@@ -112,8 +112,11 @@ export default function VenderPackForm({ diasVencimientoPago }: Props) {
       const fechaVenc = result.fechaVencimientoPago
         ? new Date(result.fechaVencimientoPago).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })
         : '';
+      const linkBienvenida = result.tokenPagina ? `${LANDING_URL}/pack/${result.tokenPagina}` : '';
       const waPendienteText = encodeURIComponent(
-        `Hola ${result.comercianteNombre}, hemos registrado tu reserva en La Villa del Millón. Una vez confirmes el pago recibirás tus 25 números para participar. Tienes hasta el ${fechaVenc} para realizar el pago.`
+        `Hola ${result.comercianteNombre}, te damos la bienvenida a La Villa del Millón. ` +
+        `Aquí están los detalles de tu reserva y los pasos para confirmar tu pago: ${linkBienvenida}` +
+        (fechaVenc ? ` — Tienes hasta el ${fechaVenc}.` : '')
       );
 
       return (

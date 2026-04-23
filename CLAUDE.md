@@ -273,8 +273,9 @@ Los pagos son por Nequi, sin pasarela automática. El soporte fotográfico se su
 
 ### Columnas nuevas en `configuracion_campana`
 - `nequi_llave text` · `monto_pack integer` · `instrucciones_pago text`
+- `bienvenida_pago_logo_url text` · `bienvenida_pago_titulo text` · `bienvenida_pago_subtitulo text` · `bienvenida_pago_mensaje text` · `bienvenida_pago_auspiciantes jsonb`
 
-Editables desde `/configuracion` → sección "Pagos (Nequi)".
+Editables desde `/configuracion` → sección "Pagos (Nequi)" y nueva sección "Bienvenida Pago Pendiente".
 
 ### Enum
 `estado_pago_pack` amplía con `comprobante_enviado` (entre `pendiente` y `pagado`).
@@ -294,11 +295,12 @@ Editables desde `/configuracion` → sección "Pagos (Nequi)".
 4. Estado `pago_verificado` queda `false` hasta que admin lo marque en arqueo.
 
 ### Flujo 2 — Pago pendiente (comerciante sube desde landing)
-1. Distribuidor crea pack `pendiente` (sin números todavía).
-2. Comerciante abre `/pack/[token]` → `page.tsx` detecta estado no-pagado y renderiza `ConfirmarPagoClient` con llave Nequi + monto + instrucciones.
-3. Comerciante sube comprobante → `subirComprobanteLandingAction` valida token, sube archivo, cambia `estado_pago='comprobante_enviado'`, y envía email (best-effort) al distribuidor.
-4. Distribuidor abre el drawer en `/ventas` → ve miniatura + modal de zoom → click "Confirmar pago y generar números" → `confirmarPagoAction` genera los 25 números y marca `pago_verificado=true` con su id.
-5. Admin puede adicionalmente marcar/desmarcar `pago_verificado` via `marcarPagoVerificadoAction` en cualquier estado posterior.
+1. Distribuidor crea pack `pendiente` (sin números todavía). El action devuelve `tokenPagina` para que el form pueda construir el link de bienvenida.
+2. `VenderPackForm` muestra botón WhatsApp con mensaje corto + link `${LANDING_URL}/pack/${tokenPagina}` (ya no es texto largo).
+3. Comerciante abre `/pack/[token]` → `page.tsx` detecta estado no-pagado y renderiza `ConfirmarPagoClient` con la sección de **bienvenida parametrizable** arriba (logo, título, subtítulo, mensaje con auspiciantes en dorado — leídos de `bienvenida_pago_*`) y llave Nequi + monto + instrucciones debajo.
+4. Comerciante sube comprobante → `subirComprobanteLandingAction` valida token, sube archivo, cambia `estado_pago='comprobante_enviado'`, y envía email (best-effort) al distribuidor.
+5. Distribuidor abre el drawer en `/ventas` → ve miniatura + modal de zoom → click "Confirmar pago y generar números" → `confirmarPagoAction` genera los 25 números y marca `pago_verificado=true` con su id.
+6. Admin puede adicionalmente marcar/desmarcar `pago_verificado` via `marcarPagoVerificadoAction` en cualquier estado posterior.
 
 ### Permisos
 - Subir comprobante: admin a cualquier pack; distribuidor solo a sus packs.
@@ -310,6 +312,7 @@ Editables desde `/configuracion` → sección "Pagos (Nequi)".
 - `app/activar/ComprobanteUploader.tsx` (client, admin) — upload reutilizable.
 - `app/ventas/ComprobanteViewer.tsx` (client, admin) — modal fullscreen con zoom (mouse wheel + pinch mobile + teclado).
 - `apps/landing-page/app/pack/[token]/ConfirmarPagoClient.tsx` — landing del flujo de pago pendiente.
+- `apps/landing-page/app/components/BienvenidaLanding.tsx` — componente compartido (logo, título, subtítulo, mensaje con auspiciantes resaltados, ubicación opcional). Lo consume `/pack/[token]` (con `bienvenida_pago_*`) y `/invitacion/[token]` (con `evento_*`). Los dos sets de campos son **independientes**: los del evento no contaminan el flujo de pago pendiente y viceversa.
 - `getPackDetail` (`lib/actions.ts`) retorna adicionalmente `comprobanteSignedUrl` (fresca) y `pack.verificador.nombre` para el drawer.
 
 ### View auxiliar

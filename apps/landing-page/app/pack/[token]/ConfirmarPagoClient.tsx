@@ -7,8 +7,17 @@ import {
   comprimirImagenCliente,
   TAMANO_MAXIMO_MB,
 } from '../../../lib/comprobantes';
+import BienvenidaLanding from '../../components/BienvenidaLanding';
 
 const POLLING_INTERVAL_MS = 15_000;
+
+type BienvenidaData = {
+  logoUrl: string | null;
+  titulo: string;
+  subtitulo: string;
+  mensaje: string;
+  auspiciantes: string[];
+};
 
 type Props = {
   token: string;
@@ -20,6 +29,7 @@ type Props = {
   estadoPago: 'pendiente' | 'comprobante_enviado';
   comprobanteSignedUrl: string | null;
   comprobanteSubidoAt: string | null;
+  bienvenida?: BienvenidaData;
 };
 
 function formatearMonto(monto: number): string {
@@ -37,7 +47,11 @@ export default function ConfirmarPagoClient({
   estadoPago,
   comprobanteSignedUrl,
   comprobanteSubidoAt,
+  bienvenida,
 }: Props) {
+  const tieneBienvenida = !!(
+    bienvenida && (bienvenida.logoUrl || bienvenida.titulo || bienvenida.subtitulo || bienvenida.mensaje || bienvenida.auspiciantes.length > 0)
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [subiendo, setSubiendo] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -138,6 +152,16 @@ export default function ConfirmarPagoClient({
       </div>
 
       <div className="max-w-2xl mx-auto px-6 py-8 space-y-6">
+        {tieneBienvenida && bienvenida && (
+          <BienvenidaLanding
+            logoUrl={bienvenida.logoUrl}
+            titulo={bienvenida.titulo}
+            subtitulo={bienvenida.subtitulo}
+            mensaje={bienvenida.mensaje}
+            auspiciantes={bienvenida.auspiciantes}
+          />
+        )}
+
         {/* Estado actual si ya hay comprobante */}
         {yaEnviado && urlLocal ? (
           <div className="bg-green-500/10 border border-green-500/30 rounded-2xl p-5 space-y-3">

@@ -79,10 +79,10 @@ export default async function PackPage({
     );
   }
 
-  // 2) Config de campaña (nombre + datos de pago) — usado por ambas ramas
+  // 2) Config de campaña (nombre + datos de pago + bienvenida) — usado por ambas ramas
   const { data: config } = await supabaseAdmin
     .from('configuracion_campana')
-    .select('nombre_campana, nequi_llave, monto_pack, instrucciones_pago')
+    .select('nombre_campana, nequi_llave, monto_pack, instrucciones_pago, bienvenida_pago_logo_url, bienvenida_pago_titulo, bienvenida_pago_subtitulo, bienvenida_pago_mensaje, bienvenida_pago_auspiciantes')
     .eq('activa', true)
     .maybeSingle();
 
@@ -98,6 +98,16 @@ export default async function PackPage({
       comprobanteSignedUrl = signed?.signedUrl || null;
     }
 
+    const bienvenida = {
+      logoUrl: config?.bienvenida_pago_logo_url || null,
+      titulo: config?.bienvenida_pago_titulo || '',
+      subtitulo: config?.bienvenida_pago_subtitulo || '',
+      mensaje: config?.bienvenida_pago_mensaje || '',
+      auspiciantes: Array.isArray(config?.bienvenida_pago_auspiciantes)
+        ? (config?.bienvenida_pago_auspiciantes as string[])
+        : [],
+    };
+
     return (
       <ConfirmarPagoClient
         token={token}
@@ -109,6 +119,7 @@ export default async function PackPage({
         estadoPago={packDirecto.estado_pago as 'pendiente' | 'comprobante_enviado'}
         comprobanteSignedUrl={comprobanteSignedUrl}
         comprobanteSubidoAt={packDirecto.comprobante_subido_at || null}
+        bienvenida={bienvenida}
       />
     );
   }

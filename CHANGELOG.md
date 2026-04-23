@@ -178,6 +178,14 @@ Acceso solo a `/scanner` y `/validar-qr/[token_qr]`. Admin lo crea desde `/distr
 - Action `getPendientesEnvioWhatsappAction` filtra por `estado=pendiente`, `whatsapp_confirmado=false`, `es_prueba=false` y WhatsApp válido 10 dígitos. Admin ve todas; distribuidor solo las suyas.
 - Componente `EnvioMasivoWhatsApp.tsx` reusa helper `formatWhatsAppNumber` (prefijo 57).
 
+### 2026-04-22
+
+- **Bienvenida parametrizable separada para pago pendiente.** El landing `/pack/[token]` cuando está `pendiente` o `comprobante_enviado` ahora muestra un encabezado parametrizable (logo, título, subtítulo, mensaje con auspiciantes resaltados en dorado) arriba del bloque de pago Nequi.
+- Nuevas columnas en `configuracion_campana`: `bienvenida_pago_logo_url`, `bienvenida_pago_titulo`, `bienvenida_pago_subtitulo`, `bienvenida_pago_mensaje`, `bienvenida_pago_auspiciantes` (jsonb). Migración: `supabase/migrations/add_bienvenida_pago_pendiente.sql`.
+- Nueva sección "Bienvenida Pago Pendiente" en `/configuracion` (independiente de la sección "Contenido Landing Evento") — los eventos terminaron y su contenido queda intacto para historial/reuso, pero ya no se mezcla con este flujo.
+- Componente compartido `apps/landing-page/app/components/BienvenidaLanding.tsx`. Lo consume tanto `/invitacion/[token]` como `/pack/[token]`. `InvitacionClient.tsx` se refactorizó para usarlo sin cambiar comportamiento.
+- Mensaje WhatsApp del flujo "pago pendiente" en `VenderPackForm.tsx` ahora envía link al landing del pack (`${LANDING_URL}/pack/${tokenPagina}`) en lugar del texto largo que dejaba al comerciante sin saber dónde subir el comprobante. `crearPackPendienteAction` ahora retorna `tokenPagina` (ya se generaba en BD; solo faltaba exponerlo al cliente).
+
 ### 2026-04-20
 
 - Reporte listado detallado de invitaciones en `/invitaciones/reporte` (nueva tab "Listado Detallado" junto a la existente "Por Distribuidor"). Una fila por invitación con todos los campos de contacto del comerciante: nombre, nombre comercial, cédula (tipo_doc + identificación), teléfono, WhatsApp, dirección, ciudad, email, origen, distribuidor y estado. Buscador texto + filtros por origen (todos/distribuidor/pre_registro) y estado.
@@ -243,4 +251,9 @@ ALTER TABLE configuracion_campana ADD COLUMN jornadas_evento jsonb DEFAULT '[...
 ALTER TABLE configuracion_campana ADD COLUMN ubicacion_evento text;
 ALTER TABLE configuracion_campana ADD COLUMN ubicacion_maps_url text;
 ALTER TABLE configuracion_campana ADD COLUMN sesion_timeout_minutos int DEFAULT 30;
+ALTER TABLE configuracion_campana ADD COLUMN bienvenida_pago_logo_url text;
+ALTER TABLE configuracion_campana ADD COLUMN bienvenida_pago_titulo text;
+ALTER TABLE configuracion_campana ADD COLUMN bienvenida_pago_subtitulo text;
+ALTER TABLE configuracion_campana ADD COLUMN bienvenida_pago_mensaje text;
+ALTER TABLE configuracion_campana ADD COLUMN bienvenida_pago_auspiciantes jsonb DEFAULT '[]'::jsonb;
 ```

@@ -16,7 +16,14 @@ ALTER TABLE public.configuracion_campana
   ADD COLUMN IF NOT EXISTS bienvenida_pago_titulo text,
   ADD COLUMN IF NOT EXISTS bienvenida_pago_subtitulo text,
   ADD COLUMN IF NOT EXISTS bienvenida_pago_mensaje text,
-  ADD COLUMN IF NOT EXISTS bienvenida_pago_auspiciantes jsonb DEFAULT '[]'::jsonb;
+  ADD COLUMN IF NOT EXISTS bienvenida_pago_auspiciantes jsonb DEFAULT '[]'::jsonb,
+  -- Template editable del mensaje WhatsApp que el distribuidor envía al
+  -- comerciante tras crear un pack pendiente. Placeholders soportados:
+  --   {nombre} → nombre del comerciante
+  --   {link}   → URL del landing /pack/[token]
+  --   {fecha}  → fecha límite de pago formateada (es-CO)
+  -- Si está NULL o vacío, se usa el texto por defecto del cliente.
+  ADD COLUMN IF NOT EXISTS whatsapp_pago_pendiente_template text;
 
 -- ─────────────────────────────────────────────────────────────────────
 -- FIN DE MIGRACIÓN

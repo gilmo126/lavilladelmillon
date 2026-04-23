@@ -32,12 +32,13 @@ export default async function ActivarPage() {
 
   const { data: config } = await supabaseAdmin
     .from('configuracion_campana')
-    .select('nombre_campana, dias_vencimiento_pago')
+    .select('nombre_campana, dias_vencimiento_pago, whatsapp_pago_pendiente_template')
     .eq('activa', true)
     .single();
 
   const nombreCampana      = config?.nombre_campana      ?? 'Campaña Activa';
   const diasVencimientoPago = config?.dias_vencimiento_pago ?? 8;
+  const whatsappPagoTemplate = config?.whatsapp_pago_pendiente_template ?? null;
 
   return (
     <div className="p-8 pb-20 h-full overflow-y-auto">
@@ -57,7 +58,7 @@ export default async function ActivarPage() {
       </header>
 
       <div className="max-w-2xl">
-        <VenderPackForm diasVencimientoPago={diasVencimientoPago} />
+        <VenderPackForm diasVencimientoPago={diasVencimientoPago} whatsappPagoTemplate={whatsappPagoTemplate} />
       </div>
     </div>
   );

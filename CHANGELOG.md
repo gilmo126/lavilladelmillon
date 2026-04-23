@@ -185,6 +185,7 @@ Acceso solo a `/scanner` y `/validar-qr/[token_qr]`. Admin lo crea desde `/distr
 - Nueva sección "Bienvenida Pago Pendiente" en `/configuracion` (independiente de la sección "Contenido Landing Evento") — los eventos terminaron y su contenido queda intacto para historial/reuso, pero ya no se mezcla con este flujo.
 - Componente compartido `apps/landing-page/app/components/BienvenidaLanding.tsx`. Lo consume tanto `/invitacion/[token]` como `/pack/[token]`. `InvitacionClient.tsx` se refactorizó para usarlo sin cambiar comportamiento.
 - Mensaje WhatsApp del flujo "pago pendiente" en `VenderPackForm.tsx` ahora envía link al landing del pack (`${LANDING_URL}/pack/${tokenPagina}`) en lugar del texto largo que dejaba al comerciante sin saber dónde subir el comprobante. `crearPackPendienteAction` ahora retorna `tokenPagina` (ya se generaba en BD; solo faltaba exponerlo al cliente).
+- Texto del WhatsApp ahora es editable desde `/configuracion` (`whatsapp_pago_pendiente_template`). Soporta placeholders `{nombre}`, `{link}`, `{fecha}`; si queda vacío se usa el default del cliente. Misma migración `add_bienvenida_pago_pendiente.sql`.
 
 ### 2026-04-20
 
@@ -256,4 +257,5 @@ ALTER TABLE configuracion_campana ADD COLUMN bienvenida_pago_titulo text;
 ALTER TABLE configuracion_campana ADD COLUMN bienvenida_pago_subtitulo text;
 ALTER TABLE configuracion_campana ADD COLUMN bienvenida_pago_mensaje text;
 ALTER TABLE configuracion_campana ADD COLUMN bienvenida_pago_auspiciantes jsonb DEFAULT '[]'::jsonb;
+ALTER TABLE configuracion_campana ADD COLUMN whatsapp_pago_pendiente_template text;
 ```
